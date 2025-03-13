@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css">
+    <link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+    <title>{{ title }}</title>
+    <style>
+        /* Estilos adicionales para mejorar la apariencia */
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #swagger-ui {
+            max-width: 1460px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script>
+        // Función para agregar atributos id y name a los campos de formulario
+        function addAttributesToFormFields() {
+            const formFields = document.querySelectorAll('input, select, textarea, button');
+            let fieldsFixed = 0;
+            
+            formFields.forEach((field, index) => {
+                if (!field.id || !field.name) {
+                    const uniqueId = `swagger-field-${Date.now()}-${index}`;
+                    
+                    if (!field.id) {
+                        field.id = uniqueId;
+                        fieldsFixed++;
+                    }
+                    
+                    if (!field.name) {
+                        field.name = field.id || uniqueId;
+                        fieldsFixed++;
+                    }
+                    
+                    // Asegurarse de que los campos tengan autocomplete="off" para evitar problemas
+                    field.setAttribute('autocomplete', 'off');
+                }
+            });
+            
+            if (fieldsFixed > 0) {
+                console.log(`Atributos agregados a ${fieldsFixed} campos de formulario`);
+            }
+            
+            return fieldsFixed;
+        }
+
+        // Función para observar cambios en el DOM y agregar atributos a nuevos campos
+        function setupMutationObserver() {
+            const targetNode = document.body;
+            const config = { 
+                childList: true, 
+                subtree: true, 
+                attributes: true,
+                attributeFilter: ['class', 'style'] 
+            };
+            
+            const callback = function(mutationsList, observer) {
+                let shouldAddAttributes = false;
+                
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        shouldAddAttributes = true;
+                        break;
+                    } else if (mutation.type === 'attributes') {
+                        const target = mutation.target;
+                        if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || 
+                            target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') {
+                            shouldAddAttributes = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (shouldAddAttributes) {
+                    addAttributesToFormFields();
+                }
+            };
+            
+            const observer = new MutationObserver(callback);
+            observer.observe(targetNode, config);
+            console.log("MutationObserver configurado para monitorear cambios en el DOM");
+        }
+
+        // Parche para el problema de los enlaces profundos con espacios
+        function patchDeepLinking() {
+            if (window.history && window.history.replaceState) {
+                const currentUrl = window.location.href;
+                if (currentUrl.includes('_')) {
+                    const newUrl = currentUrl.replace(/_/g, '%20');
+                    window.history.replaceState(null, document.title, newUrl);
+                    console.log("URL actualizada para usar %20 en lugar de _");
+                }
+            }
+            
+            // Sobrescribir el método de enlace profundo de Swagger UI
+            if (window.SwaggerUIBundle && window.SwaggerUIBundle.presets) {
+                const originalDeepLinking = window.SwaggerUIBundle.presets.apis;
+                if (originalDeepLinking) {
+                    window.SwaggerUIBundle.presets.apis = function() {
+                        const result = originalDeepLinking.apply(this, arguments);
+                        if (result && result.statePlugins && result.statePlugins.routing) {
+                            const original = result.statePlugins.routing.wrapSelectors;
+                            if (original && original.locationHash) {
+                                const originalLocationHash = original.locationHash;
+                                original.locationHash = function() {
+                                    const hash = originalLocationHash.apply(this, arguments);
+                                    if (typeof hash === 'string') {
+                                        return hash.replace(/_/g, '%20');
+                                    }
+                                    return hash;
+                                };
+                            }
+                        }
+                        return result;
+                    };
+                }
+            }
+        }
+
+        // Inicializar Swagger UI
+        window.onload = function() {
+            console.log("Inicializando Swagger UI...");
+            
+            // Aplicar parche para enlaces profundos antes de inicializar Swagger UI
+            patchDeepLinking();
+            
+            const ui = SwaggerUIBundle({
+                url: '{{ openapi_url }}',
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                deepLinking: true,
+                showExtensions: true,
+                showCommonExtensions: true,
+                persistAuthorization: true,
+                displayOperationId: false,
+                defaultModelsExpandDepth: 0,
+                defaultModelExpandDepth: 0,
+                defaultModelRendering: "example",
+                displayRequestDuration: true,
+                docExpansion: "list",
+                filter: true,
+                tryItOutEnabled: true,
+                syntaxHighlight: {
+                    theme: "agate"
+                },
+                onComplete: function() {
+                    console.log("Swagger UI completado");
+                    
+                    // Aplicar parches después de que Swagger UI se haya cargado completamente
+                    setTimeout(() => {
+                        const fieldsFixed = addAttributesToFormFields();
+                        console.log(`Inicialmente se arreglaron ${fieldsFixed} campos`);
+                        
+                        setupMutationObserver();
+                        
+                        // Configurar un intervalo para verificar periódicamente los campos
+                        setInterval(addAttributesToFormFields, 2000);
+                    }, 1000);
+                }
+            });
+
+            // Exponer la instancia de UI para depuración
+            window.ui = ui;
+        };
+        
+        // Agregar un evento para manejar la navegación y asegurarse de que los campos tengan atributos
+        window.addEventListener('hashchange', function() {
+            setTimeout(addAttributesToFormFields, 500);
+        });
+        
+        // Agregar un evento para manejar los clics y asegurarse de que los campos tengan atributos
+        document.addEventListener('click', function() {
+            setTimeout(addAttributesToFormFields, 500);
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,1 @@
+# Importar componentes del núcleo de la aplicación 
