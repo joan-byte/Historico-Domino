@@ -60,8 +60,8 @@ const handleClubsClick = () => {
   const clubsItem = navigation.value[0].items.find(item => item.title === 'Clubs');
   if (clubsItem) {
     toggleExpand('Clubs');
-    // Navegar a /clubes/crud en lugar de /clubes/lista
-    router.push('/clubes/crud');
+    // Navegar a /clubes/
+    router.push('/clubes');
   }
 };
 </script>
