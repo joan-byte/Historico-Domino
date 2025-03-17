@@ -47,7 +47,7 @@ const navigation = ref<NavSection[]>([
         icon: 'M1 22h22V8l-11-6-11 6v14zm3-2V10l8-4.5 8 4.5v10H4zM15 14h1v4h-1v-4zm-4 0h1v4h-1v-4zm-4 0h1v4H7v-4zm-2 6h14v2H5v-2z',
         isActive: true,
         children: [
-          { title: 'CRUD', href: '/clubes/nuevo' },
+          { title: 'CRUD', href: '/clubes/crud' },
           { title: 'Lista', href: '/clubes' },
           { title: 'Estadísticas', href: '/clubes/estadisticas' }
         ]
@@ -199,9 +199,9 @@ const isExpanded = (title: string): boolean => {
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </button>
-                <a
+                <router-link
                   v-else
-                  :href="item.href"
+                  :to="item.href || ''"
                   class="flex items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
                   :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
                 >
@@ -209,12 +209,18 @@ const isExpanded = (title: string): boolean => {
                     <path :d="item.icon"></path>
                   </svg>
                   <span v-if="isOpen" class="truncate">{{ item.title }}</span>
-                </a>
+                </router-link>
                 <!-- Subelementos -->
                 <div v-if="item.children && item.children.length > 0 && isExpanded(item.title) && isOpen" class="mt-1 ml-5 space-y-1">
-                  <a v-for="(child, k) in item.children" :key="`child-${k}`" :href="child.href" class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" :class="{ 'bg-gray-100 text-gray-900': child.isActive }">
+                  <router-link 
+                    v-for="(child, k) in item.children" 
+                    :key="`child-${k}`" 
+                    :to="child.href || ''" 
+                    class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
+                    :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
+                  >
                     {{ child.title }}
-                  </a>
+                  </router-link>
                 </div>
               </div>
             </div>
@@ -278,31 +284,7 @@ const isExpanded = (title: string): boolean => {
           
           <!-- Contenido principal -->
           <div class="rounded-md bg-white border shadow-sm p-6 flex-1">
-            <div class="max-w-4xl">
-              <h2 class="text-lg font-semibold mb-2">Data Fetching</h2>
-              <p class="text-sm text-gray-500 mb-4">Fetch data from an API or database in your application.</p>
-              
-              <div class="prose prose-sm max-w-none">
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
-                
-                <h3 class="text-base font-medium mt-6 mb-2">Getting Started</h3>
-                <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
-                
-                <pre class="bg-gray-900 text-gray-100 rounded-md p-4 my-4 overflow-x-auto"><code>// Example code
-fetch('/api/data')
-  .then(response => response.json())
-  .then(data => console.log(data));</code></pre>
-                
-                <h3 class="text-base font-medium mt-6 mb-2">Best Practices</h3>
-                <ul class="list-disc pl-5 mb-4">
-                  <li>Use a data fetching library like SWR or React Query</li>
-                  <li>Implement proper error handling</li>
-                  <li>Add loading states for better UX</li>
-                  <li>Consider caching strategies</li>
-                </ul>
-              </div>
-            </div>
+            <router-view />
           </div>
         </div>
       </div>

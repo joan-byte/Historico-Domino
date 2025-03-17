@@ -2,28 +2,93 @@
 // Componente para crear un nuevo club
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { clubService, type ClubCreate } from '../lib/clubService';
 
 const router = useRouter();
-const nombreClub = ref('');
-const direccion = ref('');
-const telefono = ref('');
-const email = ref('');
-const descripcion = ref('');
+const nombre = ref('');
+const cp = ref('');
+const numeroClub = ref('');
 
-const guardarClub = () => {
-  // Aquí iría la lógica para guardar el club en la base de datos
-  console.log('Guardando club:', {
-    nombre: nombreClub.value,
-    direccion: direccion.value,
-    telefono: telefono.value,
-    email: email.value,
-    descripcion: descripcion.value
-  });
+// Referencias para manejar errores de validación
+const errores = ref({
+  nombre: '',
+  cp: '',
+  numeroClub: ''
+});
+
+// Estado de carga
+const isLoading = ref(false);
+const generalError = ref('');
+
+// Validar campos del formulario
+const validarFormulario = () => {
+  let esValido = true;
   
-  // Redirigir a la lista de clubes
-  router.push('/clubes');
+  // Restablecer errores
+  errores.value = {
+    nombre: '',
+    cp: '',
+    numeroClub: ''
+  };
+  
+  // Validar nombre (requerido)
+  if (!nombre.value.trim()) {
+    errores.value.nombre = 'El nombre es obligatorio';
+    esValido = false;
+  }
+  
+  // Validar CP (2 dígitos numéricos)
+  if (!cp.value.trim()) {
+    errores.value.cp = 'El CP es obligatorio';
+    esValido = false;
+  } else if (!/^\d{2}$/.test(cp.value)) {
+    errores.value.cp = 'El CP debe ser exactamente 2 dígitos numéricos';
+    esValido = false;
+  }
+  
+  // Validar número de club (máximo 4 dígitos numéricos)
+  if (!numeroClub.value.trim()) {
+    errores.value.numeroClub = 'El número de club es obligatorio';
+    esValido = false;
+  } else if (!/^\d{1,4}$/.test(numeroClub.value)) {
+    errores.value.numeroClub = 'El número debe ser numérico y tener máximo 4 dígitos';
+    esValido = false;
+  }
+  
+  return esValido;
 };
 
+// Guardar el club
+const guardarClub = async () => {
+  // Validar primero
+  if (!validarFormulario()) {
+    return;
+  }
+
+  isLoading.value = true;
+  generalError.value = '';
+  
+  // Preparar datos según el modelo del backend
+  const clubData = {
+    cp: cp.value,
+    numero_club: numeroClub.value,
+    nombre: nombre.value
+  };
+  
+  try {
+    // Enviar datos al backend
+    await clubService.create(clubData);
+    // Redirigir a la lista de clubes
+    router.push('/clubes');
+  } catch (err: any) {
+    console.error('Error al crear el club:', err);
+    generalError.value = err.message || 'Ocurrió un error al guardar el club';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Cancelar y volver a la lista
 const cancelar = () => {
   router.push('/clubes');
 };
@@ -37,73 +102,79 @@ const cancelar = () => {
         <button 
           @click="cancelar"
           class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+          :disabled="isLoading"
         >
           Cancelar
         </button>
         <button 
           @click="guardarClub"
           class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+          :disabled="isLoading"
         >
-          Guardar
+          {{ isLoading ? 'Guardando...' : 'Guardar' }}
         </button>
       </div>
+    </div>
+    
+    <!-- Mensaje de error general -->
+    <div v-if="generalError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      {{ generalError }}
     </div>
     
     <div class="bg-white border rounded-md shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="space-y-2">
-          <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre del Club</label>
+          <label for="nombre-club" class="block text-sm font-medium text-gray-700">Nombre del Club <span class="text-red-500">*</span></label>
           <input 
-            id="nombre" 
-            v-model="nombreClub" 
+            id="nombre-club" 
+            v-model="nombre" 
             type="text" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            :class="{ 'border-red-500': errores.nombre }"
             placeholder="Nombre del club"
           />
+          <p v-if="errores.nombre" class="text-red-500 text-xs mt-1">{{ errores.nombre }}</p>
         </div>
         
         <div class="space-y-2">
-          <label for="direccion" class="block text-sm font-medium text-gray-700">Dirección</label>
+          <label for="cp-club" class="block text-sm font-medium text-gray-700">Código Postal (2 dígitos) <span class="text-red-500">*</span></label>
           <input 
-            id="direccion" 
-            v-model="direccion" 
+            id="cp-club" 
+            v-model="cp" 
             type="text" 
+            maxlength="2"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Dirección del club"
+            :class="{ 'border-red-500': errores.cp }"
+            placeholder="Ej: 28"
           />
+          <p v-if="errores.cp" class="text-red-500 text-xs mt-1">{{ errores.cp }}</p>
         </div>
         
         <div class="space-y-2">
-          <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
+          <label for="numero-club" class="block text-sm font-medium text-gray-700">Número de Club (máx 4 dígitos) <span class="text-red-500">*</span></label>
           <input 
-            id="telefono" 
-            v-model="telefono" 
-            type="tel" 
+            id="numero-club" 
+            v-model="numeroClub" 
+            type="text" 
+            maxlength="4"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Teléfono de contacto"
+            :class="{ 'border-red-500': errores.numeroClub }"
+            placeholder="Ej: 1234"
           />
+          <p v-if="errores.numeroClub" class="text-red-500 text-xs mt-1">{{ errores.numeroClub }}</p>
         </div>
         
         <div class="space-y-2">
-          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+          <label for="codigo-club-preview" class="block text-sm font-medium text-gray-700">Código Club (generado automáticamente)</label>
           <input 
-            id="email" 
-            v-model="email" 
-            type="email" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Email de contacto"
+            id="codigo-club-preview"
+            type="text"
+            :value="(cp || '00') + (numeroClub || '0000')"
+            readonly
+            aria-readonly="true"
+            class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed"
           />
-        </div>
-        
-        <div class="space-y-2 md:col-span-2">
-          <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
-          <textarea 
-            id="descripcion" 
-            v-model="descripcion" 
-            rows="4" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Descripción del club"
-          ></textarea>
+          <p class="text-xs text-gray-500">El código se generará automáticamente a partir del CP y el número de club</p>
         </div>
       </div>
     </div>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import ShadcnDashboard from './views/ShadcnDashboard.vue'
+// Componente principal de la aplicación
 </script>
 
 <template>
-  <ShadcnDashboard />
+  <router-view />
 </template>
 
 <style lang="postcss">
