@@ -29,10 +29,21 @@ export const fetchApi = async <T>(
   try {
     const response = await fetch(`${API_URL}${endpoint}`, options);
     
-    // Si la respuesta no es exitosa, lanzamos un error
+    // Si la respuesta no es exitosa, procesamos el error
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Error en la petición' }));
-      throw new Error(error.detail || 'Error en la petición');
+      const errorData = await response.json();
+      
+      // Para errores 422, el backend devuelve un objeto con detalles de validación
+      if (response.status === 422) {
+        const validationErrors = errorData.detail || [];
+        const errorMessages = validationErrors.map((error: any) => {
+          return `${error.loc.join('.')}: ${error.msg}`;
+        });
+        throw new Error(errorMessages.join('\n'));
+      }
+      
+      // Para otros errores, usamos el mensaje general
+      throw new Error(errorData.detail || 'Error en la petición');
     }
     
     // Para peticiones DELETE que no devuelven contenido

@@ -43,33 +43,50 @@ const {
 } = usePagination(sortedClubs);
 
 // Definir las columnas para la tabla
-const columns = [
-  {
-    field: 'codigo_club',
-    header: 'Código',
-    sortable: true
-  },
-  {
-    field: 'nombre',
-    header: 'Nombre',
-    sortable: true
-  },
-  {
-    field: 'cp',
-    header: 'CP',
-    sortable: true
-  },
-  {
-    field: 'numero_club',
-    header: 'Número',
-    sortable: true
-  },
-  {
-    field: 'acciones',
-    header: 'Acciones',
-    sortable: false
-  }
-];
+const columns = computed(() => {
+  return [
+    {
+      field: 'codigo_club',
+      header: 'Código',
+      sortable: true
+    },
+    {
+      field: 'nombre',
+      header: 'Nombre',
+      sortable: true
+    },
+    {
+      field: 'cp',
+      header: 'CP',
+      sortable: true
+    },
+    {
+      field: 'numero_club',
+      header: 'Número',
+      sortable: true
+    },
+    {
+      field: 'persona_contacto',
+      header: 'Persona de Contacto',
+      sortable: true
+    },
+    {
+      field: 'telefono',
+      header: 'Teléfono',
+      sortable: true
+    },
+    {
+      field: 'direccion',
+      header: 'Dirección',
+      sortable: true
+    },
+    {
+      field: 'email',
+      header: 'Email',
+      sortable: true
+    }
+  ];
+});
 
 // Cargar la lista de clubs al montar el componente
 onMounted(() => {
@@ -368,10 +385,11 @@ const getRowClass = (item: ClubResponse): string => {
         <h1 class="text-2xl font-semibold">
           {{ route.query.action === 'edit' ? 'Elige el club a editar' : 'Lista de Clubes' }}
         </h1>
-        <!-- Mostrar instrucciones adicionales si estamos en modo edición -->
-        <p v-if="route.query.action === 'edit'" class="text-sm text-gray-600">
-          Haz clic en un club para editarlo
-        </p>
+      </div>
+
+      <!-- Instrucciones para el modo edición -->
+      <div v-if="route.query.action === 'edit'" class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+        Haz clic en el club que deseas editar. Se abrirá el formulario de edición con los datos del club seleccionado.
       </div>
       
       <!-- Mensajes de estado -->
@@ -401,33 +419,6 @@ const getRowClass = (item: ClubResponse): string => {
           @row-click="handleRowClick"
           :row-class="(item: ClubResponse) => getRowClass(item)"
         >
-          <!-- Solo mostrar acciones si no estamos en modo edición -->
-          <template #cell(acciones)="{ item }">
-            <div v-if="!route.query.action" class="flex gap-2">
-              <button
-                @click.stop="editarClub(item)"
-                class="p-1 text-blue-600 hover:bg-blue-100 rounded-full"
-                title="Editar club"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                </svg>
-              </button>
-              <button
-                @click.stop="eliminarClub(item)"
-                class="p-1 text-red-600 hover:bg-red-100 rounded-full"
-                title="Eliminar club"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              </button>
-            </div>
-            <!-- En modo edición, mostrar un indicador visual -->
-            <div v-else class="text-sm text-gray-500">
-              Clic para editar
-            </div>
-          </template>
           <template #empty>
             No hay clubes que coincidan con los criterios de búsqueda.
           </template>

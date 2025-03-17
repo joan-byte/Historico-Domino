@@ -23,6 +23,12 @@ class Club(Base):
     # Nombre del club
     nombre = Column(String(100), nullable=False)
     
+    # Campos adicionales de contacto
+    persona_contacto = Column(String(200), nullable=True)
+    telefono = Column(String(15), nullable=True)
+    direccion = Column(String(255), nullable=True)
+    email = Column(String(120), nullable=True)
+    
     # Restricción para asegurar que CP solo contenga números y sea de 2 dígitos
     __table_args__ = (
         CheckConstraint("cp ~ '^[0-9]{2}$'", name='check_cp_formato'),
@@ -56,4 +62,24 @@ class Club(Base):
         """
         if codigo != f"{self.cp}{self.numero_club}":
             raise ValueError("El código del club debe ser CP + número de club")
-        return codigo 
+        return codigo
+    
+    @validates('email')
+    def validar_email(self, key, email):
+        """
+        Valida el formato básico del email si se proporciona
+        """
+        if email is not None and '@' not in email:
+            raise ValueError("El email debe tener un formato válido")
+        return email
+    
+    @validates('telefono')
+    def validar_telefono(self, key, telefono):
+        """
+        Valida que el teléfono solo contenga números y tenga una longitud razonable
+        """
+        if telefono is not None:
+            telefono_limpio = ''.join(filter(str.isdigit, telefono))
+            if len(telefono_limpio) < 9 or len(telefono_limpio) > 15:
+                raise ValueError("El teléfono debe tener entre 9 y 15 dígitos")
+        return telefono 

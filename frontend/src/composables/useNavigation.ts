@@ -7,6 +7,7 @@ export interface NavItem {
   icon?: string;
   children?: NavItem[];
   isActive?: boolean;
+  isExpanded?: boolean;
 }
 
 export interface NavSection {
@@ -29,12 +30,12 @@ export function useNavigation() {
       items: [
         {
           title: 'Clubs',
-          href: '/clubes',
+          href: '/clubes/crud',
           icon: 'M1 22h22V8l-11-6-11 6v14zm3-2V10l8-4.5 8 4.5v10H4zM15 14h1v4h-1v-4zm-4 0h1v4h-1v-4zm-4 0h1v4H7v-4zm-2 6h14v2H5v-2z',
           isActive: true,
           children: [
             { title: 'CRUD', href: '/clubes/crud' },
-            { title: 'Lista', href: '/clubes' },
+            { title: 'Lista', href: '/clubes/lista' },
             { title: 'Estadísticas', href: '/clubes/estadisticas' }
           ]
         },

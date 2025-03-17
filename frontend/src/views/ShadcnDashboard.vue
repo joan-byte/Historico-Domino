@@ -40,7 +40,7 @@ const currentView = ref<string>('default');
 
 // Vigilar los cambios de ruta para actualizar la vista automáticamente
 watch(() => route.path, (newPath) => {
-  if (newPath === '/clubes') {
+  if (newPath === '/clubes/lista') {
     // Si estamos en la lista de clubes, mostrar las tarjetas CRUD
     currentView.value = 'crud';
   } else if (newPath.includes('/clubes/crud')) {
@@ -107,7 +107,7 @@ const navigation = ref<NavSection[]>([
         isActive: true,
         children: [
           { title: 'CRUD', href: '/clubes/crud' },
-          { title: 'Lista', href: '/clubes' },
+          { title: 'Lista', href: '/clubes/lista' },
           { title: 'Estadísticas', href: '/clubes/estadisticas' }
         ]
       },
@@ -176,26 +176,6 @@ const navigation = ref<NavSection[]>([
 // Expandir/colapsar elementos de navegación
 const expandedItems = ref<string[]>(['Clubs']);
 
-// Función para navegar a la vista de Clubs y actualizar todo
-const navigateToClubs = () => {
-  // Resetear la selección de club primero
-  selectedClub.value = null;
-  
-  // Forzar la recarga del componente Clubes
-  if (route.path === '/clubes') {
-    // Si ya estamos en /clubes, refrescar con un timestamp
-    router.replace({ path: '/clubes', query: { _refresh: Date.now().toString() } });
-  } else {
-    // Si no estamos en /clubes, navegar allí
-    router.push({ path: '/clubes', query: { _refresh: Date.now().toString() } });
-  }
-  
-  // Establecer la vista a 'crud' después de la navegación
-  setTimeout(() => {
-    currentView.value = 'crud';
-  }, 50);
-};
-
 // Función separada para manejar el clic en Clubs en el sidebar
 const handleClubsClick = () => {
   // Expandir el elemento si no está expandido
@@ -203,8 +183,9 @@ const handleClubsClick = () => {
     expandedItems.value.push('Clubs');
   }
   
-  // Navegar a la vista de clubs
-  navigateToClubs();
+  // Navegar directamente a /clubes/lista
+  router.push('/clubes/lista');
+  currentView.value = 'crud';
 };
 
 // Modificar la función toggleExpand para no manejar el clic en Clubs
@@ -229,11 +210,16 @@ const getClubsChildren = (): NavItem[] => {
 
 // Función para manejar el clic en los elementos del sidebar
 const handleSidebarItemClick = (item: NavItem): void => {
-  // Si el elemento clickeado está relacionado con Clubs, cambiar a vista CRUD
-  if (item.href && (item.href === '/clubes' || item.href.includes('/clubes/'))) {
-    currentView.value = 'crud';
-  } else {
-    currentView.value = 'default';
+  // Navegar directamente a la ruta del elemento
+  if (item.href) {
+    router.push(item.href);
+    
+    // Actualizar la vista según la ruta
+    if (item.href.includes('/clubes/')) {
+      currentView.value = 'crud';
+    } else {
+      currentView.value = 'default';
+    }
   }
 };
 
@@ -355,7 +341,7 @@ const getDynamicHref = (option: any): string => {
                     :to="child.href || ''" 
                     class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                     :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
-                    @click.prevent="item.title === 'Clubs' && child.title === 'Lista' ? navigateToClubs() : handleSidebarItemClick(child)"
+                    @click="handleSidebarItemClick(child)"
                   >
                     {{ child.title }}
                   </router-link>
@@ -448,7 +434,7 @@ const getDynamicHref = (option: any): string => {
               v-for="(child, index) in getClubsChildren()" 
               :key="index" 
               class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors cursor-pointer"
-              @click="child.title === 'Lista' ? navigateToClubs() : (child.title === 'CRUD' ? currentView = 'crud' : router.push(child.href || ''))"
+              @click="handleSidebarItemClick(child)"
             >
               <div class="flex items-center justify-between mb-1">
                 <h3 class="text-sm font-medium">{{ child.title }}</h3>

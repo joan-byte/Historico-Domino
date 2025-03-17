@@ -36,17 +36,12 @@ export function useClubsManagement() {
   
   // Vigilar los cambios de ruta para actualizar la vista automáticamente
   watch(() => route.path, (newPath) => {
-    if (newPath === '/' || newPath === '/clubes' || newPath === '/clubes/') {
-      // Si estamos en la ruta raíz o en la lista de clubes, mostrar las tarjetas CRUD
-      currentView.value = 'crud';
-    } else if (newPath.includes('/clubes/crud')) {
-      // Si estamos en la vista CRUD de clubes, mantener las tarjetas CRUD
-      currentView.value = 'crud';
-    } else if (newPath.includes('/clubes')) {
-      // Si estamos en cualquier otra ruta relacionada con clubes, mantener las tarjetas CRUD
+    // Actualizar la vista basada en la ruta actual
+    if (newPath.startsWith('/clubes')) {
+      // Para todas las rutas de clubes, mostrar vista crud
       currentView.value = 'crud';
     } else {
-      // Para otras rutas, mostrar la vista predeterminada
+      // Para otras rutas, mostrar vista por defecto
       currentView.value = 'default';
     }
   }, { immediate: true });
@@ -54,7 +49,7 @@ export function useClubsManagement() {
   // Al montar el componente, configurar la vista según la ruta actual
   onMounted(() => {
     // Inicializar la vista según la ruta actual
-    if (route.path === '/' || route.path === '/clubes' || route.path.includes('/clubes/')) {
+    if (route.path.startsWith('/clubes')) {
       currentView.value = 'crud';
     }
 
@@ -75,22 +70,11 @@ export function useClubsManagement() {
   
   // Función para navegar a la vista de Clubs y actualizar todo
   const navigateToClubs = () => {
-    // Resetear la selección de club primero
+    // Resetear la selección de club
     selectedClub.value = null;
     
-    // Forzar la recarga del componente Clubes
-    if (route.path === '/clubes') {
-      // Si ya estamos en /clubes, refrescar con un timestamp
-      router.replace({ path: '/clubes', query: { _refresh: Date.now().toString() } });
-    } else {
-      // Si no estamos en /clubes, navegar allí
-      router.push({ path: '/clubes', query: { _refresh: Date.now().toString() } });
-    }
-    
-    // Establecer la vista a 'crud' después de la navegación
-    setTimeout(() => {
-      currentView.value = 'crud';
-    }, 50);
+    // Navegar a la lista de clubes
+    router.push('/clubes/lista');
   };
   
   // Opciones CRUD para mostrar en las tarjetas cuando se selecciona CRUD

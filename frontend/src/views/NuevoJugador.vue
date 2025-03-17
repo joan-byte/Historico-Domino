@@ -69,8 +69,10 @@ const cancelar = () => {
           <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
           <input 
             id="nombre" 
+            name="nombre"
             v-model="nombre" 
             type="text" 
+            autocomplete="given-name"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             placeholder="Nombre del jugador"
           />
@@ -80,8 +82,10 @@ const cancelar = () => {
           <label for="apellidos" class="block text-sm font-medium text-gray-700">Apellidos</label>
           <input 
             id="apellidos" 
+            name="apellidos"
             v-model="apellidos" 
             type="text" 
+            autocomplete="family-name"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             placeholder="Apellidos del jugador"
           />
@@ -91,8 +95,10 @@ const cancelar = () => {
           <label for="apodo" class="block text-sm font-medium text-gray-700">Apodo</label>
           <input 
             id="apodo" 
+            name="apodo"
             v-model="apodo" 
             type="text" 
+            autocomplete="nickname"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             placeholder="Apodo o alias"
           />
@@ -102,8 +108,10 @@ const cancelar = () => {
           <label for="fechaNacimiento" class="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
           <input 
             id="fechaNacimiento" 
+            name="fechaNacimiento"
             v-model="fechaNacimiento" 
             type="date" 
+            autocomplete="bday"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           />
         </div>
@@ -112,7 +120,9 @@ const cancelar = () => {
           <label for="club" class="block text-sm font-medium text-gray-700">Club</label>
           <select 
             id="club" 
+            name="club"
             v-model="club" 
+            autocomplete="organization"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
             <option value="">Seleccionar club</option>
@@ -126,7 +136,9 @@ const cancelar = () => {
           <label for="nivel" class="block text-sm font-medium text-gray-700">Nivel</label>
           <select 
             id="nivel" 
+            name="nivel"
             v-model="nivel" 
+            autocomplete="off"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
             <option value="principiante">Principiante</option>
@@ -140,8 +152,10 @@ const cancelar = () => {
           <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
           <input 
             id="telefono" 
+            name="telefono"
             v-model="telefono" 
             type="tel" 
+            autocomplete="tel"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             placeholder="Teléfono de contacto"
           />
@@ -151,8 +165,10 @@ const cancelar = () => {
           <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
           <input 
             id="email" 
+            name="email"
             v-model="email" 
             type="email" 
+            autocomplete="email"
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             placeholder="Email de contacto"
           />

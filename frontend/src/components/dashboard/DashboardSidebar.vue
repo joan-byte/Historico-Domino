@@ -33,32 +33,35 @@ const { navigateToClubs, currentView } = useClubsManagement();
 
 const router = useRouter();
 
-// Función separada para manejar el clic en Clubs en el sidebar
-const handleClubsClick = () => {
-  // Expandir el elemento si no está expandido
-  if (!isExpanded('Clubs')) {
-    toggleExpand('Clubs');
+// Función para manejar el clic en los elementos del sidebar
+const handleSidebarItemClick = (item: NavItem) => {
+  // Si el ítem tiene hijos, solo expandir/colapsar
+  if (item.children && item.children.length > 0) {
+    toggleExpand(item.title);
+    return;
   }
   
-  // Navegar a la vista de clubs
-  router.push('/clubes');
-  
-  // Establecer la vista a 'crud' de inmediato
-  currentView.value = 'crud';
+  // Si no tiene hijos, navegar a la ruta especificada
+  if (item.href) {
+    router.push(item.href);
+  }
 };
 
-// Función para manejar el clic en los elementos del sidebar
-const handleSidebarItemClick = (item: NavItem): void => {
-  // Si el elemento clickeado está relacionado con Clubs, cambiar a vista CRUD
-  if (item.href && (item.href === '/clubes' || item.href.includes('/clubes/'))) {
-    currentView.value = 'crud';
-  } else {
-    currentView.value = 'default';
+const handleChildClick = (href: string | undefined) => {
+  if (href) {
+    // Si el href es '/clubes', cambiarlo a '/clubes/lista'
+    const finalHref = href === '/clubes' ? '/clubes/lista' : href;
+    router.push(finalHref);
   }
-  
-  // Si no es un elemento que requiere navegación especial, usar router normal
-  if (item.href && !item.children?.length) {
-    router.push(item.href);
+};
+
+const handleClubsClick = () => {
+  // Expandir/colapsar el menú de Clubs
+  const clubsItem = navigation.value[0].items.find(item => item.title === 'Clubs');
+  if (clubsItem) {
+    toggleExpand('Clubs');
+    // Navegar a /clubes/crud en lugar de /clubes/lista
+    router.push('/clubes/crud');
   }
 };
 </script>
@@ -134,6 +137,7 @@ const handleSidebarItemClick = (item: NavItem): void => {
               :to="item.href || ''"
               class="flex items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
               :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
+              @click="() => handleSidebarItemClick(item)"
             >
               <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
                 <path :d="item.icon"></path>
@@ -145,10 +149,10 @@ const handleSidebarItemClick = (item: NavItem): void => {
               <router-link 
                 v-for="(child, k) in item.children" 
                 :key="`child-${k}`" 
-                :to="child.href || ''" 
+                :to="child.href === '/clubes' ? '/clubes/lista' : child.href || ''" 
                 class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                 :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
-                @click.prevent="item.title === 'Clubs' && child.title === 'Lista' ? navigateToClubs() : handleSidebarItemClick(child)"
+                @click="() => handleChildClick(child.href)"
               >
                 {{ child.title }}
               </router-link>

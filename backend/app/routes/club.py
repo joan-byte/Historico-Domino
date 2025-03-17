@@ -27,7 +27,11 @@ def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
         cp=club.cp,
         numero_club=club.numero_club,
         codigo_club=codigo_club,
-        nombre=club.nombre
+        nombre=club.nombre,
+        persona_contacto=club.persona_contacto,
+        telefono=club.telefono,
+        direccion=club.direccion,
+        email=club.email
     )
     
     try:
@@ -71,6 +75,10 @@ def actualizar_club(codigo_club: str, club_data: ClubCreate, db: Session = Depen
     club.cp = club_data.cp
     club.numero_club = club_data.numero_club
     club.codigo_club = f"{club_data.cp}{club_data.numero_club}"
+    club.persona_contacto = club_data.persona_contacto
+    club.telefono = club_data.telefono
+    club.direccion = club_data.direccion
+    club.email = club_data.email
     
     try:
         db.commit()

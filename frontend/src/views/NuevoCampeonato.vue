@@ -114,9 +114,11 @@ const actualizarFechaFin = () => {
               <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre del Campeonato *</label>
               <input 
                 id="nombre" 
+                name="nombre"
                 v-model="campeonato.nombre" 
                 type="text" 
                 required
+                autocomplete="off"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 placeholder="Ej: Campeonato Regional 2023"
               />
@@ -126,8 +128,10 @@ const actualizarFechaFin = () => {
               <label for="tipo" class="block text-sm font-medium text-gray-700">Tipo de Campeonato *</label>
               <select 
                 id="tipo" 
+                name="tipo"
                 v-model="campeonato.tipo" 
                 required
+                autocomplete="off"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               >
                 <option value="">Selecciona un tipo</option>
@@ -141,9 +145,11 @@ const actualizarFechaFin = () => {
               <label for="fechaInicio" class="block text-sm font-medium text-gray-700">Fecha de Inicio *</label>
               <input 
                 id="fechaInicio" 
+                name="fechaInicio"
                 v-model="campeonato.fechaInicio" 
                 type="date" 
                 required
+                autocomplete="off"
                 :min="fechaMinima"
                 @change="actualizarFechaFin"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -154,8 +160,10 @@ const actualizarFechaFin = () => {
               <label for="fechaFin" class="block text-sm font-medium text-gray-700">Fecha de Finalización</label>
               <input 
                 id="fechaFin" 
+                name="fechaFin"
                 v-model="campeonato.fechaFin" 
                 type="date" 
+                autocomplete="off"
                 :min="campeonato.fechaInicio || fechaMinima"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
@@ -165,8 +173,10 @@ const actualizarFechaFin = () => {
               <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
               <textarea 
                 id="descripcion" 
+                name="descripcion"
                 v-model="campeonato.descripcion" 
                 rows="3" 
+                autocomplete="off"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 placeholder="Describe el campeonato, sus objetivos y cualquier información relevante"
               ></textarea>

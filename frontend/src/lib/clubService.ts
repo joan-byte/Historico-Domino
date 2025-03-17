@@ -8,6 +8,10 @@ export interface ClubResponse {
   numero_club: string;
   codigo_club: string;
   nombre: string;
+  persona_contacto?: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
 }
 
 // Tipo para los datos para crear un Club
@@ -15,6 +19,10 @@ export interface ClubCreate {
   cp: string;
   numero_club: string;
   nombre: string;
+  persona_contacto?: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
 }
 
 // Endpoint para clubs
