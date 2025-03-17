@@ -53,18 +53,26 @@ export const apiService = {
   getAll: <T>(endpoint: string) => fetchApi<T>(endpoint),
   
   // Obtener un recurso específico por su ID
-  getById: <T>(endpoint: string, id: string | number) => fetchApi<T>(`${endpoint}/${id}`),
+  getById: <T>(endpoint: string, id: string | number) => {
+    // Eliminar la barra final del endpoint si existe
+    const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+    return fetchApi<T>(`${cleanEndpoint}/${id}`);
+  },
   
   // Crear un nuevo recurso
   create: <T>(endpoint: string, data: any) => fetchApi<T>(endpoint, 'POST', data),
   
   // Actualizar un recurso existente
-  update: <T>(endpoint: string, id: string | number, data: any) => 
-    fetchApi<T>(`${endpoint}/${id}`, 'PUT', data),
+  update: <T>(endpoint: string, id: string | number, data: any) => {
+    const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+    return fetchApi<T>(`${cleanEndpoint}/${id}`, 'PUT', data);
+  },
   
   // Eliminar un recurso
-  delete: <T>(endpoint: string, id: string | number) => 
-    fetchApi<T>(`${endpoint}/${id}`, 'DELETE'),
+  delete: <T>(endpoint: string, id: string | number) => {
+    const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+    return fetchApi<T>(`${cleanEndpoint}/${id}`, 'DELETE');
+  },
 
   // Método personalizado para endpoint específico
   custom: <T>(endpoint: string, method: string = 'GET', data: any = null) => 

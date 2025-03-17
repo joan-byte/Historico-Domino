@@ -1,96 +1,56 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ShadcnDashboard from '../views/ShadcnDashboard.vue'
-import Jugadores from '../views/Jugadores.vue'
 import Clubes from '../views/Clubes.vue'
-import Partidas from '../views/Partidas.vue'
-import Estadisticas from '../views/Estadisticas.vue'
 import Home from '../views/Home.vue'
+import DashboardLayout from '../components/dashboard/DashboardLayout.vue'
+import { h } from 'vue'
+import { RouterView } from 'vue-router'
 
 // Definición de rutas
 const routes = [
   {
     path: '/',
-    component: ShadcnDashboard, // ShadcnDashboard es ahora el layout principal
+    component: DashboardLayout,
     children: [
       {
         path: '',
-        name: 'home',
-        component: Home
+        redirect: '/clubes'
       },
       {
-        path: 'jugadores',
-        name: 'jugadores',
-        component: Jugadores
+        path: '/clubes',
+        component: Clubes,
+        name: 'ClubesRoot',
       },
       {
-        path: 'jugadores/nuevo',
-        name: 'nuevo-jugador',
-        component: () => import('../views/NuevoJugador.vue')
-      },
-      {
-        path: 'jugadores/estadisticas',
-        name: 'estadisticas-jugadores',
-        component: () => import('../views/EstadisticasJugadores.vue')
-      },
-      {
-        path: 'clubes',
-        name: 'clubes',
-        component: Clubes
-      },
-      {
-        path: 'clubes/crud',
-        name: 'crud-clubes',
+        path: '/clubes/crud',
+        name: 'CrudClubes',
         component: () => import('../views/CrudClubs.vue')
       },
       {
-        path: 'clubes/nuevo',
-        name: 'nuevo-club',
+        path: '/clubes/crear',
+        name: 'CrearClub',
         component: () => import('../views/NuevoClub.vue')
       },
       {
-        path: 'clubes/estadisticas',
-        name: 'estadisticas-clubes',
+        path: '/clubes/modificar/:codigoClub?',
+        name: 'ModificarClub',
+        component: () => import('../views/ModificarClub.vue'),
+        props: true
+      },
+      {
+        path: '/clubes/eliminar/:codigoClub?',
+        name: 'EliminarClub',
+        component: () => import('../views/EliminarClub.vue'),
+        props: true
+      },
+      {
+        path: '/clubes/estadisticas',
+        name: 'Estadisticas',
         component: () => import('../views/EstadisticasClubes.vue')
       },
       {
-        path: 'campeonato',
-        name: 'campeonato',
-        component: () => import('../views/Campeonato.vue')
-      },
-      {
-        path: 'campeonato/nuevo',
-        name: 'nuevo-campeonato',
-        component: () => import('../views/NuevoCampeonato.vue')
-      },
-      {
-        path: 'campeonato/estadisticas',
-        name: 'estadisticas-campeonato',
-        component: () => import('../views/EstadisticasCampeonato.vue')
-      },
-      {
-        path: 'resultados',
-        name: 'resultados',
-        component: () => import('../views/Resultados.vue')
-      },
-      {
-        path: 'resultados/nuevo',
-        name: 'nuevo-resultado',
-        component: () => import('../views/NuevoResultado.vue')
-      },
-      {
-        path: 'resultados/estadisticas',
-        name: 'estadisticas-resultados',
-        component: () => import('../views/EstadisticasResultados.vue')
-      },
-      {
-        path: 'partidas',
-        name: 'partidas',
-        component: Partidas
-      },
-      {
-        path: 'estadisticas',
-        name: 'estadisticas',
-        component: Estadisticas
+        path: '/clubes/lista',
+        name: 'ClubesLista',
+        component: Clubes
       }
     ]
   }
@@ -98,7 +58,7 @@ const routes = [
 
 // Creación del router
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL || '/'),
   routes
 })
 

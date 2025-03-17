@@ -56,6 +56,30 @@ def obtener_club(codigo_club: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Club no encontrado")
     return club
 
+@router.put("/{codigo_club}", response_model=ClubResponse)
+def actualizar_club(codigo_club: str, club_data: ClubCreate, db: Session = Depends(get_db)):
+    """
+    Actualizar un club existente
+    """
+    # Buscar el club
+    club = db.query(Club).filter(Club.codigo_club == codigo_club).first()
+    if not club:
+        raise HTTPException(status_code=404, detail="Club no encontrado")
+    
+    # Actualizar los campos
+    club.nombre = club_data.nombre
+    club.cp = club_data.cp
+    club.numero_club = club_data.numero_club
+    club.codigo_club = f"{club_data.cp}{club_data.numero_club}"
+    
+    try:
+        db.commit()
+        db.refresh(club)
+        return club
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.delete("/{codigo_club}", response_model=ClubResponse)
 def eliminar_club(codigo_club: str, db: Session = Depends(get_db)):
     """

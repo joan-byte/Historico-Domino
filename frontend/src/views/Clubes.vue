@@ -1,7 +1,7 @@
 <!-- Vista de Clubes - Muestra la lista de clubs y permite operaciones CRUD -->
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, ref, watch, inject, onUnmounted, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useClubs } from '../composables/useClubs';
 import { usePagination } from '../composables/usePagination';
 import StatusMessage from '../components/ui/StatusMessage.vue';
@@ -10,9 +10,19 @@ import DataTable from '../components/ui/DataTable.vue';
 import type { ClubResponse } from '../lib/clubService';
 
 const router = useRouter();
-const { clubs, isLoading, error, fetchClubs, deleteClub, sortedClubs } = useClubs();
-const showDeleteModal = ref(false);
-const clubToDelete = ref<ClubResponse | null>(null);
+const route = useRoute();
+const { clubs, isLoading, error, fetchClubs, sortedClubs } = useClubs();
+const selectedClub = ref<ClubResponse | null>(null);
+
+// Emitir el club seleccionado para que el dashboard pueda destacar las tarjetas correspondientes
+// Esto asume que el dashboard está escuchando este evento o usando un estado global
+const emitSelectedClub = (club: ClubResponse | null) => {
+  // Usar algún mecanismo para comunicar con el componente padre
+  // Por ejemplo, un evento personalizado o estado global
+  window.dispatchEvent(new CustomEvent('club-selected', { 
+    detail: club 
+  }));
+};
 
 // Configurar paginación
 const { 
@@ -53,6 +63,11 @@ const columns = [
     field: 'numero_club',
     header: 'Número',
     sortable: true
+  },
+  {
+    field: 'acciones',
+    header: 'Acciones',
+    sortable: false
   }
 ];
 
@@ -61,75 +76,321 @@ onMounted(() => {
   fetchClubs();
 });
 
-// Navegar a la página de creación de club
-const navigateToCreate = () => {
-  router.push('/clubes/nuevo');
-};
-
-// Abrir el modal de confirmación para eliminar un club
-const confirmDelete = (club: ClubResponse) => {
-  clubToDelete.value = club;
-  showDeleteModal.value = true;
-};
-
-// Eliminar un club
-const handleDeleteClub = async () => {
-  if (!clubToDelete.value) return;
+// Manejar el clic en una fila
+const handleRowClick = (club: ClubResponse) => {
+  // Si venimos de la ruta CRUD y queremos editar
+  if (route.query.action === 'edit') {
+    router.push(`/clubes/modificar/${club.codigo_club}`);
+    return;
+  }
   
-  try {
-    await deleteClub(clubToDelete.value.codigo_club);
-    showDeleteModal.value = false;
-    clubToDelete.value = null;
-  } catch (err) {
-    // El error ya está manejado en el composable
+  // Comportamiento normal de selección
+  if (selectedClub.value && selectedClub.value.codigo_club === club.codigo_club) {
+    selectedClub.value = null;
+    emitSelectedClub(null);
+  } else {
+    selectedClub.value = club;
+    emitSelectedClub(club);
   }
 };
 
-// Cancelar la eliminación
-const cancelDelete = () => {
-  showDeleteModal.value = false;
-  clubToDelete.value = null;
+// Verificar si una fila está seleccionada
+const isRowSelected = (club: ClubResponse): boolean => {
+  return selectedClub.value?.codigo_club === club.codigo_club;
 };
 
-// Manejar el clic en una fila
-const handleRowClick = (club: ClubResponse) => {
-  // Navegar a la vista de detalle del club o implementar otra lógica
-  console.log('Club seleccionado:', club);
+// Limpiar la selección cuando se desmonta el componente
+onUnmounted(() => {
+  selectedClub.value = null;
+  emitSelectedClub(null);
+});
+
+// Definiciones para las tarjetas CRUD
+interface CrudOption {
+  title: string;
+  description: string;
+  icon: string;
+  route: string;
+  color: string;
+  buttonText?: string;
+  disabled?: boolean;
+}
+
+// Opciones CRUD para las tarjetas superiores
+const crudCardOptions: CrudOption[] = [
+  {
+    title: 'CRUD',
+    description: 'Gestionar operaciones CRUD de clubs',
+    icon: 'document',
+    route: '/clubes/crud',
+    color: 'bg-green-100 text-green-800 border-green-300'
+  },
+  {
+    title: 'Lista',
+    description: 'Ver todos los clubs registrados',
+    icon: 'list',
+    route: '/clubes/lista',
+    color: 'bg-blue-100 text-blue-800 border-blue-300'
+  },
+  {
+    title: 'Estadísticas',
+    description: 'Ver métricas y estadísticas de clubs',
+    icon: 'chart',
+    route: '/clubes/estadisticas',
+    color: 'bg-purple-100 text-purple-800 border-purple-300'
+  }
+];
+
+// Función para navegar
+const navigateTo = (route: string): void => {
+  console.log('Navegando a: ', route);
+  router.push(route);
+};
+
+// Función para cambiar de página
+const changePage = (page: number) => {
+  goToPage(page);
+};
+
+// Determinar si estamos en la ruta principal de clubes o una subruta
+const isRootRoute = computed(() => {
+  return route.path === '/clubes' || route.path === '/clubes/';
+});
+
+const isCrudRoute = computed(() => {
+  // Detección más robusta de la ruta CRUD, considerando posibles variaciones
+  return route.path === '/clubes/crud' || route.path === '/clubes/crud/';
+});
+
+const isListRoute = computed(() => {
+  return route.path === '/clubes/lista';
+});
+
+// Mostrar la vista principal si estamos en la ruta principal o en la ruta CRUD
+const showMainView = computed(() => {
+  return isRootRoute.value || isCrudRoute.value;
+});
+
+// Actualizar colores y textos de botones en las tarjetas CRUD basados en el club seleccionado
+const mainCrudOptionsWithState = computed(() => {
+  console.log('Recalculando opciones, ruta actual:', route.path, 'Es ruta CRUD:', isCrudRoute.value);
+  
+  // Si estamos en la ruta CRUD, mostrar Crear, Editar y Eliminar
+  if (isCrudRoute.value) {
+    return [
+      {
+        title: 'Crear Club',
+        description: 'Añadir un nuevo club a la base de datos',
+        icon: 'plus',
+        route: '/clubes/crear',
+        color: 'bg-green-100 text-green-800 border-green-300',
+        buttonText: 'Ir a crear'
+      },
+      {
+        title: 'Editar Club',
+        description: 'Modificar información de un club existente',
+        icon: 'edit',
+        route: '/clubes/editar',
+        color: 'bg-blue-100 text-blue-800 border-blue-300',
+        buttonText: 'Ir a editar'
+      },
+      {
+        title: 'Eliminar Club',
+        description: 'Eliminar un club de la base de datos',
+        icon: 'trash',
+        route: '/clubes/eliminar',
+        color: 'bg-red-100 text-red-800 border-red-300',
+        buttonText: 'Ir a eliminar'
+      }
+    ];
+  }
+  // Para la ruta principal, mantener las opciones originales
+  return [
+    {
+      title: 'Crear',
+      description: 'Añadir un nuevo club a la base de datos',
+      icon: 'plus',
+      route: '/clubes/crear',
+      color: 'bg-green-100 text-green-800 border-green-300',
+      buttonText: 'Ir a crear'
+    },
+    {
+      title: 'Ver los clubs',
+      description: 'Ver todos los clubs registrados',
+      icon: 'list',
+      route: '/clubes/lista',
+      color: 'bg-blue-100 text-blue-800 border-blue-300',
+      buttonText: 'Ver todos los clubs'
+    },
+    {
+      title: 'Estadísticas de clubs',
+      description: 'Ver métricas y estadísticas de clubs',
+      icon: 'chart',
+      route: '/clubes/estadisticas',
+      color: 'bg-purple-100 text-purple-800 border-purple-300',
+      buttonText: 'Ver estadísticas'
+    }
+  ];
+});
+
+// Función para editar un club
+const editarClub = (club: ClubResponse) => {
+  router.push(`/clubes/modificar/${club.codigo_club}`);
+};
+
+// Función para eliminar un club
+const eliminarClub = (club: ClubResponse) => {
+  router.push(`/clubes/eliminar/${club.codigo_club}`);
+};
+
+// Función para obtener la clase de fila basada en el contexto
+const getRowClass = (item: ClubResponse): string => {
+  if (route.query.action === 'edit') {
+    return isRowSelected(item) ? 'bg-blue-50' : '';
+  }
+  return '';
 };
 </script>
 
 <template>
-  <div class="container mx-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold">Clubes</h1>
-      <button 
-        @click="navigateToCreate"
-        class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
-      >
-        Nuevo Club
-      </button>
-    </div>
-
-    <!-- Usar el componente StatusMessage para errores y carga -->
-    <StatusMessage
-      type="error"
-      :show="!!error"
-      :message="error || ''"
-    />
-    
-    <StatusMessage
-      type="loading"
-      :show="isLoading"
-      message="Cargando clubes..."
-    />
-
-    <!-- Usar el componente DataTable para mostrar los datos -->
-    <div v-if="!isLoading" class="bg-white shadow-sm rounded-lg overflow-hidden">
-      <div v-if="clubs.length === 0" class="p-8 text-center text-gray-500">
-        No hay clubes registrados. Haga clic en "Nuevo Club" para agregar uno.
+  <div class="space-y-6">
+    <!-- Vista principal - muestra opciones de CRUD cuando estamos en la ruta principal o CRUD -->
+    <div v-if="showMainView" class="container mx-auto">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold">Gestión de Clubs</h1>
+        <p class="text-gray-600">Selecciona una operación para administrar los clubs</p>
       </div>
       
-      <div v-else>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Si estamos en la ruta /clubes/crud, mostrar las tarjetas CRUD específicas -->
+        <template v-if="route.path.includes('/clubes/crud')">
+          <div 
+            v-for="(option, index) in [
+              {
+                title: 'Crear Club',
+                description: 'Añadir un nuevo club a la base de datos',
+                icon: 'plus',
+                route: '/clubes/crear',
+                color: 'bg-green-100 text-green-800 border-green-300',
+                buttonText: 'Ir a crear'
+              },
+              {
+                title: 'Editar Club',
+                description: 'Modificar información de un club existente',
+                icon: 'edit',
+                route: '/clubes/editar',
+                color: 'bg-blue-100 text-blue-800 border-blue-300',
+                buttonText: 'Ir a editar'
+              },
+              {
+                title: 'Eliminar Club',
+                description: 'Eliminar un club de la base de datos',
+                icon: 'trash',
+                route: '/clubes/eliminar',
+                color: 'bg-red-100 text-red-800 border-red-300',
+                buttonText: 'Ir a eliminar'
+              }
+            ]" 
+            :key="index" 
+            class="border rounded-lg shadow-sm p-4 cursor-pointer transition-all hover:shadow-md relative"
+            :class="option.color"
+            @click="navigateTo(option.route)"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-medium">{{ option.title }}</h3>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <path 
+                  :d="option.icon === 'plus' 
+                    ? 'M12 4v16m8-8H4' 
+                    : option.icon === 'edit' 
+                    ? 'M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' 
+                    : option.icon === 'trash' 
+                    ? 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' 
+                    : option.icon === 'list' 
+                    ? 'M4 6h16M4 10h16M4 14h16M4 18h16' 
+                    : 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z'"
+                />
+              </svg>
+            </div>
+            <div class="text-xs text-gray-600 mb-8">
+              {{ option.description }}
+            </div>
+            <div class="absolute bottom-3 left-4 right-4">
+              <router-link :to="option.route" class="text-xs text-blue-500 hover:underline">
+                {{ option.buttonText }}
+              </router-link>
+            </div>
+          </div>
+        </template>
+        
+        <!-- Para otras rutas, mostrar las tarjetas originales -->
+        <template v-else>
+          <div 
+            v-for="(option, index) in mainCrudOptionsWithState" 
+            :key="index" 
+            class="border rounded-lg shadow-sm p-4 cursor-pointer transition-all hover:shadow-md relative"
+            :class="option.color"
+            @click="navigateTo(option.route)"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-medium">{{ option.title }}</h3>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <path 
+                  :d="option.icon === 'plus' 
+                    ? 'M12 4v16m8-8H4' 
+                    : option.icon === 'edit' 
+                    ? 'M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' 
+                    : option.icon === 'trash' 
+                    ? 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' 
+                    : option.icon === 'list' 
+                    ? 'M4 6h16M4 10h16M4 14h16M4 18h16' 
+                    : 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z'"
+                />
+              </svg>
+            </div>
+            <div class="text-xs text-gray-600 mb-8">
+              {{ option.description }}
+            </div>
+            <div class="absolute bottom-3 left-4 right-4">
+              <router-link :to="option.route" class="text-xs text-blue-500 hover:underline">
+                {{ option.buttonText }}
+              </router-link>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Vista de lista de clubes -->
+    <div v-else-if="isListRoute" class="space-y-4">
+      <!-- Título dinámico según el contexto -->
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-semibold">
+          {{ route.query.action === 'edit' ? 'Elige el club a editar' : 'Lista de Clubes' }}
+        </h1>
+        <!-- Mostrar instrucciones adicionales si estamos en modo edición -->
+        <p v-if="route.query.action === 'edit'" class="text-sm text-gray-600">
+          Haz clic en un club para editarlo
+        </p>
+      </div>
+      
+      <!-- Mensajes de estado -->
+      <StatusMessage
+        type="error"
+        :show="!!error"
+        :message="error || ''"
+        class="mb-4"
+      />
+      
+      <StatusMessage
+        type="loading"
+        :show="isLoading"
+        message="Cargando clubes..."
+        class="mb-4"
+      />
+      
+      <!-- Tabla de datos -->
+      <div class="rounded-md border">
         <DataTable 
           :items="paginatedItems" 
           :columns="columns" 
@@ -138,29 +399,43 @@ const handleRowClick = (club: ClubResponse) => {
           initial-sort-field="nombre"
           initial-sort-direction="asc"
           @row-click="handleRowClick"
+          :row-class="(item: ClubResponse) => getRowClass(item)"
         >
-          <!-- Slot para las acciones por fila -->
-          <template #row-actions="{ item }">
-            <td class="px-6 py-4 whitespace-nowrap text-center">
-              <button 
-                @click.stop="confirmDelete(item)"
-                class="text-red-600 hover:text-red-900 inline-flex items-center"
+          <!-- Solo mostrar acciones si no estamos en modo edición -->
+          <template #cell(acciones)="{ item }">
+            <div v-if="!route.query.action" class="flex gap-2">
+              <button
+                @click.stop="editarClub(item)"
+                class="p-1 text-blue-600 hover:bg-blue-100 rounded-full"
+                title="Editar club"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5 mr-1">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                 </svg>
-                Eliminar
               </button>
-            </td>
+              <button
+                @click.stop="eliminarClub(item)"
+                class="p-1 text-red-600 hover:bg-red-100 rounded-full"
+                title="Eliminar club"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </div>
+            <!-- En modo edición, mostrar un indicador visual -->
+            <div v-else class="text-sm text-gray-500">
+              Clic para editar
+            </div>
           </template>
-          
-          <!-- Mensaje cuando no hay datos -->
           <template #empty>
             No hay clubes que coincidan con los criterios de búsqueda.
           </template>
         </DataTable>
-        
-        <!-- Usar el componente de paginación -->
+      </div>
+      
+      <!-- Paginación -->
+      <div class="flex justify-center mt-4">
         <Pagination
           v-if="clubs.length > 0"
           :current-page="currentPage"
@@ -181,49 +456,8 @@ const handleRowClick = (club: ClubResponse) => {
       </div>
     </div>
 
-    <!-- Modal de confirmación para eliminar -->
-    <div v-if="showDeleteModal" class="fixed z-10 inset-0 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full shadow-xl overflow-hidden">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">
-                  Eliminar Club
-                </h3>
-                <div class="mt-2">
-                  <p class="text-sm text-gray-500">
-                    ¿Está seguro que desea eliminar el club "{{ clubToDelete?.nombre }}"? Esta acción no se puede deshacer.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              type="button" 
-              @click="handleDeleteClub" 
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              Eliminar
-            </button>
-            <button 
-              type="button" 
-              @click="cancelDelete" 
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Vista alternativa cuando no estamos en la ruta principal ni en la lista -->
+    <router-view v-else />
   </div>
 </template>
 

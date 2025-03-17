@@ -19,28 +19,33 @@ const crudOptions: CrudOption[] = [
     title: 'Crear Club',
     description: 'Registrar un nuevo club en el sistema',
     icon: 'M12 4v16m8-8H4',
-    route: '/clubes/nuevo',
+    route: '/clubes/crear',
     color: 'bg-green-100 text-green-800 border-green-200'
   },
   {
-    title: 'Ver Clubs',
-    description: 'Lista de todos los clubs registrados',
-    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-    route: '/clubes',
+    title: 'Editar Club',
+    description: 'Seleccionar un club de la lista para modificar',
+    icon: 'M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z',
+    route: '/clubes/lista',
     color: 'bg-blue-100 text-blue-800 border-blue-200'
   },
   {
-    title: 'Estadísticas',
-    description: 'Ver métricas y estadísticas de clubs',
-    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-    route: '/clubes/estadisticas',
-    color: 'bg-purple-100 text-purple-800 border-purple-200'
+    title: 'Eliminar Club',
+    description: 'Eliminar un club de la base de datos',
+    icon: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+    route: '/clubes/eliminar',
+    color: 'bg-red-100 text-red-800 border-red-200'
   }
 ];
 
 // Navegar a la ruta seleccionada
 const navigateTo = (route: string): void => {
-  router.push(route);
+  // Si la ruta es la lista y venimos del botón de editar, añadir query parameter
+  if (route === '/clubes/lista') {
+    router.push({ path: route, query: { action: 'edit' } });
+  } else {
+    router.push(route);
+  }
 };
 </script>
 

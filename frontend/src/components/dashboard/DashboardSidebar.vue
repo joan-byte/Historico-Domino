@@ -1,0 +1,175 @@
+<script setup lang="ts">
+// Componente de la barra lateral del dashboard
+import { useNavigation, type NavItem } from '@/composables/useNavigation';
+import { useRouter } from 'vue-router';
+import { useClubsManagement } from '@/composables/useClubsManagement';
+
+// Propiedades para el componente
+interface Props {
+  company: {
+    name: string;
+    plan: string;
+  };
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+}
+
+const props = defineProps<Props>();
+
+// Obtener las funciones de navegación
+const {
+  isOpen,
+  navigation,
+  toggleSidebar,
+  toggleExpand,
+  isExpanded
+} = useNavigation();
+
+// Obtener funciones específicas de clubes
+const { navigateToClubs, currentView } = useClubsManagement();
+
+const router = useRouter();
+
+// Función separada para manejar el clic en Clubs en el sidebar
+const handleClubsClick = () => {
+  // Expandir el elemento si no está expandido
+  if (!isExpanded('Clubs')) {
+    toggleExpand('Clubs');
+  }
+  
+  // Navegar a la vista de clubs
+  router.push('/clubes');
+  
+  // Establecer la vista a 'crud' de inmediato
+  currentView.value = 'crud';
+};
+
+// Función para manejar el clic en los elementos del sidebar
+const handleSidebarItemClick = (item: NavItem): void => {
+  // Si el elemento clickeado está relacionado con Clubs, cambiar a vista CRUD
+  if (item.href && (item.href === '/clubes' || item.href.includes('/clubes/'))) {
+    currentView.value = 'crud';
+  } else {
+    currentView.value = 'default';
+  }
+  
+  // Si no es un elemento que requiere navegación especial, usar router normal
+  if (item.href && !item.children?.length) {
+    router.push(item.href);
+  }
+};
+</script>
+
+<template>
+  <!-- Sidebar -->
+  <div
+    class="h-full flex flex-col border-r bg-[#fafafa] transition-all duration-300"
+    :class="{ 'w-52': isOpen, 'w-10': !isOpen }"
+  >
+    <!-- Logo y nombre de la empresa -->
+    <div class="flex h-8 items-center border-b px-2">
+      <div class="flex items-center gap-1">
+        <div class="flex h-5 w-5 items-center justify-center rounded-md bg-white border border-gray-300 text-[10px] font-medium overflow-hidden">
+          <!-- Ficha de dominó estilizada (6-6) -->
+          <svg viewBox="0 0 24 36" width="12" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Borde de la ficha -->
+            <rect x="2" y="2" width="20" height="32" rx="3" fill="none" stroke="black" stroke-width="1.5" />
+            
+            <!-- Línea divisoria horizontal -->
+            <line x1="2" y1="18" x2="22" y2="18" stroke="black" stroke-width="1" />
+            
+            <!-- Puntos - Lado superior (6 puntos en 2 columnas) -->
+            <circle cx="7.5" cy="6" r="1.2" fill="black" />
+            <circle cx="7.5" cy="11" r="1.2" fill="black" />
+            <circle cx="7.5" cy="16" r="1.2" fill="black" />
+            
+            <circle cx="16.5" cy="6" r="1.2" fill="black" />
+            <circle cx="16.5" cy="11" r="1.2" fill="black" />
+            <circle cx="16.5" cy="16" r="1.2" fill="black" />
+            
+            <!-- Puntos - Lado inferior (6 puntos en 2 columnas) -->
+            <circle cx="7.5" cy="20" r="1.2" fill="black" />
+            <circle cx="7.5" cy="25" r="1.2" fill="black" />
+            <circle cx="7.5" cy="30" r="1.2" fill="black" />
+            
+            <circle cx="16.5" cy="20" r="1.2" fill="black" />
+            <circle cx="16.5" cy="25" r="1.2" fill="black" />
+            <circle cx="16.5" cy="30" r="1.2" fill="black" />
+          </svg>
+        </div>
+        <div v-if="isOpen" class="flex flex-col ml-1">
+          <span class="text-[11px] font-medium leading-tight">{{ company.name }}</span>
+          <span class="text-[9px] text-gray-500 leading-tight">{{ company.plan }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegación -->
+    <div class="flex-1 overflow-auto py-2">
+      <div v-for="(section, i) in navigation" :key="`section-${i}`" class="px-2 py-1">
+        <h3 v-if="isOpen" class="mb-1 px-1 text-[9px] font-semibold text-gray-500">
+          {{ section.title }}
+        </h3>
+        <div class="space-y-1">
+          <div v-for="(item, j) in section.items" :key="`item-${j}`">
+            <button
+              v-if="item.children && item.children.length > 0"
+              class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
+              :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
+              @click="item.title === 'Clubs' ? handleClubsClick() : toggleExpand(item.title)"
+            >
+              <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                <path :d="item.icon"></path>
+              </svg>
+              <span v-if="isOpen" class="flex-1 text-left truncate">{{ item.title }}</span>
+              <svg v-if="isOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="ml-auto h-3 w-3" :class="{ 'rotate-180': isExpanded(item.title) }">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <router-link
+              v-else
+              :to="item.href || ''"
+              class="flex items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
+              :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
+            >
+              <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                <path :d="item.icon"></path>
+              </svg>
+              <span v-if="isOpen" class="truncate">{{ item.title }}</span>
+            </router-link>
+            <!-- Subelementos -->
+            <div v-if="item.children && item.children.length > 0 && isExpanded(item.title) && isOpen" class="mt-1 ml-5 space-y-1">
+              <router-link 
+                v-for="(child, k) in item.children" 
+                :key="`child-${k}`" 
+                :to="child.href || ''" 
+                class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
+                :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
+                @click.prevent="item.title === 'Clubs' && child.title === 'Lista' ? navigateToClubs() : handleSidebarItemClick(child)"
+              >
+                {{ child.title }}
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información del usuario -->
+    <div class="mt-auto border-t p-2">
+      <div v-if="isOpen" class="flex items-center gap-2">
+        <img :src="user.avatar" alt="Avatar" class="h-5 w-5 rounded-full" />
+        <div class="flex flex-col">
+          <span class="text-[10px] font-medium leading-tight">{{ user.name }}</span>
+          <span class="text-[9px] text-gray-500 leading-tight">{{ user.email }}</span>
+        </div>
+      </div>
+      <div v-else class="flex justify-center">
+        <img :src="user.avatar" alt="Avatar" class="h-5 w-5 rounded-full" />
+      </div>
+    </div>
+  </div>
+</template> 

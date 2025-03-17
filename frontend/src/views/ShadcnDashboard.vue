@@ -1,6 +1,16 @@
 <script setup lang="ts">
 // Vista con diseño de Shadcn
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+// Definir la interfaz para el club
+interface Club {
+  codigo_club: string;
+  nombre: string;
+  cp?: string;
+  numero_club?: string;
+  [key: string]: any;
+}
 
 // Información de la empresa
 const company = {
@@ -17,6 +27,55 @@ const user = {
 
 // Estado para controlar si el sidebar está abierto
 const isOpen = ref(true);
+
+// Estado para almacenar el club seleccionado desde la vista Clubes
+const selectedClub = ref<Club | null>(null);
+
+// Obtener la ruta actual y el router para la navegación
+const route = useRoute();
+const router = useRouter();
+
+// Estado para controlar la vista actual
+const currentView = ref<string>('default');
+
+// Vigilar los cambios de ruta para actualizar la vista automáticamente
+watch(() => route.path, (newPath) => {
+  if (newPath === '/clubes') {
+    // Si estamos en la lista de clubes, mostrar las tarjetas CRUD
+    currentView.value = 'crud';
+  } else if (newPath.includes('/clubes/crud')) {
+    // Si estamos en la vista CRUD de clubes, mantener las tarjetas CRUD
+    currentView.value = 'crud';
+  } else if (newPath.includes('/clubes')) {
+    // Si estamos en cualquier otra ruta relacionada con clubes, mantener las tarjetas CRUD
+    currentView.value = 'crud';
+  } else {
+    // Para otras rutas, mostrar la vista predeterminada
+    currentView.value = 'default';
+  }
+}, { immediate: true });
+
+// Al montar el componente, configurar la vista según la ruta actual
+onMounted(() => {
+  // Inicializar la vista según la ruta actual
+  if (route.path === '/clubes' || route.path.includes('/clubes/')) {
+    currentView.value = 'crud';
+  }
+
+  // Escuchar el evento personalizado cuando se selecciona un club
+  window.addEventListener('club-selected', handleClubSelected);
+});
+
+// Limpiar los event listeners al desmontar
+onUnmounted(() => {
+  window.removeEventListener('club-selected', handleClubSelected);
+});
+
+// Función para manejar el evento de selección de club
+const handleClubSelected = (event: Event) => {
+  const customEvent = event as CustomEvent;
+  selectedClub.value = customEvent.detail as Club | null;
+};
 
 // Función para alternar el estado del sidebar
 const toggleSidebar = () => {
@@ -117,20 +176,44 @@ const navigation = ref<NavSection[]>([
 // Expandir/colapsar elementos de navegación
 const expandedItems = ref<string[]>(['Clubs']);
 
-// Estado para controlar la vista actual
-const currentView = ref<string>('default');
+// Función para navegar a la vista de Clubs y actualizar todo
+const navigateToClubs = () => {
+  // Resetear la selección de club primero
+  selectedClub.value = null;
+  
+  // Forzar la recarga del componente Clubes
+  if (route.path === '/clubes') {
+    // Si ya estamos en /clubes, refrescar con un timestamp
+    router.replace({ path: '/clubes', query: { _refresh: Date.now().toString() } });
+  } else {
+    // Si no estamos en /clubes, navegar allí
+    router.push({ path: '/clubes', query: { _refresh: Date.now().toString() } });
+  }
+  
+  // Establecer la vista a 'crud' después de la navegación
+  setTimeout(() => {
+    currentView.value = 'crud';
+  }, 50);
+};
 
+// Función separada para manejar el clic en Clubs en el sidebar
+const handleClubsClick = () => {
+  // Expandir el elemento si no está expandido
+  if (!isExpanded('Clubs')) {
+    expandedItems.value.push('Clubs');
+  }
+  
+  // Navegar a la vista de clubs
+  navigateToClubs();
+};
+
+// Modificar la función toggleExpand para no manejar el clic en Clubs
 const toggleExpand = (title: string): void => {
   const index = expandedItems.value.indexOf(title);
   if (index === -1) {
     expandedItems.value.push(title);
   } else {
     expandedItems.value.splice(index, 1);
-  }
-  
-  // Restablecer la vista cuando se hace clic en Clubs
-  if (title === 'Clubs') {
-    currentView.value = 'default';
   }
 };
 
@@ -146,8 +229,8 @@ const getClubsChildren = (): NavItem[] => {
 
 // Función para manejar el clic en los elementos del sidebar
 const handleSidebarItemClick = (item: NavItem): void => {
-  // Si el elemento clickeado es CRUD dentro de Clubs, cambiar la vista
-  if (item.title === 'CRUD' && item.href && item.href.includes('/clubes')) {
+  // Si el elemento clickeado está relacionado con Clubs, cambiar a vista CRUD
+  if (item.href && (item.href === '/clubes' || item.href.includes('/clubes/'))) {
     currentView.value = 'crud';
   } else {
     currentView.value = 'default';
@@ -157,24 +240,32 @@ const handleSidebarItemClick = (item: NavItem): void => {
 // Opciones CRUD para mostrar en las tarjetas cuando se selecciona CRUD
 const crudOptions = [
   { 
-    title: 'Crear', 
-    href: '/clubes/crear', 
-    description: 'Añadir un nuevo club a la base de datos',
-    icon: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>'
+    title: 'CRUD',
+    href: '/clubes/crud',
+    description: 'Gestionar operaciones CRUD de clubs',
+    icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+    color: 'bg-green-100 text-green-800 border-green-300'
   },
   { 
-    title: 'Modificar', 
-    href: '/clubes/modificar', 
-    description: 'Editar información de clubs existentes',
-    icon: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>'
+    title: 'Lista',
+    href: '/clubes/lista', 
+    description: 'Ver todos los clubs registrados',
+    icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+    color: 'bg-blue-100 text-blue-800 border-blue-300'
   },
   { 
-    title: 'Eliminar', 
-    href: '/clubes/eliminar', 
-    description: 'Eliminar clubs del sistema',
-    icon: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>'
+    title: 'Estadísticas',
+    href: '/clubes/estadisticas', 
+    description: 'Ver métricas y estadísticas de clubs',
+    icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+    color: 'bg-purple-100 text-purple-800 border-purple-300'
   }
 ];
+
+// Función para obtener el href dinámico basado en la opción seleccionada
+const getDynamicHref = (option: any): string => {
+  return option.href || '';
+};
 </script>
 
 <template>
@@ -235,7 +326,7 @@ const crudOptions = [
                   v-if="item.children && item.children.length > 0"
                   class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
                   :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
-                  @click="toggleExpand(item.title)"
+                  @click="item.title === 'Clubs' ? handleClubsClick() : toggleExpand(item.title)"
                 >
                   <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
                     <path :d="item.icon"></path>
@@ -264,7 +355,7 @@ const crudOptions = [
                     :to="child.href || ''" 
                     class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                     :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
-                    @click="handleSidebarItemClick(child)"
+                    @click.prevent="item.title === 'Clubs' && child.title === 'Lista' ? navigateToClubs() : handleSidebarItemClick(child)"
                   >
                     {{ child.title }}
                   </router-link>
@@ -323,56 +414,62 @@ const crudOptions = [
         <!-- Contenido principal -->
         <div class="flex flex-col gap-4 p-4 overflow-auto">
           <!-- Tarjetas en la parte superior - Cambian según la vista -->
-          <div class="grid grid-cols-3 gap-4">
+          <div v-if="currentView === 'crud'" class="grid grid-cols-3 gap-4">
             <!-- Tarjetas para la vista CRUD -->
-            <template v-if="currentView === 'crud'">
-              <router-link 
-                v-for="(option, index) in crudOptions" 
-                :key="index" 
-                :to="option.href" 
-                class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors"
-              >
-                <div class="flex items-center justify-between mb-1">
-                  <h3 class="text-sm font-medium">{{ option.title }}</h3>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-                    <g v-html="option.icon"></g>
-                  </svg>
-                </div>
-                <div class="text-xs text-gray-600 mb-1">
-                  {{ option.description }}
-                </div>
-                <div class="flex justify-between mt-auto">
-                  <span class="text-xs text-blue-500">Ir a {{ option.title.toLowerCase() }}</span>
-                </div>
-              </router-link>
-            </template>
-            
-            <!-- Tarjetas para la vista predeterminada (hijos de Clubs) -->
-            <template v-else>
-              <router-link 
-                v-for="(child, index) in getClubsChildren()" 
-                :key="index" 
-                :to="child.href || ''" 
-                class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors"
-                @click="child.title === 'CRUD' ? handleSidebarItemClick(child) : null"
-              >
-                <div class="flex items-center justify-between mb-1">
-                  <h3 class="text-sm font-medium">{{ child.title }}</h3>
-                  <span class="text-xs text-gray-500">Club</span>
-                </div>
-                <div class="text-xs text-gray-600 mb-1">
-                  Sección de {{ child.title }} de Clubs
-                </div>
-                <div class="flex justify-between mt-auto">
-                  <span class="text-xs text-blue-500">Ver detalles</span>
-                </div>
-              </router-link>
-            </template>
+            <router-link 
+              v-for="(option, index) in crudOptions" 
+              :key="index" 
+              :to="getDynamicHref(option)"
+              class="aspect-[3/1] rounded-md border shadow-sm p-4 cursor-pointer transition-all hover:shadow-md relative"
+              :class="option.color"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium">{{ option.title }}</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                  <g v-html="option.icon"></g>
+                </svg>
+              </div>
+              <div class="text-xs text-gray-600 mb-8">
+                {{ option.description }}
+              </div>
+              <div class="absolute bottom-3 left-4 right-4">
+                <span class="text-xs text-blue-500 hover:underline">
+                  {{ option.title === 'CRUD' ? 'Gestionar clubs' : 
+                     option.title === 'Lista' ? 'Ver todos los clubs' : 
+                     'Ver estadísticas' }}
+                </span>
+              </div>
+            </router-link>
           </div>
           
-          <!-- Contenido principal -->
+          <!-- Tarjetas alternativas para la vista predeterminada (hijos de Clubs) -->
+          <div v-else class="grid grid-cols-3 gap-4">
+            <div 
+              v-for="(child, index) in getClubsChildren()" 
+              :key="index" 
+              class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors cursor-pointer"
+              @click="child.title === 'Lista' ? navigateToClubs() : (child.title === 'CRUD' ? currentView = 'crud' : router.push(child.href || ''))"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-medium">{{ child.title }}</h3>
+                <span class="text-xs text-gray-500">Club</span>
+              </div>
+              <div class="text-xs text-gray-600 mb-1">
+                {{ child.title === 'Lista' ? 'Ver todos los clubs' : 
+                  (child.title === 'CRUD' ? 'Crear un nuevo club' : 'Estadísticas de clubs') }}
+              </div>
+              <div class="flex justify-between mt-auto">
+                <span class="text-xs text-blue-500">
+                  {{ child.title === 'Lista' ? 'Ir a la lista de clubs' : 
+                    (child.title === 'CRUD' ? 'Gestionar clubs' : 'Ver estadísticas') }}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Contenido del router-view -->
           <div class="rounded-md bg-white border shadow-sm p-6 flex-1">
-            <router-view />
+            <router-view :key="route.fullPath" />
           </div>
         </div>
       </div>
