@@ -48,14 +48,29 @@ const routes = [
     component: () => import('../views/Campeonato.vue')
   },
   {
-    path: '/campeonato/tipo',
-    name: 'tipo-campeonato',
-    component: () => import('../views/TipoCampeonato.vue')
+    path: '/campeonato/nuevo',
+    name: 'nuevo-campeonato',
+    component: () => import('../views/NuevoCampeonato.vue')
+  },
+  {
+    path: '/campeonato/estadisticas',
+    name: 'estadisticas-campeonato',
+    component: () => import('../views/EstadisticasCampeonato.vue')
   },
   {
     path: '/resultados',
     name: 'resultados',
     component: () => import('../views/Resultados.vue')
+  },
+  {
+    path: '/resultados/nuevo',
+    name: 'nuevo-resultado',
+    component: () => import('../views/NuevoResultado.vue')
+  },
+  {
+    path: '/resultados/estadisticas',
+    name: 'estadisticas-resultados',
+    component: () => import('../views/EstadisticasResultados.vue')
   },
   {
     path: '/partidas',

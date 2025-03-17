@@ -47,8 +47,8 @@ const navigation = ref<NavSection[]>([
         icon: 'M1 22h22V8l-11-6-11 6v14zm3-2V10l8-4.5 8 4.5v10H4zM15 14h1v4h-1v-4zm-4 0h1v4h-1v-4zm-4 0h1v4H7v-4zm-2 6h14v2H5v-2z',
         isActive: true,
         children: [
-          { title: 'Listado', href: '/clubes' },
-          { title: 'Nuevo Club', href: '/clubes/nuevo' },
+          { title: 'CRUD', href: '/clubes/nuevo' },
+          { title: 'Lista', href: '/clubes' },
           { title: 'Estadísticas', href: '/clubes/estadisticas' }
         ]
       },
@@ -57,24 +57,30 @@ const navigation = ref<NavSection[]>([
         href: '/jugadores',
         icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
         children: [
-          { title: 'Listado', href: '/jugadores' },
-          { title: 'Nuevo Jugador', href: '/jugadores/nuevo' },
+          { title: 'CRUD', href: '/jugadores/nuevo' },
+          { title: 'Lista', href: '/jugadores' },
           { title: 'Estadísticas', href: '/jugadores/estadisticas' }
         ]
       },
       {
         title: 'Campeonatos',
         href: '/campeonato',
-        icon: 'M7 22h10a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1zm7-8.5c1.2-1 2-2.5 2-4.24C16 6.12 14 4 11.5 4S7 6.12 7 9.26c0 1.74.8 3.25 2 4.24V16h5v-2.5z',
+        icon: 'M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z',
         children: [
-          { title: 'Listado', href: '/campeonato' },
-          { title: 'Tipo de Campeonato', href: '/campeonato/tipo' }
+          { title: 'CRUD', href: '/campeonato/nuevo' },
+          { title: 'Lista', href: '/campeonato' },
+          { title: 'Estadísticas', href: '/campeonato/estadisticas' }
         ]
       },
       {
         title: 'Resultados',
         href: '/resultados',
-        icon: 'M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'
+        icon: 'M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z',
+        children: [
+          { title: 'CRUD', href: '/resultados/nuevo' },
+          { title: 'Lista', href: '/resultados' },
+          { title: 'Estadísticas', href: '/resultados/estadisticas' }
+        ]
       },
       {
         title: 'Settings',
