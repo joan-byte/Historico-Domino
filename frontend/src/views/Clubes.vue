@@ -1,61 +1,87 @@
-<script setup>
-// Vista de Clubes - Muestra la lista de clubs y permite operaciones CRUD
-import { ref, onMounted } from 'vue';
+<!-- Vista de Clubes - Muestra la lista de clubs y permite operaciones CRUD -->
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { clubService } from '../lib/clubService';
+import { useClubs } from '../composables/useClubs';
+import { usePagination } from '../composables/usePagination';
+import StatusMessage from '../components/ui/StatusMessage.vue';
+import Pagination from '../components/ui/Pagination.vue';
+import DataTable from '../components/ui/DataTable.vue';
+import type { ClubResponse } from '../lib/clubService';
 
 const router = useRouter();
-const clubs = ref([]);
-const isLoading = ref(false);
-const error = ref(null);
+const { clubs, isLoading, error, fetchClubs, deleteClub, sortedClubs } = useClubs();
 const showDeleteModal = ref(false);
-const clubToDelete = ref(null);
+const clubToDelete = ref<ClubResponse | null>(null);
+
+// Configurar paginación
+const { 
+  currentPage, 
+  pageSize, 
+  totalPages, 
+  paginatedItems, 
+  canGoPrev, 
+  canGoNext, 
+  pageRange,
+  pageSizeOptions,
+  goToPage, 
+  nextPage, 
+  prevPage, 
+  setPageSize,
+  firstPage,
+  lastPage
+} = usePagination(sortedClubs);
+
+// Definir las columnas para la tabla
+const columns = [
+  {
+    field: 'codigo_club',
+    header: 'Código',
+    sortable: true
+  },
+  {
+    field: 'nombre',
+    header: 'Nombre',
+    sortable: true
+  },
+  {
+    field: 'cp',
+    header: 'CP',
+    sortable: true
+  },
+  {
+    field: 'numero_club',
+    header: 'Número',
+    sortable: true
+  }
+];
 
 // Cargar la lista de clubs al montar el componente
 onMounted(() => {
   fetchClubs();
 });
 
-// Obtener todos los clubs desde el backend
-const fetchClubs = async () => {
-  isLoading.value = true;
-  error.value = null;
-  
-  try {
-    clubs.value = await clubService.getAll();
-  } catch (err) {
-    console.error('Error al cargar los clubs:', err);
-    error.value = 'No se pudieron cargar los clubs. Por favor, intente de nuevo más tarde.';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
 // Navegar a la página de creación de club
 const navigateToCreate = () => {
-  router.push('/nuevo-club');
+  router.push('/clubes/nuevo');
 };
 
 // Abrir el modal de confirmación para eliminar un club
-const confirmDelete = (club) => {
+const confirmDelete = (club: ClubResponse) => {
   clubToDelete.value = club;
   showDeleteModal.value = true;
 };
 
 // Eliminar un club
-const deleteClub = async () => {
-  isLoading.value = true;
+const handleDeleteClub = async () => {
+  if (!clubToDelete.value) return;
   
   try {
-    await clubService.delete(clubToDelete.value.codigo_club);
-    clubs.value = clubs.value.filter(club => club.codigo_club !== clubToDelete.value.codigo_club);
+    await deleteClub(clubToDelete.value.codigo_club);
     showDeleteModal.value = false;
     clubToDelete.value = null;
   } catch (err) {
-    console.error('Error al eliminar el club:', err);
-    error.value = 'No se pudo eliminar el club. Por favor, intente de nuevo más tarde.';
-  } finally {
-    isLoading.value = false;
+    // El error ya está manejado en el composable
   }
 };
 
@@ -63,6 +89,12 @@ const deleteClub = async () => {
 const cancelDelete = () => {
   showDeleteModal.value = false;
   clubToDelete.value = null;
+};
+
+// Manejar el clic en una fila
+const handleRowClick = (club: ClubResponse) => {
+  // Navegar a la vista de detalle del club o implementar otra lógica
+  console.log('Club seleccionado:', club);
 };
 </script>
 
@@ -78,92 +110,123 @@ const cancelDelete = () => {
       </button>
     </div>
 
-    <!-- Mensaje de error -->
-    <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {{ error }}
-    </div>
+    <!-- Usar el componente StatusMessage para errores y carga -->
+    <StatusMessage
+      type="error"
+      :show="!!error"
+      :message="error || ''"
+    />
+    
+    <StatusMessage
+      type="loading"
+      :show="isLoading"
+      message="Cargando clubes..."
+    />
 
-    <!-- Estado de carga -->
-    <div v-if="isLoading" class="flex justify-center my-8">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-    </div>
-
-    <!-- Tabla de Clubs -->
-    <div v-else class="bg-white shadow-sm rounded-lg overflow-hidden">
+    <!-- Usar el componente DataTable para mostrar los datos -->
+    <div v-if="!isLoading" class="bg-white shadow-sm rounded-lg overflow-hidden">
       <div v-if="clubs.length === 0" class="p-8 text-center text-gray-500">
         No hay clubes registrados. Haga clic en "Nuevo Club" para agregar uno.
       </div>
       
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Código
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Nombre
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              CP
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Número
-            </th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="club in clubs" :key="club.codigo_club" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-              {{ club.codigo_club }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {{ club.nombre }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {{ club.cp }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {{ club.numero_club }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+      <div v-else>
+        <DataTable 
+          :items="paginatedItems" 
+          :columns="columns" 
+          item-key="codigo_club"
+          :hover="true"
+          initial-sort-field="nombre"
+          initial-sort-direction="asc"
+          @row-click="handleRowClick"
+        >
+          <!-- Slot para las acciones por fila -->
+          <template #row-actions="{ item }">
+            <td class="px-6 py-4 whitespace-nowrap text-center">
               <button 
-                @click="confirmDelete(club)"
-                class="text-red-600 hover:text-red-900 ml-2"
+                @click.stop="confirmDelete(item)"
+                class="text-red-600 hover:text-red-900 inline-flex items-center"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5 mr-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
                 Eliminar
               </button>
             </td>
-          </tr>
-        </tbody>
-      </table>
+          </template>
+          
+          <!-- Mensaje cuando no hay datos -->
+          <template #empty>
+            No hay clubes que coincidan con los criterios de búsqueda.
+          </template>
+        </DataTable>
+        
+        <!-- Usar el componente de paginación -->
+        <Pagination
+          v-if="clubs.length > 0"
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :can-go-prev="canGoPrev"
+          :can-go-next="canGoNext"
+          :page-range="pageRange"
+          :show-page-size-selector="true"
+          :page-size-options="pageSizeOptions"
+          :page-size="pageSize"
+          @update:current-page="goToPage"
+          @first-page="firstPage"
+          @prev-page="prevPage"
+          @next-page="nextPage"
+          @last-page="lastPage"
+          @update:page-size="setPageSize"
+        />
+      </div>
     </div>
 
     <!-- Modal de confirmación para eliminar -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-      <div class="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Confirmar eliminación</h3>
-        <p class="text-gray-600 mb-6">
-          ¿Está seguro de que desea eliminar el club "{{ clubToDelete?.nombre }}"? Esta acción no se puede deshacer.
-        </p>
-        <div class="flex justify-end space-x-3">
-          <button 
-            @click="cancelDelete"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
-          <button 
-            @click="deleteClub"
-            class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-            :disabled="isLoading"
-          >
-            {{ isLoading ? 'Eliminando...' : 'Eliminar' }}
-          </button>
+    <div v-if="showDeleteModal" class="fixed z-10 inset-0 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full shadow-xl overflow-hidden">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                  Eliminar Club
+                </h3>
+                <div class="mt-2">
+                  <p class="text-sm text-gray-500">
+                    ¿Está seguro que desea eliminar el club "{{ clubToDelete?.nombre }}"? Esta acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button 
+              type="button" 
+              @click="handleDeleteClub" 
+              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+            >
+              Eliminar
+            </button>
+            <button 
+              type="button" 
+              @click="cancelDelete" 
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</template> 
+</template>
+
+<style scoped>
+/* Estilos específicos de la vista si se necesitan */
+</style> 
