@@ -23,7 +23,7 @@ export interface JugadorCreate {
 }
 
 // Endpoint para jugadores
-const JUGADORES_ENDPOINT = '/jugadores';
+const JUGADORES_ENDPOINT = '/api/jugadores/';
 
 // Servicio para gestionar jugadores
 export const jugadorService = {

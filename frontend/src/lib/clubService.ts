@@ -18,7 +18,7 @@ export interface ClubCreate {
 }
 
 // Endpoint para clubs
-const CLUBS_ENDPOINT = '/clubs';
+const CLUBS_ENDPOINT = '/api/clubs/';
 
 // Servicio para gestionar clubs
 export const clubService = {

@@ -83,9 +83,10 @@ const cambiarOrden = (filtro: string) => {
       </div>
       
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-gray-700">Ordenar por</label>
+        <label for="ordenar-victorias" class="block text-sm font-medium text-gray-700">Ordenar por</label>
         <div class="flex gap-2">
           <button 
+            id="ordenar-victorias"
             @click="cambiarOrden('victorias')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'victorias' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
@@ -93,6 +94,7 @@ const cambiarOrden = (filtro: string) => {
             Victorias
           </button>
           <button 
+            id="ordenar-partidas"
             @click="cambiarOrden('partidas')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'partidas' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
@@ -100,6 +102,7 @@ const cambiarOrden = (filtro: string) => {
             Partidas
           </button>
           <button 
+            id="ordenar-puntuacion"
             @click="cambiarOrden('puntuacion')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'puntuacion' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"

@@ -99,9 +99,10 @@ const cambiarClubFiltro = () => {
       </div>
       
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-gray-700">Ordenar por</label>
+        <label for="ordenar-victorias-jugador" class="block text-sm font-medium text-gray-700">Ordenar por</label>
         <div class="flex gap-2">
           <button 
+            id="ordenar-victorias-jugador"
             @click="cambiarOrden('victorias')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'victorias' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
@@ -109,6 +110,7 @@ const cambiarClubFiltro = () => {
             Victorias
           </button>
           <button 
+            id="ordenar-partidas-jugador"
             @click="cambiarOrden('partidas')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'partidas' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
@@ -116,6 +118,7 @@ const cambiarClubFiltro = () => {
             Partidas
           </button>
           <button 
+            id="ordenar-puntuacion-jugador"
             @click="cambiarOrden('puntuacion')" 
             class="px-3 py-2 border rounded-md text-sm"
             :class="ordenarPor === 'puntuacion' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"

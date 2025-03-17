@@ -27,8 +27,8 @@ export interface TipoCampeonatoResponse {
 }
 
 // Endpoints para campeonatos
-const CAMPEONATOS_ENDPOINT = '/campeonatos';
-const TIPO_CAMPEONATOS_ENDPOINT = '/tipos-campeonato';
+const CAMPEONATOS_ENDPOINT = '/api/campeonatos/';
+const TIPO_CAMPEONATOS_ENDPOINT = '/api/tipos-campeonato/';
 
 // Servicio para gestionar campeonatos
 export const campeonatoService = {

@@ -26,7 +26,7 @@ export interface ResultadoCreate {
 }
 
 // Endpoint para resultados
-const RESULTADOS_ENDPOINT = '/resultados';
+const RESULTADOS_ENDPOINT = '/api/resultados/';
 
 // Servicio para gestionar resultados
 export const resultadoService = {

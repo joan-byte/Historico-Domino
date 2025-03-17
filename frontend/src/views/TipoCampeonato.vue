@@ -152,8 +152,10 @@ const cambiarEstado = (id: number) => {
         </div>
         
         <div class="space-y-1">
-          <label class="flex items-center">
+          <label for="activo" class="flex items-center">
             <input 
+              id="activo"
+              name="activo"
               type="checkbox" 
               v-model="nuevoTipo.activo" 
               class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"

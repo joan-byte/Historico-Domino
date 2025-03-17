@@ -91,6 +91,8 @@ const updatePageSize = (event: Event) => {
     <div v-if="showPageSizeSelector" class="flex items-center">
       <span class="text-sm text-gray-700 mr-2">Mostrar</span>
       <select 
+        id="page-size-selector"
+        name="page-size-selector"
         :value="pageSize" 
         @change="updatePageSize"
         class="border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1 px-2"

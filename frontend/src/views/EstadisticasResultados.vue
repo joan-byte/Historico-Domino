@@ -348,8 +348,10 @@ const formatearFecha = (fecha: string) => {
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+          <label for="anio-filtro" class="block text-sm font-medium text-gray-700 mb-1">Año</label>
           <select 
+            id="anio-filtro"
+            name="anio-filtro"
             v-model="filtros.año" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -361,8 +363,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campeonato</label>
+          <label for="campeonato-filtro" class="block text-sm font-medium text-gray-700 mb-1">Campeonato</label>
           <select 
+            id="campeonato-filtro"
+            name="campeonato-filtro"
             v-model="filtros.campeonato" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -374,8 +378,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Club</label>
+          <label for="club-filtro" class="block text-sm font-medium text-gray-700 mb-1">Club</label>
           <select 
+            id="club-filtro"
+            name="club-filtro"
             v-model="filtros.club" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >

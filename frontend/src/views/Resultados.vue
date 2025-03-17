@@ -258,8 +258,10 @@ const formatearFecha = (fecha: string) => {
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campeonato</label>
+          <label for="campeonato-filtro" class="block text-sm font-medium text-gray-700 mb-1">Campeonato</label>
           <select 
+            id="campeonato-filtro"
+            name="campeonato-filtro"
             v-model="filtros.campeonato" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -271,8 +273,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Club</label>
+          <label for="club-filtro" class="block text-sm font-medium text-gray-700 mb-1">Club</label>
           <select 
+            id="club-filtro"
+            name="club-filtro"
             v-model="filtros.club" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -284,8 +288,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
+          <label for="equipo-filtro" class="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
           <select 
+            id="equipo-filtro"
+            name="equipo-filtro"
             v-model="filtros.equipo" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -297,8 +303,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <label for="estado-filtro" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
           <select 
+            id="estado-filtro"
+            name="estado-filtro"
             v-model="filtros.estado" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
@@ -310,8 +318,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha desde</label>
+          <label for="fecha-desde" class="block text-sm font-medium text-gray-700 mb-1">Fecha desde</label>
           <input 
+            id="fecha-desde"
+            name="fecha-desde"
             type="date" 
             v-model="filtros.fechaDesde" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -319,8 +329,10 @@ const formatearFecha = (fecha: string) => {
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha hasta</label>
+          <label for="fecha-hasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha hasta</label>
           <input 
+            id="fecha-hasta"
+            name="fecha-hasta"
             type="date" 
             v-model="filtros.fechaHasta" 
             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
