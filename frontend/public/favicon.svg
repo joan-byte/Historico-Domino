@@ -1,0 +1,25 @@
+<svg width="32" height="48" viewBox="0 0 24 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Borde de la ficha -->
+  <rect x="2" y="2" width="20" height="32" rx="3" fill="none" stroke="black" stroke-width="1.5" />
+  
+  <!-- Línea divisoria horizontal -->
+  <line x1="2" y1="18" x2="22" y2="18" stroke="black" stroke-width="1" />
+  
+  <!-- Puntos - Lado superior (6 puntos en 2 columnas) -->
+  <circle cx="7.5" cy="6" r="1.2" fill="black" />
+  <circle cx="7.5" cy="11" r="1.2" fill="black" />
+  <circle cx="7.5" cy="16" r="1.2" fill="black" />
+  
+  <circle cx="16.5" cy="6" r="1.2" fill="black" />
+  <circle cx="16.5" cy="11" r="1.2" fill="black" />
+  <circle cx="16.5" cy="16" r="1.2" fill="black" />
+  
+  <!-- Puntos - Lado inferior (6 puntos en 2 columnas) -->
+  <circle cx="7.5" cy="20" r="1.2" fill="black" />
+  <circle cx="7.5" cy="25" r="1.2" fill="black" />
+  <circle cx="7.5" cy="30" r="1.2" fill="black" />
+  
+  <circle cx="16.5" cy="20" r="1.2" fill="black" />
+  <circle cx="16.5" cy="25" r="1.2" fill="black" />
+  <circle cx="16.5" cy="30" r="1.2" fill="black" />
+</svg> 

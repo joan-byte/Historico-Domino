@@ -142,8 +142,33 @@ const isExpanded = (title: string): boolean => {
         <!-- Logo y nombre de la empresa -->
         <div class="flex h-8 items-center border-b px-2">
           <div class="flex items-center gap-1">
-            <div class="flex h-5 w-5 items-center justify-center rounded-md bg-black text-white text-[10px] font-medium">
-              A
+            <div class="flex h-5 w-5 items-center justify-center rounded-md bg-white border border-gray-300 text-[10px] font-medium overflow-hidden">
+              <!-- Ficha de dominó estilizada (6-6) -->
+              <svg viewBox="0 0 24 36" width="12" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Borde de la ficha -->
+                <rect x="2" y="2" width="20" height="32" rx="3" fill="none" stroke="black" stroke-width="1.5" />
+                
+                <!-- Línea divisoria horizontal -->
+                <line x1="2" y1="18" x2="22" y2="18" stroke="black" stroke-width="1" />
+                
+                <!-- Puntos - Lado superior (6 puntos en 2 columnas) -->
+                <circle cx="7.5" cy="6" r="1.2" fill="black" />
+                <circle cx="7.5" cy="11" r="1.2" fill="black" />
+                <circle cx="7.5" cy="16" r="1.2" fill="black" />
+                
+                <circle cx="16.5" cy="6" r="1.2" fill="black" />
+                <circle cx="16.5" cy="11" r="1.2" fill="black" />
+                <circle cx="16.5" cy="16" r="1.2" fill="black" />
+                
+                <!-- Puntos - Lado inferior (6 puntos en 2 columnas) -->
+                <circle cx="7.5" cy="20" r="1.2" fill="black" />
+                <circle cx="7.5" cy="25" r="1.2" fill="black" />
+                <circle cx="7.5" cy="30" r="1.2" fill="black" />
+                
+                <circle cx="16.5" cy="20" r="1.2" fill="black" />
+                <circle cx="16.5" cy="25" r="1.2" fill="black" />
+                <circle cx="16.5" cy="30" r="1.2" fill="black" />
+              </svg>
             </div>
             <div v-if="isOpen" class="flex flex-col ml-1">
               <span class="text-[11px] font-medium leading-tight">{{ company.name }}</span>
