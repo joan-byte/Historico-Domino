@@ -117,6 +117,9 @@ const navigation = ref<NavSection[]>([
 // Expandir/colapsar elementos de navegación
 const expandedItems = ref<string[]>(['Clubs']);
 
+// Estado para controlar la vista actual
+const currentView = ref<string>('default');
+
 const toggleExpand = (title: string): void => {
   const index = expandedItems.value.indexOf(title);
   if (index === -1) {
@@ -124,11 +127,54 @@ const toggleExpand = (title: string): void => {
   } else {
     expandedItems.value.splice(index, 1);
   }
+  
+  // Restablecer la vista cuando se hace clic en Clubs
+  if (title === 'Clubs') {
+    currentView.value = 'default';
+  }
 };
 
 const isExpanded = (title: string): boolean => {
   return expandedItems.value.includes(title);
 };
+
+// Obtener los hijos de Clubs para las tarjetas superiores
+const getClubsChildren = (): NavItem[] => {
+  const clubsItem = navigation.value[0].items.find(item => item.title === 'Clubs');
+  return clubsItem?.children || [];
+};
+
+// Función para manejar el clic en los elementos del sidebar
+const handleSidebarItemClick = (item: NavItem): void => {
+  // Si el elemento clickeado es CRUD dentro de Clubs, cambiar la vista
+  if (item.title === 'CRUD' && item.href && item.href.includes('/clubes')) {
+    currentView.value = 'crud';
+  } else {
+    currentView.value = 'default';
+  }
+};
+
+// Opciones CRUD para mostrar en las tarjetas cuando se selecciona CRUD
+const crudOptions = [
+  { 
+    title: 'Crear', 
+    href: '/clubes/crear', 
+    description: 'Añadir un nuevo club a la base de datos',
+    icon: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>'
+  },
+  { 
+    title: 'Modificar', 
+    href: '/clubes/modificar', 
+    description: 'Editar información de clubs existentes',
+    icon: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>'
+  },
+  { 
+    title: 'Eliminar', 
+    href: '/clubes/eliminar', 
+    description: 'Eliminar clubs del sistema',
+    icon: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>'
+  }
+];
 </script>
 
 <template>
@@ -218,6 +264,7 @@ const isExpanded = (title: string): boolean => {
                     :to="child.href || ''" 
                     class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                     :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
+                    @click="handleSidebarItemClick(child)"
                   >
                     {{ child.title }}
                   </router-link>
@@ -275,11 +322,52 @@ const isExpanded = (title: string): boolean => {
 
         <!-- Contenido principal -->
         <div class="flex flex-col gap-4 p-4 overflow-auto">
-          <!-- Tarjetas en la parte superior -->
+          <!-- Tarjetas en la parte superior - Cambian según la vista -->
           <div class="grid grid-cols-3 gap-4">
-            <div class="aspect-[3/1] rounded-md bg-gray-100 shadow-sm"></div>
-            <div class="aspect-[3/1] rounded-md bg-gray-100 shadow-sm"></div>
-            <div class="aspect-[3/1] rounded-md bg-gray-100 shadow-sm"></div>
+            <!-- Tarjetas para la vista CRUD -->
+            <template v-if="currentView === 'crud'">
+              <router-link 
+                v-for="(option, index) in crudOptions" 
+                :key="index" 
+                :to="option.href" 
+                class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex items-center justify-between mb-1">
+                  <h3 class="text-sm font-medium">{{ option.title }}</h3>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                    <g v-html="option.icon"></g>
+                  </svg>
+                </div>
+                <div class="text-xs text-gray-600 mb-1">
+                  {{ option.description }}
+                </div>
+                <div class="flex justify-between mt-auto">
+                  <span class="text-xs text-blue-500">Ir a {{ option.title.toLowerCase() }}</span>
+                </div>
+              </router-link>
+            </template>
+            
+            <!-- Tarjetas para la vista predeterminada (hijos de Clubs) -->
+            <template v-else>
+              <router-link 
+                v-for="(child, index) in getClubsChildren()" 
+                :key="index" 
+                :to="child.href || ''" 
+                class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors"
+                @click="child.title === 'CRUD' ? handleSidebarItemClick(child) : null"
+              >
+                <div class="flex items-center justify-between mb-1">
+                  <h3 class="text-sm font-medium">{{ child.title }}</h3>
+                  <span class="text-xs text-gray-500">Club</span>
+                </div>
+                <div class="text-xs text-gray-600 mb-1">
+                  Sección de {{ child.title }} de Clubs
+                </div>
+                <div class="flex justify-between mt-auto">
+                  <span class="text-xs text-blue-500">Ver detalles</span>
+                </div>
+              </router-link>
+            </template>
           </div>
           
           <!-- Contenido principal -->
