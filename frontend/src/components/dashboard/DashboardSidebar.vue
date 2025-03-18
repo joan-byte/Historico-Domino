@@ -49,19 +49,59 @@ const handleSidebarItemClick = (item: NavItem) => {
 
 const handleChildClick = (href: string | undefined) => {
   if (href) {
-    // Si el href es '/clubes', cambiarlo a '/clubes/lista'
-    const finalHref = href === '/clubes' ? '/clubes/lista' : href;
-    router.push(finalHref);
+    // Navegar directamente a la ruta especificada
+    router.push(href);
   }
 };
 
+// Funciones específicas para cada elemento padre
 const handleClubsClick = () => {
   // Expandir/colapsar el menú de Clubs
-  const clubsItem = navigation.value[0].items.find(item => item.title === 'Clubs');
-  if (clubsItem) {
-    toggleExpand('Clubs');
-    // Navegar a /clubes/
-    router.push('/clubes');
+  toggleExpand('Clubs');
+  // Navegar a /clubes/
+  router.push('/clubes');
+};
+
+const handleJugadoresClick = () => {
+  // Expandir/colapsar el menú de Jugadores
+  toggleExpand('Jugadores');
+  // Navegar a /jugadores/ (la ruta principal)
+  router.push('/jugadores');
+};
+
+const handleCampeonatosClick = () => {
+  // Solo expandir/colapsar el menú de Campeonatos
+  toggleExpand('Campeonatos');
+  // Por ahora, no navegar a ninguna ruta
+  // router.push('/campeonato');
+};
+
+const handleResultadosClick = () => {
+  // Solo expandir/colapsar el menú de Resultados
+  toggleExpand('Resultados');
+  // Por ahora, no navegar a ninguna ruta
+  // router.push('/resultados');
+};
+
+// Función genérica para manejar clics en elementos padre
+const handleParentClick = (item: NavItem) => {
+  switch (item.title) {
+    case 'Clubs':
+      handleClubsClick();
+      break;
+    case 'Jugadores':
+      handleJugadoresClick();
+      break;
+    case 'Campeonatos':
+      handleCampeonatosClick();
+      break;
+    case 'Resultados':
+      handleResultadosClick();
+      break;
+    default:
+      // Para otros elementos, solo expandir/colapsar
+      toggleExpand(item.title);
+      break;
   }
 };
 </script>
@@ -122,7 +162,7 @@ const handleClubsClick = () => {
               v-if="item.children && item.children.length > 0"
               class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
               :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
-              @click="item.title === 'Clubs' ? handleClubsClick() : toggleExpand(item.title)"
+              @click="handleParentClick(item)"
             >
               <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
                 <path :d="item.icon"></path>
@@ -149,7 +189,7 @@ const handleClubsClick = () => {
               <router-link 
                 v-for="(child, k) in item.children" 
                 :key="`child-${k}`" 
-                :to="child.href === '/clubes' ? '/clubes/lista' : child.href || ''" 
+                :to="child.href || '#'" 
                 class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                 :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
                 @click="() => handleChildClick(child.href)"

@@ -2,7 +2,7 @@
 // Componente para las tarjetas CRUD en el dashboard
 import { useClubsManagement } from '@/composables/useClubsManagement';
 
-const { crudOptions, getDynamicHref, selectedClub } = useClubsManagement();
+const { crudOptions, getDynamicHref, getButtonText } = useClubsManagement();
 </script>
 
 <template>
@@ -26,9 +26,7 @@ const { crudOptions, getDynamicHref, selectedClub } = useClubsManagement();
       </div>
       <div class="flex justify-between mt-auto">
         <span class="text-xs text-blue-500">
-          {{ option.title === 'CRUD' ? 'Gestionar clubs' : 
-             option.title === 'Lista' ? 'Ver todos los clubs' : 
-             'Ver estadísticas' }}
+          {{ getButtonText(option) }}
         </span>
       </div>
     </router-link>

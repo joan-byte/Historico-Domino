@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Vista con diseño de Shadcn
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 // Definir la interfaz para el club
@@ -40,14 +40,20 @@ const currentView = ref<string>('default');
 
 // Vigilar los cambios de ruta para actualizar la vista automáticamente
 watch(() => route.path, (newPath) => {
-  if (newPath === '/clubes/lista') {
-    // Si estamos en la lista de clubes, mostrar las tarjetas CRUD
+  if (newPath === '/') {
+    // En la ruta principal, mostrar las tarjetas principales
+    currentView.value = 'default';
+  } else if (newPath.includes('/clubes/') || newPath === '/clubes') {
+    // Si estamos en rutas relacionadas con clubes, mantener las tarjetas CRUD
     currentView.value = 'crud';
-  } else if (newPath.includes('/clubes/crud')) {
-    // Si estamos en la vista CRUD de clubes, mantener las tarjetas CRUD
+  } else if (newPath.includes('/jugadores/') || newPath === '/jugadores') {
+    // Si estamos en rutas relacionadas con jugadores, mostrar la vista de CRUD
     currentView.value = 'crud';
-  } else if (newPath.includes('/clubes')) {
-    // Si estamos en cualquier otra ruta relacionada con clubes, mantener las tarjetas CRUD
+  } else if (newPath.includes('/campeonato/') || newPath === '/campeonato') {
+    // Si estamos en rutas relacionadas con campeonatos, mostrar la vista de CRUD
+    currentView.value = 'crud';
+  } else if (newPath.includes('/resultados/') || newPath === '/resultados') {
+    // Si estamos en rutas relacionadas con resultados, mostrar la vista de CRUD
     currentView.value = 'crud';
   } else {
     // Para otras rutas, mostrar la vista predeterminada
@@ -58,8 +64,13 @@ watch(() => route.path, (newPath) => {
 // Al montar el componente, configurar la vista según la ruta actual
 onMounted(() => {
   // Inicializar la vista según la ruta actual
-  if (route.path === '/clubes' || route.path.includes('/clubes/')) {
+  if (route.path === '/clubes' || route.path.includes('/clubes/') ||
+      route.path === '/jugadores' || route.path.includes('/jugadores/') ||
+      route.path === '/campeonato' || route.path.includes('/campeonato/') ||
+      route.path === '/resultados' || route.path.includes('/resultados/')) {
     currentView.value = 'crud';
+  } else {
+    currentView.value = 'default';
   }
 
   // Escuchar el evento personalizado cuando se selecciona un club
@@ -116,7 +127,7 @@ const navigation = ref<NavSection[]>([
         href: '/jugadores',
         icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
         children: [
-          { title: 'CRUD', href: '/jugadores/nuevo' },
+          { title: 'CRUD', href: '/jugadores/crud' },
           { title: 'Lista', href: '/jugadores' },
           { title: 'Estadísticas', href: '/jugadores/estadisticas' }
         ]
@@ -126,7 +137,7 @@ const navigation = ref<NavSection[]>([
         href: '/campeonato',
         icon: 'M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z',
         children: [
-          { title: 'CRUD', href: '/campeonato/nuevo' },
+          { title: 'CRUD', href: '/campeonato/crud' },
           { title: 'Lista', href: '/campeonato' },
           { title: 'Estadísticas', href: '/campeonato/estadisticas' }
         ]
@@ -136,7 +147,7 @@ const navigation = ref<NavSection[]>([
         href: '/resultados',
         icon: 'M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z',
         children: [
-          { title: 'CRUD', href: '/resultados/nuevo' },
+          { title: 'CRUD', href: '/resultados/crud' },
           { title: 'Lista', href: '/resultados' },
           { title: 'Estadísticas', href: '/resultados/estadisticas' }
         ]
@@ -223,30 +234,207 @@ const handleSidebarItemClick = (item: NavItem): void => {
   }
 };
 
-// Opciones CRUD para mostrar en las tarjetas cuando se selecciona CRUD
-const crudOptions = [
-  { 
-    title: 'CRUD',
-    href: '/clubes/crud',
-    description: 'Gestionar operaciones CRUD de clubs',
-    icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-    color: 'bg-green-100 text-green-800 border-green-300'
-  },
-  { 
-    title: 'Lista',
-    href: '/clubes/lista', 
-    description: 'Ver todos los clubs registrados',
-    icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-    color: 'bg-blue-100 text-blue-800 border-blue-300'
-  },
-  { 
-    title: 'Estadísticas',
-    href: '/clubes/estadisticas', 
-    description: 'Ver métricas y estadísticas de clubs',
-    icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-    color: 'bg-purple-100 text-purple-800 border-purple-300'
+// Función para manejar el clic en las tarjetas principales
+const handleMainCardClick = (route: string): void => {
+  // Expandir el elemento correspondiente en el sidebar
+  if (route.includes('/clubes')) {
+    if (!isExpanded('Clubs')) {
+      toggleExpand('Clubs');
+    }
+  } else if (route.includes('/jugadores')) {
+    if (!isExpanded('Jugadores')) {
+      toggleExpand('Jugadores');
+    }
+  } else if (route.includes('/campeonato')) {
+    if (!isExpanded('Campeonatos')) {
+      toggleExpand('Campeonatos');
+    }
+  } else if (route.includes('/resultados')) {
+    if (!isExpanded('Resultados')) {
+      toggleExpand('Resultados');
+    }
   }
-];
+  
+  // Navegar a la ruta
+  router.push(route);
+  
+  // Actualizar la vista según la ruta
+  if (route.includes('/clubes')) {
+    currentView.value = 'crud';
+  } else {
+    currentView.value = 'default';
+  }
+};
+
+// Opciones CRUD dinámicas según la sección activa
+const getCrudOptions = () => {
+  const path = route.path;
+  
+  // Opciones para Clubs
+  if (path.includes('/clubes')) {
+    return [
+      { 
+        title: 'CRUD',
+        href: '/clubes/crud',
+        description: 'Gestionar operaciones CRUD de clubs',
+        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+        color: 'bg-green-100 text-green-800 border-green-300'
+      },
+      { 
+        title: 'Lista',
+        href: '/clubes/lista', 
+        description: 'Ver todos los clubs registrados',
+        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+        color: 'bg-blue-100 text-blue-800 border-blue-300'
+      },
+      { 
+        title: 'Estadísticas',
+        href: '/clubes/estadisticas', 
+        description: 'Ver métricas y estadísticas de clubs',
+        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+        color: 'bg-purple-100 text-purple-800 border-purple-300'
+      }
+    ];
+  }
+  
+  // Opciones para Jugadores
+  if (path.includes('/jugadores')) {
+    return [
+      { 
+        title: 'CRUD',
+        href: '/jugadores/crud',
+        description: 'Gestionar operaciones CRUD de jugadores',
+        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+        color: 'bg-blue-100 text-blue-800 border-blue-300'
+      },
+      { 
+        title: 'Lista',
+        href: '/jugadores', 
+        description: 'Ver todos los jugadores registrados',
+        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+        color: 'bg-indigo-100 text-indigo-800 border-indigo-300'
+      },
+      { 
+        title: 'Estadísticas',
+        href: '/jugadores/estadisticas', 
+        description: 'Ver métricas y estadísticas de jugadores',
+        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+        color: 'bg-purple-100 text-purple-800 border-purple-300'
+      }
+    ];
+  }
+  
+  // Opciones para Campeonatos
+  if (path.includes('/campeonato')) {
+    return [
+      { 
+        title: 'CRUD',
+        href: '/campeonato/crud',
+        description: 'Gestionar operaciones CRUD de campeonatos',
+        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+        color: 'bg-amber-100 text-amber-800 border-amber-300'
+      },
+      { 
+        title: 'Lista',
+        href: '/campeonato', 
+        description: 'Ver todos los campeonatos',
+        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+        color: 'bg-orange-100 text-orange-800 border-orange-300'
+      },
+      { 
+        title: 'Estadísticas',
+        href: '/campeonato/estadisticas', 
+        description: 'Ver métricas y estadísticas de campeonatos',
+        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+        color: 'bg-red-100 text-red-800 border-red-300'
+      }
+    ];
+  }
+  
+  // Opciones para Resultados
+  if (path.includes('/resultados')) {
+    return [
+      { 
+        title: 'CRUD',
+        href: '/resultados/crud',
+        description: 'Gestionar operaciones CRUD de resultados',
+        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+        color: 'bg-purple-100 text-purple-800 border-purple-300'
+      },
+      { 
+        title: 'Lista',
+        href: '/resultados', 
+        description: 'Ver todos los resultados registrados',
+        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+        color: 'bg-violet-100 text-violet-800 border-violet-300'
+      },
+      { 
+        title: 'Estadísticas',
+        href: '/resultados/estadisticas', 
+        description: 'Ver métricas y estadísticas de resultados',
+        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+        color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300'
+      }
+    ];
+  }
+  
+  // Por defecto, mostrar opciones para Clubs
+  return [
+    { 
+      title: 'CRUD',
+      href: '/clubes/crud',
+      description: 'Gestionar operaciones CRUD de clubs',
+      icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+      color: 'bg-green-100 text-green-800 border-green-300'
+    },
+    { 
+      title: 'Lista',
+      href: '/clubes/lista', 
+      description: 'Ver todos los clubs registrados',
+      icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
+      color: 'bg-blue-100 text-blue-800 border-blue-300'
+    },
+    { 
+      title: 'Estadísticas',
+      href: '/clubes/estadisticas', 
+      description: 'Ver métricas y estadísticas de clubs',
+      icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
+      color: 'bg-purple-100 text-purple-800 border-purple-300'
+    }
+  ];
+};
+
+// Referencia reactiva para las opciones CRUD
+const crudOptions = computed(() => {
+  return getCrudOptions();
+});
+
+// Función para obtener etiquetas dinámicas para los botones de las tarjetas CRUD
+const getCardButtonLabel = (option: any) => {
+  const path = route.path;
+  
+  if (option.title === 'CRUD') {
+    if (path.includes('/clubes')) return 'Gestionar clubs';
+    if (path.includes('/jugadores')) return 'Gestionar jugadores';
+    if (path.includes('/campeonato')) return 'Gestionar campeonatos';
+    if (path.includes('/resultados')) return 'Gestionar resultados';
+    return 'Gestionar';
+  }
+  
+  if (option.title === 'Lista') {
+    if (path.includes('/clubes')) return 'Ver todos los clubs';
+    if (path.includes('/jugadores')) return 'Ver todos los jugadores';
+    if (path.includes('/campeonato')) return 'Ver todos los campeonatos';
+    if (path.includes('/resultados')) return 'Ver todos los resultados';
+    return 'Ver lista';
+  }
+  
+  if (option.title === 'Estadísticas') {
+    return 'Ver estadísticas';
+  }
+  
+  return option.title;
+};
 
 // Función para obtener el href dinámico basado en la opción seleccionada
 const getDynamicHref = (option: any): string => {
@@ -399,55 +587,106 @@ const getDynamicHref = (option: any): string => {
 
         <!-- Contenido principal -->
         <div class="flex flex-col gap-4 p-4 overflow-auto">
-          <!-- Tarjetas en la parte superior - Cambian según la vista -->
-          <div v-if="currentView === 'crud'" class="grid grid-cols-3 gap-4">
-            <!-- Tarjetas para la vista CRUD -->
-            <router-link 
-              v-for="(option, index) in crudOptions" 
-              :key="index" 
-              :to="getDynamicHref(option)"
-              class="aspect-[3/1] rounded-md border shadow-sm p-4 cursor-pointer transition-all hover:shadow-md relative"
-              :class="option.color"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-medium">{{ option.title }}</h3>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-                  <g v-html="option.icon"></g>
-                </svg>
-              </div>
-              <div class="text-xs text-gray-600 mb-8">
-                {{ option.description }}
-              </div>
-              <div class="absolute bottom-3 left-4 right-4">
-                <span class="text-xs text-blue-500 hover:underline">
-                  {{ option.title === 'CRUD' ? 'Gestionar clubs' : 
-                     option.title === 'Lista' ? 'Ver todos los clubs' : 
-                     'Ver estadísticas' }}
-                </span>
-              </div>
-            </router-link>
-          </div>
-          
-          <!-- Tarjetas alternativas para la vista predeterminada (hijos de Clubs) -->
-          <div v-else class="grid grid-cols-3 gap-4">
+          <!-- Tarjetas en la parte superior - Se muestran en todas las vistas -->
+          <div class="grid grid-cols-5 gap-4">
+            <!-- Tarjeta de Inicio -->
             <div 
-              v-for="(child, index) in getClubsChildren()" 
-              :key="index" 
-              class="aspect-[3/1] rounded-md bg-white border shadow-sm p-3 flex flex-col hover:bg-gray-50 transition-colors cursor-pointer"
-              @click="handleSidebarItemClick(child)"
+              class="aspect-[3/2] rounded-md bg-gray-50 border border-gray-200 shadow-sm p-3 flex flex-col hover:bg-gray-100 transition-colors cursor-pointer"
+              @click="handleMainCardClick('/')"
             >
               <div class="flex items-center justify-between mb-1">
-                <h3 class="text-sm font-medium">{{ child.title }}</h3>
-                <span class="text-xs text-gray-500">Club</span>
+                <h3 class="text-sm font-medium text-gray-800">Inicio</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-gray-600">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
               </div>
-              <div class="text-xs text-gray-600 mb-1">
-                {{ child.title === 'Lista' ? 'Ver todos los clubs' : 
-                  (child.title === 'CRUD' ? 'Crear un nuevo club' : 'Estadísticas de clubs') }}
+              <div class="text-xs text-gray-700 mb-2">
+                Página principal del sistema
               </div>
               <div class="flex justify-between mt-auto">
-                <span class="text-xs text-blue-500">
-                  {{ child.title === 'Lista' ? 'Ir a la lista de clubs' : 
-                    (child.title === 'CRUD' ? 'Gestionar clubs' : 'Ver estadísticas') }}
+                <span class="text-xs text-gray-600 hover:underline">
+                  Volver al inicio
+                </span>
+              </div>
+            </div>
+            
+            <div 
+              class="aspect-[3/2] rounded-md bg-green-50 border border-green-200 shadow-sm p-3 flex flex-col hover:bg-green-100 transition-colors cursor-pointer"
+              @click="handleMainCardClick('/clubes')"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-medium text-green-800">Clubs</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-green-600">
+                  <path d="M1 22h22V8l-11-6-11 6v14zm3-2V10l8-4.5 8 4.5v10H4zM15 14h1v4h-1v-4zm-4 0h1v4h-1v-4zm-4 0h1v4H7v-4zm-2 6h14v2H5v-2z"></path>
+                </svg>
+              </div>
+              <div class="text-xs text-green-700 mb-2">
+                Gestión de clubs y entidades
+              </div>
+              <div class="flex justify-between mt-auto">
+                <span class="text-xs text-green-600 hover:underline">
+                  Acceder a Clubs
+                </span>
+              </div>
+            </div>
+            
+            <div 
+              class="aspect-[3/2] rounded-md bg-blue-50 border border-blue-200 shadow-sm p-3 flex flex-col hover:bg-blue-100 transition-colors cursor-pointer"
+              @click="handleMainCardClick('/jugadores')"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-medium text-blue-800">Jugadores</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-blue-600">
+                  <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <div class="text-xs text-blue-700 mb-2">
+                Gestión de jugadores y licencias
+              </div>
+              <div class="flex justify-between mt-auto">
+                <span class="text-xs text-blue-600 hover:underline">
+                  Acceder a Jugadores
+                </span>
+              </div>
+            </div>
+            
+            <div 
+              class="aspect-[3/2] rounded-md bg-amber-50 border border-amber-200 shadow-sm p-3 flex flex-col hover:bg-amber-100 transition-colors cursor-pointer"
+              @click="handleMainCardClick('/campeonato')"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-medium text-amber-800">Campeonatos</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-amber-600">
+                  <path d="M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z"></path>
+                </svg>
+              </div>
+              <div class="text-xs text-amber-700 mb-2">
+                Gestión de torneos y campeonatos
+              </div>
+              <div class="flex justify-between mt-auto">
+                <span class="text-xs text-amber-600 hover:underline">
+                  Acceder a Campeonatos
+                </span>
+              </div>
+            </div>
+            
+            <div 
+              class="aspect-[3/2] rounded-md bg-purple-50 border border-purple-200 shadow-sm p-3 flex flex-col hover:bg-purple-100 transition-colors cursor-pointer"
+              @click="handleMainCardClick('/resultados')"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-medium text-purple-800">Resultados</h3>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-purple-600">
+                  <path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path>
+                </svg>
+              </div>
+              <div class="text-xs text-purple-700 mb-2">
+                Registro y análisis de resultados
+              </div>
+              <div class="flex justify-between mt-auto">
+                <span class="text-xs text-purple-600 hover:underline">
+                  Acceder a Resultados
                 </span>
               </div>
             </div>
@@ -455,7 +694,13 @@ const getDynamicHref = (option: any): string => {
           
           <!-- Contenido del router-view -->
           <div class="rounded-md bg-white border shadow-sm p-6 flex-1">
-            <router-view :key="route.fullPath" />
+            <div v-if="route.path === '/'" class="flex flex-col items-center justify-center h-full">
+              <h1 class="text-2xl font-bold text-gray-800 mb-4">Bienvenidos a la gestión del histórico</h1>
+              <p class="text-lg text-gray-600 text-center mb-6">
+                Sistema centralizado para la gestión de Clubs, Jugadores, Campeonatos y Resultados
+              </p>
+            </div>
+            <router-view v-else :key="route.fullPath" />
           </div>
         </div>
       </div>

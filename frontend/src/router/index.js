@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Clubes from '../views/Clubes.vue'
 import Home from '../views/Home.vue'
-import DashboardLayout from '../components/dashboard/DashboardLayout.vue'
+import ShadcnDashboard from '../views/ShadcnDashboard.vue'
 import { h } from 'vue'
 import { RouterView } from 'vue-router'
 
@@ -9,11 +9,12 @@ import { RouterView } from 'vue-router'
 const routes = [
   {
     path: '/',
-    component: DashboardLayout,
+    component: ShadcnDashboard,
     children: [
       {
         path: '',
-        redirect: '/clubes'
+        name: 'Home',
+        component: Home
       },
       {
         path: '/clubes',
@@ -51,6 +52,45 @@ const routes = [
         path: '/clubes/lista',
         name: 'ClubesLista',
         component: Clubes
+      },
+      
+      // Rutas para el módulo de Jugadores
+      {
+        path: '/jugadores',
+        component: () => import('../views/Jugadores.vue'),
+        name: 'JugadoresRoot',
+      },
+      {
+        path: '/jugadores/crud',
+        name: 'CrudJugadores',
+        component: () => import('../views/CrudJugadores.vue')
+      },
+      {
+        path: '/jugadores/crear',
+        name: 'CrearJugador',
+        component: () => import('../views/NuevoJugador.vue')
+      },
+      {
+        path: '/jugadores/modificar/:licencia?',
+        name: 'ModificarJugador',
+        component: () => import('../views/ModificarJugador.vue'),
+        props: true
+      },
+      {
+        path: '/jugadores/eliminar/:licencia?',
+        name: 'EliminarJugador',
+        component: () => import('../views/EliminarJugador.vue'),
+        props: true
+      },
+      {
+        path: '/jugadores/estadisticas',
+        name: 'EstadisticasJugadores',
+        component: () => import('../views/EstadisticasJugadores.vue')
+      },
+      {
+        path: '/jugadores/lista',
+        name: 'JugadoresLista',
+        component: () => import('../views/Jugadores.vue')
       }
     ]
   }

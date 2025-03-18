@@ -224,7 +224,7 @@ const mainCrudOptionsWithState = computed(() => {
   // Para la ruta principal, mantener las opciones originales
   return [
     {
-      title: 'Crear',
+      title: 'Crear Club',
       description: 'Añadir un nuevo club a la base de datos',
       icon: 'plus',
       route: '/clubes/crear',
