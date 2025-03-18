@@ -1,41 +1,91 @@
 <script setup lang="ts">
 // Componente para crear un nuevo jugador
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useJugadores } from '../composables/useJugadores';
+import { useClubs } from '../composables/useClubs';
+import type { JugadorCreate } from '../lib/jugadorService';
+import StatusMessage from '../components/ui/StatusMessage.vue';
 
 const router = useRouter();
+const { createJugador, error: jugadorError, isLoading } = useJugadores();
+const { clubs, fetchClubs, isLoading: clubsLoading, error: clubsError } = useClubs();
+
+// Campos del formulario
 const nombre = ref('');
 const apellidos = ref('');
-const apodo = ref('');
-const fechaNacimiento = ref('');
-const club = ref('');
+const cp = ref('');
+const numero_jugador = ref('');
+const codigo_club = ref('');
+const dni = ref('');
 const telefono = ref('');
 const email = ref('');
-const nivel = ref('intermedio');
 
-const clubesDisponibles = [
-  { id: 1, nombre: 'Club Domino A' },
-  { id: 2, nombre: 'Club Domino B' },
-  { id: 3, nombre: 'Club Domino C' },
-  { id: 4, nombre: 'Club Domino D' },
-  { id: 5, nombre: 'Club Domino E' }
-];
+// Cargar la lista de clubes al montar el componente
+onMounted(() => {
+  fetchClubs();
+});
 
-const guardarJugador = () => {
-  // Aquí iría la lógica para guardar el jugador en la base de datos
-  console.log('Guardando jugador:', {
+// Estado para errores de validación
+const validationErrors = ref<Record<string, string>>({});
+
+// Validar los campos del formulario
+const validarFormulario = (): boolean => {
+  validationErrors.value = {};
+  
+  if (!nombre.value.trim()) {
+    validationErrors.value.nombre = 'El nombre es obligatorio';
+  }
+  
+  if (!apellidos.value.trim()) {
+    validationErrors.value.apellidos = 'Los apellidos son obligatorios';
+  }
+  
+  if (!cp.value.trim()) {
+    validationErrors.value.cp = 'El CP es obligatorio';
+  } else if (!/^\d{2}$/.test(cp.value)) {
+    validationErrors.value.cp = 'El CP debe ser exactamente 2 dígitos numéricos';
+  }
+  
+  if (!numero_jugador.value.trim()) {
+    validationErrors.value.numero_jugador = 'El número de jugador es obligatorio';
+  } else if (!/^\d{5}$/.test(numero_jugador.value)) {
+    validationErrors.value.numero_jugador = 'El número debe tener exactamente 5 dígitos numéricos';
+  }
+  
+  if (!codigo_club.value) {
+    validationErrors.value.codigo_club = 'Debe seleccionar un club';
+  }
+  
+  if (dni.value && !/^[0-9]{8}[A-Z]$/.test(dni.value)) {
+    validationErrors.value.dni = 'El DNI debe tener 8 números seguidos de una letra mayúscula';
+  }
+  
+  return Object.keys(validationErrors.value).length === 0;
+};
+
+const guardarJugador = async () => {
+  if (!validarFormulario()) {
+    return;
+  }
+  
+  const jugadorData: JugadorCreate = {
     nombre: nombre.value,
     apellidos: apellidos.value,
-    apodo: apodo.value,
-    fechaNacimiento: fechaNacimiento.value,
-    club: club.value,
-    telefono: telefono.value,
-    email: email.value,
-    nivel: nivel.value
-  });
+    cp: cp.value,
+    numero_jugador: numero_jugador.value,
+    codigo_club: codigo_club.value,
+    dni: dni.value || undefined,
+    telefono: telefono.value || undefined,
+    email: email.value || undefined
+  };
   
-  // Redirigir a la lista de jugadores
-  router.push('/jugadores');
+  try {
+    await createJugador(jugadorData);
+    router.push('/jugadores');
+  } catch (error) {
+    console.error('Error al crear el jugador:', error);
+  }
 };
 
 const cancelar = () => {
@@ -56,122 +106,153 @@ const cancelar = () => {
         </button>
         <button 
           @click="guardarJugador"
-          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+          :disabled="isLoading"
+          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Guardar
+          {{ isLoading ? 'Guardando...' : 'Guardar' }}
         </button>
       </div>
     </div>
     
+    <!-- Mensajes de estado -->
+    <StatusMessage 
+      type="error" 
+      :show="!!jugadorError" 
+      :message="jugadorError || ''" 
+      class="mb-4"
+    />
+    
+    <StatusMessage 
+      type="error" 
+      :show="!!clubsError" 
+      :message="clubsError || ''" 
+      class="mb-4"
+    />
+    
     <div class="bg-white border rounded-md shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="space-y-2">
-          <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
-          <input 
-            id="nombre" 
-            name="nombre"
-            v-model="nombre" 
-            type="text" 
-            autocomplete="given-name"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Nombre del jugador"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Nombre <span class="text-red-500">*</span>
+            <input 
+              name="nombre"
+              v-model="nombre" 
+              type="text" 
+              autocomplete="given-name"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.nombre}"
+              placeholder="Nombre del jugador"
+            />
+          </label>
+          <p v-if="validationErrors.nombre" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.nombre }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="apellidos" class="block text-sm font-medium text-gray-700">Apellidos</label>
-          <input 
-            id="apellidos" 
-            name="apellidos"
-            v-model="apellidos" 
-            type="text" 
-            autocomplete="family-name"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Apellidos del jugador"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Apellidos <span class="text-red-500">*</span>
+            <input 
+              name="apellidos"
+              v-model="apellidos" 
+              type="text" 
+              autocomplete="family-name"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.apellidos}"
+              placeholder="Apellidos del jugador"
+            />
+          </label>
+          <p v-if="validationErrors.apellidos" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.apellidos }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="apodo" class="block text-sm font-medium text-gray-700">Apodo</label>
-          <input 
-            id="apodo" 
-            name="apodo"
-            v-model="apodo" 
-            type="text" 
-            autocomplete="nickname"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Apodo o alias"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Club <span class="text-red-500">*</span>
+            <select 
+              name="codigo_club"
+              v-model="codigo_club" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.codigo_club}"
+              :disabled="clubsLoading"
+            >
+              <option value="">Seleccionar club</option>
+              <option v-for="club in clubs" :key="club.codigo_club" :value="club.codigo_club">
+                {{ club.nombre }}
+              </option>
+            </select>
+          </label>
+          <p v-if="validationErrors.codigo_club" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.codigo_club }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="fechaNacimiento" class="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
-          <input 
-            id="fechaNacimiento" 
-            name="fechaNacimiento"
-            v-model="fechaNacimiento" 
-            type="date" 
-            autocomplete="bday"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Número de jugador (máx 5 dígitos) <span class="text-red-500">*</span>
+            <input 
+              name="numero-jugador" 
+              v-model="numero_jugador" 
+              type="text" 
+              maxlength="5"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.numero_jugador}"
+              placeholder="Ej: 12345"
+            />
+          </label>
+          <p v-if="validationErrors.numero_jugador" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.numero_jugador }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="club" class="block text-sm font-medium text-gray-700">Club</label>
-          <select 
-            id="club" 
-            name="club"
-            v-model="club" 
-            autocomplete="organization"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Seleccionar club</option>
-            <option v-for="clubItem in clubesDisponibles" :key="clubItem.id" :value="clubItem.id">
-              {{ clubItem.nombre }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            DNI
+            <input 
+              name="dni"
+              v-model="dni" 
+              type="text" 
+              maxlength="9"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.dni}"
+              placeholder="12345678A"
+            />
+          </label>
+          <p v-if="validationErrors.dni" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.dni }}
+          </p>
+          <p class="text-xs text-gray-500">
+            Formato: 8 números + 1 letra mayúscula (opcional)
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="nivel" class="block text-sm font-medium text-gray-700">Nivel</label>
-          <select 
-            id="nivel" 
-            name="nivel"
-            v-model="nivel" 
-            autocomplete="off"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="principiante">Principiante</option>
-            <option value="intermedio">Intermedio</option>
-            <option value="avanzado">Avanzado</option>
-            <option value="experto">Experto</option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Teléfono
+            <input 
+              name="telefono"
+              v-model="telefono" 
+              type="tel" 
+              autocomplete="tel"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Teléfono de contacto"
+            />
+          </label>
         </div>
         
         <div class="space-y-2">
-          <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
-          <input 
-            id="telefono" 
-            name="telefono"
-            v-model="telefono" 
-            type="tel" 
-            autocomplete="tel"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Teléfono de contacto"
-          />
-        </div>
-        
-        <div class="space-y-2">
-          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-          <input 
-            id="email" 
-            name="email"
-            v-model="email" 
-            type="email" 
-            autocomplete="email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Email de contacto"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Email
+            <input 
+              name="email"
+              v-model="email" 
+              type="email" 
+              autocomplete="email"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Email de contacto"
+            />
+          </label>
         </div>
       </div>
     </div>

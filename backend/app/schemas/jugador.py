@@ -46,6 +46,23 @@ class JugadorBase(BaseModel):
 class JugadorCreate(JugadorBase):
     pass
 
+# Esquema específico para actualización - no requiere CP ni numero_jugador
+class JugadorUpdate(BaseModel):
+    nombre: str
+    apellidos: str
+    codigo_club: str
+    dni: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[EmailStr] = None
+    
+    @validator('dni')
+    def validar_dni(cls, v):
+        if v == "string":
+            return None
+        if v is not None and not (len(v) == 9 and v[:-1].isdigit() and v[-1].isalpha()):
+            raise ValueError('DNI debe tener formato válido (8 números y una letra)')
+        return v
+
 class JugadorResponse(JugadorBase):
     id: int
     idfed: str

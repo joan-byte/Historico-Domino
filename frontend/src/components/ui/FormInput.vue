@@ -93,23 +93,23 @@ const inputClasses = computed(() => {
 
 <template>
   <div class="mb-4">
-    <!-- Etiqueta del campo -->
-    <label :for="id" class="block text-sm font-medium text-gray-700 mb-1">
+    <!-- Etiqueta del campo con el input anidado -->
+    <label class="block text-sm font-medium text-gray-700">
       {{ label }}
       <span v-if="required" class="text-red-500">*</span>
+      
+      <!-- Campo de entrada -->
+      <input
+        :type="type"
+        :value="modelValue"
+        :placeholder="placeholder"
+        :required="required"
+        :disabled="disabled"
+        :class="[inputClasses, 'mt-1']"
+        @input="updateValue"
+        class="w-full"
+      />
     </label>
-    
-    <!-- Campo de entrada -->
-    <input
-      :id="id"
-      :type="type"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :required="required"
-      :disabled="disabled"
-      :class="inputClasses"
-      @input="updateValue"
-    />
     
     <!-- Mensaje de error -->
     <p v-if="error" class="mt-1 text-sm text-red-600">{{ error }}</p>

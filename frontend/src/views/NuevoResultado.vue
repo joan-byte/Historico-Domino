@@ -131,56 +131,64 @@ const getNombreEquipo = (id: string) => {
     
     <div class="bg-white border rounded-md shadow-sm p-6">
       <form @submit.prevent="guardarResultado" class="space-y-6">
-        <!-- Información básica -->
-        <div>
-          <h2 class="text-lg font-medium mb-4">Información de la Partida</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label for="fecha" class="block text-sm font-medium text-gray-700">Fecha *</label>
-              <input 
-                id="fecha" 
-                v-model="resultado.fecha" 
-                type="date" 
+        <!-- Fecha, Campeonato y Club Local -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Fecha -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">
+              Fecha *
+              <input
+                v-model="resultado.fecha"
+                type="date"
                 required
                 :max="fechaMinima"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
               />
-            </div>
-            
-            <div class="space-y-1">
-              <label for="campeonato" class="block text-sm font-medium text-gray-700">Campeonato *</label>
-              <select 
-                id="campeonato" 
-                v-model="resultado.campeonato" 
+            </label>
+          </div>
+
+          <!-- Campeonato -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">
+              Campeonato *
+              <select
+                v-model="resultado.campeonato"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
               >
-                <option value="">Selecciona un campeonato</option>
+                <option value="">Seleccionar campeonato</option>
                 <option v-for="campeonato in campeonatos" :key="campeonato.id" :value="campeonato.id">
                   {{ campeonato.nombre }}
                 </option>
               </select>
-            </div>
-            
-            <div class="space-y-1">
-              <label for="club" class="block text-sm font-medium text-gray-700">Club Anfitrión *</label>
-              <select 
-                id="club" 
-                v-model="resultado.club" 
+            </label>
+          </div>
+
+          <!-- Club local -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">
+              Club Local *
+              <select
+                v-model="resultado.club"
                 required
                 @change="cambiarClub"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
               >
-                <option value="">Selecciona un club</option>
+                <option value="">Seleccionar club local</option>
                 <option v-for="club in clubes" :key="club.id" :value="club.id">
                   {{ club.nombre }}
                 </option>
               </select>
-            </div>
+            </label>
           </div>
         </div>
         
-        <!-- Equipos y puntuación -->
+        <!-- Mensaje cuando no hay club seleccionado -->
+        <div v-if="!resultado.club" class="py-4 text-center text-amber-700 bg-amber-50 rounded-md">
+          Selecciona un club local para poder elegir los equipos
+        </div>
+        
+        <!-- Equipos y puntuaciones -->
         <div>
           <h2 class="text-lg font-medium mb-4">Equipos y Puntuación</h2>
           
@@ -196,29 +204,31 @@ const getNombreEquipo = (id: string) => {
               <h3 class="text-sm font-medium mb-3">Equipo A</h3>
               <div class="space-y-3">
                 <div>
-                  <label for="equipoA" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Equipo *</label>
-                  <select 
-                    id="equipoA" 
-                    v-model="resultado.equipoA" 
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="">Selecciona un equipo</option>
-                    <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
-                      {{ equipo.nombre }}
-                    </option>
-                  </select>
+                  <label class="block text-sm font-medium text-gray-700">
+                    Seleccionar Equipo *
+                    <select 
+                      v-model="resultado.equipoA" 
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                    >
+                      <option value="">Selecciona un equipo</option>
+                      <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
+                        {{ equipo.nombre }}
+                      </option>
+                    </select>
+                  </label>
                 </div>
                 
                 <div>
-                  <label for="puntosEquipoA" class="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
-                  <input 
-                    id="puntosEquipoA" 
-                    v-model.number="resultado.puntosEquipoA" 
-                    type="number" 
-                    min="0"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
+                  <label class="block text-sm font-medium text-gray-700">
+                    Puntos
+                    <input 
+                      v-model.number="resultado.puntosEquipoA" 
+                      type="number" 
+                      min="0"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
@@ -228,29 +238,31 @@ const getNombreEquipo = (id: string) => {
               <h3 class="text-sm font-medium mb-3">Equipo B</h3>
               <div class="space-y-3">
                 <div>
-                  <label for="equipoB" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Equipo *</label>
-                  <select 
-                    id="equipoB" 
-                    v-model="resultado.equipoB" 
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="">Selecciona un equipo</option>
-                    <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
-                      {{ equipo.nombre }}
-                    </option>
-                  </select>
+                  <label class="block text-sm font-medium text-gray-700">
+                    Seleccionar Equipo *
+                    <select 
+                      v-model="resultado.equipoB" 
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                    >
+                      <option value="">Selecciona un equipo</option>
+                      <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
+                        {{ equipo.nombre }}
+                      </option>
+                    </select>
+                  </label>
                 </div>
                 
                 <div>
-                  <label for="puntosEquipoB" class="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
-                  <input 
-                    id="puntosEquipoB" 
-                    v-model.number="resultado.puntosEquipoB" 
-                    type="number" 
-                    min="0"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
+                  <label class="block text-sm font-medium text-gray-700">
+                    Puntos
+                    <input 
+                      v-model.number="resultado.puntosEquipoB" 
+                      type="number" 
+                      min="0"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
@@ -278,14 +290,15 @@ const getNombreEquipo = (id: string) => {
         
         <!-- Notas adicionales -->
         <div>
-          <label for="notas" class="block text-sm font-medium text-gray-700 mb-1">Notas Adicionales</label>
-          <textarea 
-            id="notas" 
-            v-model="resultado.notas" 
-            rows="3" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Añade cualquier información relevante sobre la partida"
-          ></textarea>
+          <label class="block text-sm font-medium text-gray-700">
+            Notas Adicionales
+            <textarea 
+              v-model="resultado.notas" 
+              rows="3" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Añade cualquier información relevante sobre la partida"
+            ></textarea>
+          </label>
         </div>
         
         <!-- Botones de acción -->

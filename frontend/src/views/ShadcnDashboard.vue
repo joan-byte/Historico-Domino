@@ -669,8 +669,8 @@ const getDynamicHref = (option: any): string => {
                   Acceder a Campeonatos
                 </span>
               </div>
-            </div>
-            
+          </div>
+          
             <div 
               class="aspect-[3/2] rounded-md bg-purple-50 border border-purple-200 shadow-sm p-3 flex flex-col hover:bg-purple-100 transition-colors cursor-pointer"
               @click="handleMainCardClick('/resultados')"

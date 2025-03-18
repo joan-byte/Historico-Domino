@@ -89,19 +89,20 @@ const updatePageSize = (event: Event) => {
   <div class="flex items-center justify-between py-4">
     <!-- Selector de tamaño de página -->
     <div v-if="showPageSizeSelector" class="flex items-center">
-      <span class="text-sm text-gray-700 mr-2">Mostrar</span>
-      <select 
-        id="page-size-selector"
-        name="page-size-selector"
-        :value="pageSize" 
-        @change="updatePageSize"
-        class="border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1 px-2"
-      >
-        <option v-for="size in pageSizeOptions" :key="size" :value="size">
-          {{ size }}
-        </option>
-      </select>
-      <span class="text-sm text-gray-700 ml-2">elementos</span>
+      <label class="flex items-center text-sm text-gray-700">
+        <span class="mr-2">Mostrar</span>
+        <select 
+          name="page-size-selector"
+          :value="pageSize" 
+          @change="updatePageSize"
+          class="border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1 px-2"
+        >
+          <option v-for="size in pageSizeOptions" :key="size" :value="size">
+            {{ size }}
+          </option>
+        </select>
+        <span class="ml-2">elementos</span>
+      </label>
     </div>
     <div v-else class="flex-1"></div>
     

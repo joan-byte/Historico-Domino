@@ -4,22 +4,38 @@ import { apiService } from './apiService';
 // Tipo para la respuesta de Jugador desde el backend
 export interface JugadorResponse {
   id: number;
-  numero_licencia: string;
+  cp: string;
+  numero_jugador: string;
+  idfed: string;
   nombre: string;
   apellidos: string;
-  fecha_nacimiento?: string;
-  club_id?: number;
-  codigo_club?: string;
-  nombre_club?: string;
+  dni?: string;
+  telefono?: string;
+  email?: string;
+  codigo_club: string;
+  nombre_club: string;
 }
 
 // Tipo para los datos para crear un Jugador
 export interface JugadorCreate {
-  numero_licencia: string;
+  cp: string;
+  numero_jugador: string;
   nombre: string;
   apellidos: string;
-  fecha_nacimiento?: string;
-  club_id?: number;
+  dni?: string;
+  telefono?: string;
+  email?: string;
+  codigo_club: string;
+}
+
+// Tipo para los datos para actualizar un Jugador
+export interface JugadorUpdate {
+  nombre: string;
+  apellidos: string;
+  codigo_club: string;
+  dni?: string;
+  telefono?: string;
+  email?: string;
 }
 
 // Endpoint para jugadores
@@ -30,20 +46,20 @@ export const jugadorService = {
   // Obtener todos los jugadores
   getAll: () => apiService.getAll<JugadorResponse[]>(JUGADORES_ENDPOINT),
   
-  // Obtener un jugador por su número de licencia
-  getByLicencia: (licencia: string) => apiService.getById<JugadorResponse>(JUGADORES_ENDPOINT, licencia),
+  // Obtener un jugador por su idfed (el backend usa idfed como identificador en las rutas)
+  getByIdFed: (idfed: string) => apiService.getById<JugadorResponse>(JUGADORES_ENDPOINT, idfed),
   
   // Crear un nuevo jugador
   create: (jugadorData: JugadorCreate) => apiService.create<JugadorResponse>(JUGADORES_ENDPOINT, jugadorData),
   
-  // Actualizar un jugador existente
-  update: (licencia: string, jugadorData: Partial<JugadorCreate>) => 
-    apiService.update<JugadorResponse>(JUGADORES_ENDPOINT, licencia, jugadorData),
+  // Actualizar un jugador existente (usando POST ya que PUT no está implementado en el backend)
+  update: (idfed: string, jugadorData: JugadorUpdate) => 
+    apiService.custom<JugadorResponse>(`${JUGADORES_ENDPOINT}actualizar/${idfed}`, 'POST', jugadorData),
   
   // Eliminar un jugador
-  delete: (licencia: string) => apiService.delete<any>(JUGADORES_ENDPOINT, licencia),
+  delete: (idfed: string) => apiService.delete<JugadorResponse>(JUGADORES_ENDPOINT, idfed),
   
   // Obtener jugadores por club
-  getByClub: (clubId: number) => 
-    apiService.custom<JugadorResponse[]>(`${JUGADORES_ENDPOINT}/club/${clubId}`)
+  getByClub: (codigoClub: string) => 
+    apiService.custom<JugadorResponse[]>(`${JUGADORES_ENDPOINT}club/${codigoClub}`)
 }; 

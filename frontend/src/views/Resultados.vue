@@ -258,85 +258,97 @@ const formatearFecha = (fecha: string) => {
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label for="campeonato-filtro" class="block text-sm font-medium text-gray-700 mb-1">Campeonato</label>
-          <select 
-            id="campeonato-filtro"
-            name="campeonato-filtro"
-            v-model="filtros.campeonato" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Todos los campeonatos</option>
-            <option v-for="campeonato in campeonatos" :key="campeonato" :value="campeonato">
-              {{ campeonato }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Campeonato
+            <select 
+              id="campeonato-filtro"
+              name="campeonato-filtro"
+              v-model="filtros.campeonato" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            >
+              <option value="">Todos los campeonatos</option>
+              <option v-for="campeonato in campeonatos" :key="campeonato" :value="campeonato">
+                {{ campeonato }}
+              </option>
+            </select>
+          </label>
         </div>
         
         <div>
-          <label for="club-filtro" class="block text-sm font-medium text-gray-700 mb-1">Club</label>
-          <select 
-            id="club-filtro"
-            name="club-filtro"
-            v-model="filtros.club" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Todos los clubes</option>
-            <option v-for="club in clubes" :key="club" :value="club">
-              {{ club }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Club
+            <select 
+              id="club-filtro"
+              name="club-filtro"
+              v-model="filtros.club" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            >
+              <option value="">Todos los clubes</option>
+              <option v-for="club in clubes" :key="club" :value="club">
+                {{ club }}
+              </option>
+            </select>
+          </label>
         </div>
         
         <div>
-          <label for="equipo-filtro" class="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
-          <select 
-            id="equipo-filtro"
-            name="equipo-filtro"
-            v-model="filtros.equipo" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Todos los equipos</option>
-            <option v-for="equipo in equipos" :key="equipo" :value="equipo">
-              {{ equipo }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Equipo
+            <select 
+              id="equipo-filtro"
+              name="equipo-filtro"
+              v-model="filtros.equipo" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            >
+              <option value="">Todos los equipos</option>
+              <option v-for="equipo in equipos" :key="equipo" :value="equipo">
+                {{ equipo }}
+              </option>
+            </select>
+          </label>
         </div>
         
         <div>
-          <label for="estado-filtro" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select 
-            id="estado-filtro"
-            name="estado-filtro"
-            v-model="filtros.estado" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Todos los estados</option>
-            <option v-for="estado in estados" :key="estado" :value="estado">
-              {{ estado }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Estado
+            <select 
+              id="estado-filtro"
+              name="estado-filtro"
+              v-model="filtros.estado" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            >
+              <option value="">Todos los estados</option>
+              <option v-for="estado in estados" :key="estado" :value="estado">
+                {{ estado }}
+              </option>
+            </select>
+          </label>
         </div>
         
         <div>
-          <label for="fecha-desde" class="block text-sm font-medium text-gray-700 mb-1">Fecha desde</label>
-          <input 
-            id="fecha-desde"
-            name="fecha-desde"
-            type="date" 
-            v-model="filtros.fechaDesde" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Fecha desde
+            <input 
+              id="fecha-desde"
+              name="fecha-desde"
+              type="date" 
+              v-model="filtros.fechaDesde" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            />
+          </label>
         </div>
         
         <div>
-          <label for="fecha-hasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha hasta</label>
-          <input 
-            id="fecha-hasta"
-            name="fecha-hasta"
-            type="date" 
-            v-model="filtros.fechaHasta" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Fecha hasta
+            <input 
+              id="fecha-hasta"
+              name="fecha-hasta"
+              type="date" 
+              v-model="filtros.fechaHasta" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            />
+          </label>
         </div>
       </div>
     </div>

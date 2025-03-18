@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..db.session import get_db
 from ..models.jugador import Jugador
-from ..schemas.jugador import JugadorCreate, JugadorResponse
+from ..schemas.jugador import JugadorCreate, JugadorResponse, JugadorUpdate
 
 router = APIRouter(
     prefix="/jugadores",
@@ -60,6 +60,37 @@ def obtener_jugador(idfed: str, db: Session = Depends(get_db)):
     if not jugador:
         raise HTTPException(status_code=404, detail="Jugador no encontrado")
     return jugador
+
+@router.post("/actualizar/{idfed}", response_model=JugadorResponse)
+def actualizar_jugador(idfed: str, jugador_data: JugadorUpdate, db: Session = Depends(get_db)):
+    """
+    Actualizar un jugador existente por su IDFED
+    """
+    # Buscar el jugador
+    jugador = db.query(Jugador).filter(Jugador.idfed == idfed).first()
+    if not jugador:
+        raise HTTPException(status_code=404, detail="Jugador no encontrado")
+    
+    # Actualizar solo los campos permitidos
+    jugador.nombre = jugador_data.nombre
+    jugador.apellidos = jugador_data.apellidos
+    jugador.codigo_club = jugador_data.codigo_club
+    
+    # Actualizar campos opcionales
+    if jugador_data.dni:
+        jugador.dni = jugador_data.dni
+    if jugador_data.telefono:
+        jugador.telefono = jugador_data.telefono
+    if jugador_data.email:
+        jugador.email = jugador_data.email
+    
+    try:
+        db.commit()
+        db.refresh(jugador)
+        return jugador
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/club/{codigo_club}", response_model=List[JugadorResponse])
 def obtener_jugadores_por_club(codigo_club: str, db: Session = Depends(get_db)):

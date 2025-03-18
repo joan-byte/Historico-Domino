@@ -71,13 +71,13 @@ const routes = [
         component: () => import('../views/NuevoJugador.vue')
       },
       {
-        path: '/jugadores/modificar/:licencia?',
+        path: '/jugadores/modificar/:idfed',
         name: 'ModificarJugador',
         component: () => import('../views/ModificarJugador.vue'),
         props: true
       },
       {
-        path: '/jugadores/eliminar/:licencia?',
+        path: '/jugadores/eliminar/:idfed',
         name: 'EliminarJugador',
         component: () => import('../views/EliminarJugador.vue'),
         props: true

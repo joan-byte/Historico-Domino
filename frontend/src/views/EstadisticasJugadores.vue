@@ -73,59 +73,60 @@ const cambiarClubFiltro = () => {
     <!-- Filtros -->
     <div class="flex flex-wrap gap-4 mb-6">
       <div class="space-y-1">
-        <label for="periodo" class="block text-sm font-medium text-gray-700">Periodo</label>
-        <select 
-          id="periodo" 
-          v-model="periodoFiltro" 
-          class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-        >
-          <option value="todos">Todos los tiempos</option>
-          <option value="mes">Último mes</option>
-          <option value="trimestre">Último trimestre</option>
-          <option value="anio">Último año</option>
-        </select>
+        <label class="block text-sm font-medium text-gray-700">
+          Periodo
+          <select 
+            v-model="periodoFiltro" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+          >
+            <option value="todos">Todos los tiempos</option>
+            <option value="mes">Último mes</option>
+            <option value="trimestre">Último trimestre</option>
+            <option value="anio">Último año</option>
+          </select>
+        </label>
       </div>
       
       <div class="space-y-1">
-        <label for="club" class="block text-sm font-medium text-gray-700">Club</label>
-        <select 
-          id="club" 
-          v-model="clubFiltro" 
-          @change="cambiarClubFiltro"
-          class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-        >
-          <option v-for="club in clubes" :key="club.id" :value="club.id">{{ club.nombre }}</option>
-        </select>
+        <label class="block text-sm font-medium text-gray-700">
+          Club
+          <select 
+            v-model="clubFiltro" 
+            @change="cambiarClubFiltro"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+          >
+            <option v-for="club in clubes" :key="club.id" :value="club.id">{{ club.nombre }}</option>
+          </select>
+        </label>
       </div>
       
       <div class="space-y-1">
-        <label for="ordenar-victorias-jugador" class="block text-sm font-medium text-gray-700">Ordenar por</label>
-        <div class="flex gap-2">
-          <button 
-            id="ordenar-victorias-jugador"
-            @click="cambiarOrden('victorias')" 
-            class="px-3 py-2 border rounded-md text-sm"
-            :class="ordenarPor === 'victorias' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-          >
-            Victorias
-          </button>
-          <button 
-            id="ordenar-partidas-jugador"
-            @click="cambiarOrden('partidas')" 
-            class="px-3 py-2 border rounded-md text-sm"
-            :class="ordenarPor === 'partidas' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-          >
-            Partidas
-          </button>
-          <button 
-            id="ordenar-puntuacion-jugador"
-            @click="cambiarOrden('puntuacion')" 
-            class="px-3 py-2 border rounded-md text-sm"
-            :class="ordenarPor === 'puntuacion' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-          >
-            Puntuación
-          </button>
-        </div>
+        <label class="block text-sm font-medium text-gray-700">
+          Ordenar por
+          <div class="flex gap-2 mt-1">
+            <button 
+              @click="cambiarOrden('victorias')" 
+              class="px-3 py-2 border rounded-md text-sm"
+              :class="ordenarPor === 'victorias' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+            >
+              Victorias
+            </button>
+            <button 
+              @click="cambiarOrden('partidas')" 
+              class="px-3 py-2 border rounded-md text-sm"
+              :class="ordenarPor === 'partidas' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+            >
+              Partidas
+            </button>
+            <button 
+              @click="cambiarOrden('puntuacion')" 
+              class="px-3 py-2 border rounded-md text-sm"
+              :class="ordenarPor === 'puntuacion' ? 'bg-black text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+            >
+              Puntuación
+            </button>
+          </div>
+        </label>
       </div>
     </div>
     

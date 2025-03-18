@@ -108,51 +108,59 @@ const cambiarEstado = (id: number) => {
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div class="space-y-1">
-          <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre *</label>
-          <input 
-            id="nombre" 
-            v-model="nuevoTipo.nombre" 
-            type="text" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Ej: Liga Regular"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Nombre *
+            <input 
+              id="nombre" 
+              v-model="nuevoTipo.nombre" 
+              type="text" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Ej: Liga Regular"
+            />
+          </label>
         </div>
         
         <div class="space-y-1">
-          <label for="duracion" class="block text-sm font-medium text-gray-700">Duración Promedio</label>
-          <input 
-            id="duracion" 
-            v-model="nuevoTipo.duracionPromedio" 
-            type="text" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Ej: 3-4 meses"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Duración Promedio
+            <input 
+              id="duracion" 
+              v-model="nuevoTipo.duracionPromedio" 
+              type="text" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Ej: 3-4 meses"
+            />
+          </label>
         </div>
         
         <div class="space-y-1 md:col-span-2">
-          <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción *</label>
-          <textarea 
-            id="descripcion" 
-            v-model="nuevoTipo.descripcion" 
-            rows="3" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Describe cómo funciona este tipo de campeonato"
-          ></textarea>
+          <label class="block text-sm font-medium text-gray-700">
+            Descripción *
+            <textarea 
+              id="descripcion" 
+              v-model="nuevoTipo.descripcion" 
+              rows="3" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Describe cómo funciona este tipo de campeonato"
+            ></textarea>
+          </label>
         </div>
         
         <div class="space-y-1 md:col-span-2">
-          <label for="puntuacion" class="block text-sm font-medium text-gray-700">Sistema de Puntuación</label>
-          <textarea 
-            id="puntuacion" 
-            v-model="nuevoTipo.puntuacion" 
-            rows="2" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Ej: Victoria: 3 puntos, Empate: 1 punto, Derrota: 0 puntos"
-          ></textarea>
+          <label class="block text-sm font-medium text-gray-700">
+            Sistema de Puntuación
+            <textarea 
+              id="puntuacion" 
+              v-model="nuevoTipo.puntuacion" 
+              rows="2" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Ej: Victoria: 3 puntos, Empate: 1 punto, Derrota: 0 puntos"
+            ></textarea>
+          </label>
         </div>
         
         <div class="space-y-1">
-          <label for="activo" class="flex items-center">
+          <label class="flex items-center">
             <input 
               id="activo"
               name="activo"
@@ -198,27 +206,23 @@ const cambiarEstado = (id: number) => {
                 </p>
               </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tipo.duracionPromedio }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tipo.duracionPromedio || 'No especificada' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               <span 
-                class="px-2 py-1 text-xs font-medium rounded-full" 
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
                 :class="tipo.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
               >
                 {{ tipo.activo ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              <div class="flex space-x-2">
-                <button 
-                  @click="cambiarEstado(tipo.id)" 
-                  class="text-blue-600 hover:text-blue-900"
-                >
-                  {{ tipo.activo ? 'Desactivar' : 'Activar' }}
-                </button>
-                <button class="text-gray-600 hover:text-gray-900">
-                  Editar
-                </button>
-              </div>
+              <button 
+                @click="cambiarEstado(tipo.id)" 
+                class="text-blue-600 hover:text-blue-900"
+                aria-label="Cambiar estado de tipo de campeonato"
+              >
+                {{ tipo.activo ? 'Desactivar' : 'Activar' }}
+              </button>
             </td>
           </tr>
         </tbody>

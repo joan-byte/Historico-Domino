@@ -161,30 +161,34 @@ const campeonatosFiltrados = computed(() => {
     <!-- Filtros -->
     <div class="flex flex-wrap gap-4 mb-6">
       <div class="space-y-1">
-        <label for="anio" class="block text-sm font-medium text-gray-700">Año</label>
-        <select 
-          id="anio" 
-          v-model="anioFiltro" 
-          class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-        >
-          <option v-for="anio in aniosDisponibles" :key="anio" :value="anio">
-            {{ anio === 'todos' ? 'Todos los años' : anio }}
-          </option>
-        </select>
+        <label class="block text-sm font-medium text-gray-700">
+          Año
+          <select 
+            id="anio" 
+            v-model="anioFiltro" 
+            class="px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+          >
+            <option v-for="anio in aniosDisponibles" :key="anio" :value="anio">
+              {{ anio === 'todos' ? 'Todos los años' : anio }}
+            </option>
+          </select>
+        </label>
       </div>
       
       <div class="space-y-1">
-        <label for="estado" class="block text-sm font-medium text-gray-700">Estado</label>
-        <select 
-          id="estado" 
-          v-model="estadoFiltro" 
-          class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-        >
-          <option value="todos">Todos los estados</option>
-          <option value="Planificado">Planificado</option>
-          <option value="En curso">En curso</option>
-          <option value="Finalizado">Finalizado</option>
-        </select>
+        <label class="block text-sm font-medium text-gray-700">
+          Estado
+          <select 
+            id="estado" 
+            v-model="estadoFiltro" 
+            class="px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+          >
+            <option value="todos">Todos los estados</option>
+            <option value="Planificado">Planificado</option>
+            <option value="En curso">En curso</option>
+            <option value="Finalizado">Finalizado</option>
+          </select>
+        </label>
       </div>
     </div>
     

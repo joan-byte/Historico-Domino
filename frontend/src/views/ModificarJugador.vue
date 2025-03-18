@@ -2,81 +2,111 @@
 // Componente para modificar un jugador existente
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useJugadores } from '../composables/useJugadores';
+import { useClubs } from '../composables/useClubs';
+import type { JugadorUpdate } from '../lib/jugadorService';
+import StatusMessage from '../components/ui/StatusMessage.vue';
 
 const router = useRouter();
 const route = useRoute();
-const licencia = ref(route.params.licencia as string);
+const idfed = ref(route.params.idfed as string);
+
+// Usar los composables
+const { 
+  fetchJugadorByIdFed, 
+  updateJugador, 
+  selectedJugador, 
+  isLoading, 
+  error: jugadorError 
+} = useJugadores();
+
+const { 
+  clubs, 
+  fetchClubs, 
+  isLoading: clubsLoading, 
+  error: clubsError 
+} = useClubs();
 
 // Campos del formulario
 const nombre = ref('');
 const apellidos = ref('');
-const apodo = ref('');
-const fechaNacimiento = ref('');
-const club = ref('');
+const cp = ref('');
+const numero_jugador = ref('');
+const codigo_club = ref('');
+const dni = ref('');
 const telefono = ref('');
 const email = ref('');
-const nivel = ref('');
 
-// Mensaje de error
-const error = ref('');
+// Estado para errores de validación
+const validationErrors = ref<Record<string, string>>({});
 
-const clubesDisponibles = [
-  { id: 1, nombre: 'Club Domino A' },
-  { id: 2, nombre: 'Club Domino B' },
-  { id: 3, nombre: 'Club Domino C' },
-  { id: 4, nombre: 'Club Domino D' },
-  { id: 5, nombre: 'Club Domino E' }
-];
-
-// Cargar datos del jugador
+// Cargar datos del jugador y los clubes
 onMounted(async () => {
-  if (licencia.value) {
+  fetchClubs();
+  
+  if (idfed.value) {
     try {
-      // Aquí iría la llamada al API para obtener los datos del jugador
-      // En este ejemplo usamos datos de prueba
-      setTimeout(() => {
-        nombre.value = 'Juan';
-        apellidos.value = 'Pérez';
-        apodo.value = 'El Maestro';
-        fechaNacimiento.value = '1985-06-15';
-        club.value = '1';
-        telefono.value = '555-123-4567';
-        email.value = 'juan@example.com';
-        nivel.value = 'avanzado';
-      }, 500);
+      await fetchJugadorByIdFed(idfed.value);
+      
+      // Cuando se carga el jugador, rellenar los campos del formulario
+      if (selectedJugador.value) {
+        nombre.value = selectedJugador.value.nombre;
+        apellidos.value = selectedJugador.value.apellidos;
+        cp.value = selectedJugador.value.cp;
+        numero_jugador.value = selectedJugador.value.numero_jugador;
+        codigo_club.value = selectedJugador.value.codigo_club;
+        dni.value = selectedJugador.value.dni || '';
+        telefono.value = selectedJugador.value.telefono || '';
+        email.value = selectedJugador.value.email || '';
+      }
     } catch (err) {
       console.error('Error al cargar el jugador:', err);
-      error.value = 'No se pudo cargar la información del jugador';
     }
   }
 });
 
-const actualizarJugador = () => {
-  // Validar campos
-  if (!nombre.value || !apellidos.value) {
-    error.value = 'Los campos nombre y apellidos son obligatorios';
+// Validar los campos del formulario
+const validarFormulario = (): boolean => {
+  validationErrors.value = {};
+  
+  if (!nombre.value.trim()) {
+    validationErrors.value.nombre = 'El nombre es obligatorio';
+  }
+  
+  if (!apellidos.value.trim()) {
+    validationErrors.value.apellidos = 'Los apellidos son obligatorios';
+  }
+  
+  if (!codigo_club.value) {
+    validationErrors.value.codigo_club = 'Debe seleccionar un club';
+  }
+  
+  if (dni.value && !/^[0-9]{8}[A-Z]$/.test(dni.value)) {
+    validationErrors.value.dni = 'El DNI debe tener 8 números seguidos de una letra mayúscula';
+  }
+  
+  return Object.keys(validationErrors.value).length === 0;
+};
+
+const actualizarJugador = async () => {
+  if (!validarFormulario()) {
     return;
   }
 
   try {
-    // Aquí iría la lógica para actualizar el jugador en la base de datos
-    console.log('Actualizando jugador:', {
-      licencia: licencia.value,
+    const jugadorData: JugadorUpdate = {
       nombre: nombre.value,
       apellidos: apellidos.value,
-      apodo: apodo.value,
-      fechaNacimiento: fechaNacimiento.value,
-      club: club.value,
-      telefono: telefono.value,
-      email: email.value,
-      nivel: nivel.value
-    });
+      codigo_club: codigo_club.value,
+      dni: dni.value.trim() || undefined,
+      telefono: telefono.value.trim() || undefined,
+      email: email.value.trim() || undefined
+    };
     
-    // Redirigir a la lista de jugadores
+    await updateJugador(idfed.value, jugadorData);
     router.push('/jugadores');
   } catch (err) {
     console.error('Error al actualizar el jugador:', err);
-    error.value = 'Ocurrió un error al guardar los cambios';
   }
 };
 
@@ -98,127 +128,197 @@ const cancelar = () => {
         </button>
         <button 
           @click="actualizarJugador"
-          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+          :disabled="isLoading"
+          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Guardar
+          {{ isLoading ? 'Guardando...' : 'Guardar' }}
         </button>
       </div>
     </div>
     
-    <!-- Mensaje de error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-100 border border-red-300 rounded-md text-red-800">
-      {{ error }}
-    </div>
+    <!-- Mensajes de estado -->
+    <StatusMessage 
+      type="error" 
+      :show="!!jugadorError" 
+      :message="jugadorError || ''" 
+      class="mb-4"
+    />
+    
+    <StatusMessage 
+      type="error" 
+      :show="!!clubsError" 
+      :message="clubsError || ''" 
+      class="mb-4"
+    />
     
     <div class="bg-white border rounded-md shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- IDFED (informativo) -->
         <div class="space-y-2">
-          <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
-          <input 
-            id="nombre" 
-            name="nombre"
-            v-model="nombre" 
-            type="text" 
-            autocomplete="given-name"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Nombre del jugador"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            IDFED
+            <input 
+              id="idfed"
+              name="idfed"
+              type="text" 
+              :value="idfed"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 mt-1 cursor-not-allowed"
+            />
+          </label>
+          <p class="text-xs text-gray-500">
+            Identificador único del jugador (no editable)
+          </p>
+        </div>
+        
+        <!-- Campos CP + Número Jugador (No editables) -->
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">
+            Código Postal (CP)
+            <input 
+              id="cp"
+              name="cp"
+              type="text" 
+              :value="cp"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 mt-1 cursor-not-allowed"
+            />
+          </label>
+          <p class="text-xs text-gray-500">
+            Primeros dos dígitos del código postal (no editable)
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="apellidos" class="block text-sm font-medium text-gray-700">Apellidos</label>
-          <input 
-            id="apellidos" 
-            name="apellidos"
-            v-model="apellidos" 
-            type="text" 
-            autocomplete="family-name"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Apellidos del jugador"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Número de Jugador
+            <input 
+              id="numero_jugador"
+              name="numero_jugador"
+              type="text" 
+              :value="numero_jugador"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 mt-1 cursor-not-allowed"
+            />
+          </label>
+          <p class="text-xs text-gray-500">
+            Cinco dígitos numéricos (no editable)
+          </p>
+        </div>
+        
+        <!-- Datos personales -->
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">
+            Nombre 
+            <span class="text-red-500">*</span>
+            <input 
+              id="nombre"
+              name="nombre"
+              v-model="nombre" 
+              type="text" 
+              autocomplete="given-name"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.nombre}"
+              placeholder="Nombre del jugador"
+            />
+          </label>
+          <p v-if="validationErrors.nombre" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.nombre }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="apodo" class="block text-sm font-medium text-gray-700">Apodo</label>
-          <input 
-            id="apodo" 
-            name="apodo"
-            v-model="apodo" 
-            type="text" 
-            autocomplete="nickname"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Apodo o alias"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Apellidos 
+            <span class="text-red-500">*</span>
+            <input 
+              id="apellidos"
+              name="apellidos"
+              v-model="apellidos" 
+              type="text" 
+              autocomplete="family-name"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.apellidos}"
+              placeholder="Apellidos del jugador"
+            />
+          </label>
+          <p v-if="validationErrors.apellidos" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.apellidos }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="fechaNacimiento" class="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
-          <input 
-            id="fechaNacimiento" 
-            name="fechaNacimiento"
-            v-model="fechaNacimiento" 
-            type="date" 
-            autocomplete="bday"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            DNI
+            <input 
+              id="dni"
+              name="dni"
+              v-model="dni" 
+              type="text" 
+              maxlength="9"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.dni}"
+              placeholder="12345678A"
+            />
+          </label>
+          <p v-if="validationErrors.dni" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.dni }}
+          </p>
+          <p class="text-xs text-gray-500">
+            Formato: 8 números + 1 letra mayúscula (opcional)
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="club" class="block text-sm font-medium text-gray-700">Club</label>
-          <select 
-            id="club" 
-            name="club"
-            v-model="club" 
-            autocomplete="organization"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Seleccionar club</option>
-            <option v-for="clubItem in clubesDisponibles" :key="clubItem.id" :value="clubItem.id">
-              {{ clubItem.nombre }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Club
+            <span class="text-red-500">*</span>
+            <select 
+              id="codigo_club"
+              name="codigo_club"
+              v-model="codigo_club"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              :class="{'border-red-500': validationErrors.codigo_club}"
+              :disabled="clubsLoading"
+            >
+              <option value="">Seleccione un club</option>
+              <option v-for="club in clubs" :key="club.codigo_club" :value="club.codigo_club">
+                {{ club.nombre }}
+              </option>
+            </select>
+          </label>
+          <p v-if="validationErrors.codigo_club" class="text-red-500 text-xs mt-1">
+            {{ validationErrors.codigo_club }}
+          </p>
         </div>
         
         <div class="space-y-2">
-          <label for="nivel" class="block text-sm font-medium text-gray-700">Nivel</label>
-          <select 
-            id="nivel" 
-            name="nivel"
-            v-model="nivel" 
-            autocomplete="off"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="principiante">Principiante</option>
-            <option value="intermedio">Intermedio</option>
-            <option value="avanzado">Avanzado</option>
-            <option value="experto">Experto</option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Teléfono
+            <input 
+              id="telefono"
+              name="telefono"
+              v-model="telefono" 
+              type="tel" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Teléfono de contacto (opcional)"
+            />
+          </label>
         </div>
         
         <div class="space-y-2">
-          <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
-          <input 
-            id="telefono" 
-            name="telefono"
-            v-model="telefono" 
-            type="tel" 
-            autocomplete="tel"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Teléfono de contacto"
-          />
-        </div>
-        
-        <div class="space-y-2">
-          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-          <input 
-            id="email" 
-            name="email"
-            v-model="email" 
-            type="email" 
-            autocomplete="email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            placeholder="Email de contacto"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Email
+            <input 
+              id="email"
+              name="email"
+              v-model="email" 
+              type="email" 
+              autocomplete="email"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              placeholder="Correo electrónico (opcional)"
+            />
+          </label>
         </div>
       </div>
     </div>

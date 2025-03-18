@@ -111,28 +111,30 @@ const crearCampeonato = () => {
     <div class="flex flex-wrap justify-between items-end gap-4 mb-6">
       <div class="flex flex-wrap gap-4">
         <div class="space-y-1">
-          <label for="estado" class="block text-sm font-medium text-gray-700">Estado</label>
-          <select 
-            id="estado" 
-            v-model="estadoFiltro" 
-            class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="todos">Todos los estados</option>
-            <option value="Planificado">Planificado</option>
-            <option value="En curso">En curso</option>
-            <option value="Finalizado">Finalizado</option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700">
+            Estado
+            <select 
+              v-model="estadoFiltro" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="Planificado">Planificado</option>
+              <option value="En curso">En curso</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
+          </label>
         </div>
         
         <div class="space-y-1">
-          <label for="nombre" class="block text-sm font-medium text-gray-700">Buscar por nombre</label>
-          <input 
-            id="nombre" 
-            v-model="nombreFiltro" 
-            type="text" 
-            placeholder="Nombre del campeonato" 
-            class="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <label class="block text-sm font-medium text-gray-700">
+            Buscar por nombre
+            <input 
+              v-model="nombreFiltro" 
+              type="text" 
+              placeholder="Nombre del campeonato" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            />
+          </label>
         </div>
       </div>
       

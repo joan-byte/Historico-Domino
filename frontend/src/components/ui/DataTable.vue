@@ -228,7 +228,12 @@ onMounted(() => {
             :key="`${item[itemKey]}-${column.field}`"
             :class="getCellClasses(column)"
           >
-            {{ getCellValue(item, column) }}
+            <template v-if="column.render">
+              <div v-html="getCellValue(item, column)" role="button" tabindex="0"></div>
+            </template>
+            <template v-else>
+              {{ getCellValue(item, column) }}
+            </template>
           </td>
           
           <!-- Slot para acciones personalizadas por fila -->
@@ -251,10 +256,13 @@ onMounted(() => {
 <style scoped>
 /* Estilos adicionales si son necesarios */
 .striped tr:nth-child(even) {
-  @apply bg-gray-50;
+  background-color: #f9fafb; /* bg-gray-50 equivalente */
 }
 
 .compact th, .compact td {
-  @apply px-3 py-2;
+  padding-left: 0.75rem; /* px-3 equivalente */
+  padding-right: 0.75rem;
+  padding-top: 0.5rem; /* py-2 equivalente */
+  padding-bottom: 0.5rem;
 }
 </style> 

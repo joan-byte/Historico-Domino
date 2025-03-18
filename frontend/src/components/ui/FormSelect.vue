@@ -97,33 +97,33 @@ const selectClasses = computed(() => {
 
 <template>
   <div class="mb-4">
-    <!-- Etiqueta del campo -->
-    <label :for="id" class="block text-sm font-medium text-gray-700 mb-1">
+    <!-- Etiqueta del campo con el select anidado -->
+    <label class="block text-sm font-medium text-gray-700">
       {{ label }}
       <span v-if="required" class="text-red-500">*</span>
-    </label>
-    
-    <!-- Campo de selección -->
-    <select
-      :id="id"
-      :value="modelValue"
-      :required="required"
-      :disabled="disabled"
-      :class="selectClasses"
-      @change="updateValue"
-    >
-      <!-- Opción placeholder -->
-      <option value="" disabled>{{ placeholder }}</option>
       
-      <!-- Opciones del select -->
-      <option 
-        v-for="option in options" 
-        :key="option.value"
-        :value="option.value"
+      <!-- Campo de selección -->
+      <select
+        :value="modelValue"
+        :required="required"
+        :disabled="disabled"
+        :class="[selectClasses, 'mt-1']"
+        @change="updateValue"
+        class="w-full"
       >
-        {{ option.label }}
-      </option>
-    </select>
+        <!-- Opción placeholder -->
+        <option value="" disabled>{{ placeholder }}</option>
+        
+        <!-- Opciones del select -->
+        <option 
+          v-for="option in options" 
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+    </label>
     
     <!-- Mensaje de error -->
     <p v-if="error" class="mt-1 text-sm text-red-600">{{ error }}</p>
