@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Clubes from '../views/Clubes.vue'
+import Clubs from '../views/Clubs.vue'
 import Home from '../views/Home.vue'
 import ShadcnDashboard from '../views/ShadcnDashboard.vue'
 import { h } from 'vue'
@@ -18,7 +18,7 @@ const routes = [
       },
       {
         path: '/clubes',
-        component: Clubes,
+        component: Clubs,
         name: 'ClubesRoot',
       },
       {
@@ -51,7 +51,7 @@ const routes = [
       {
         path: '/clubes/lista',
         name: 'ClubesLista',
-        component: Clubes
+        component: Clubs
       },
       
       // Rutas para el módulo de Jugadores
@@ -85,6 +85,44 @@ const routes = [
         path: '/jugadores/lista',
         name: 'JugadoresLista',
         component: () => import('../views/Jugadores.vue')
+      },
+      
+      // Rutas para el módulo de Campeonatos
+      {
+        path: '/campeonatos',
+        component: () => import('../views/Campeonatos.vue'),
+        name: 'CampeonatosRoot',
+      },
+      {
+        path: '/campeonatos/crud',
+        name: 'CrudCampeonatos',
+        component: () => import('../views/CrudCampeonatos.vue')
+      },
+      {
+        path: '/campeonatos/crear',
+        name: 'CrearCampeonato',
+        component: () => import('../views/NuevoCampeonato.vue')
+      },
+      {
+        path: '/campeonatos/modificar/:id',
+        name: 'ModificarCampeonato',
+        component: () => import('../views/ModificarCampeonato.vue'),
+        props: true
+      },
+      {
+        path: '/campeonatos/estadisticas',
+        name: 'EstadisticasCampeonatos',
+        component: () => import('../views/EstadisticasCampeonatos.vue')
+      },
+      {
+        path: '/campeonatos/lista',
+        name: 'CampeonatosLista',
+        component: () => import('../views/Campeonatos.vue')
+      },
+      {
+        path: '/campeonatos/tipos',
+        name: 'TiposCampeonato',
+        component: () => import('../views/TipoCampeonato.vue')
       }
     ]
   }

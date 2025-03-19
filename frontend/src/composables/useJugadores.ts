@@ -17,7 +17,6 @@ export function useJugadores() {
     try {
       jugadores.value = await jugadorService.getAll();
     } catch (err) {
-      console.error('Error al cargar los jugadores:', err);
       error.value = 'No se pudieron cargar los jugadores. Intente nuevamente más tarde.';
     } finally {
       isLoading.value = false;
@@ -31,7 +30,6 @@ export function useJugadores() {
     try {
       selectedJugador.value = await jugadorService.getByIdFed(idfed);
     } catch (err) {
-      console.error(`Error al cargar el jugador con IDFED ${idfed}:`, err);
       error.value = `No se pudo cargar el jugador. Intente nuevamente más tarde.`;
     } finally {
       isLoading.value = false;
@@ -45,7 +43,6 @@ export function useJugadores() {
     try {
       jugadores.value = await jugadorService.getByClub(codigoClub);
     } catch (err) {
-      console.error(`Error al cargar jugadores del club ${codigoClub}:`, err);
       error.value = `No se pudieron cargar los jugadores del club. Intente nuevamente más tarde.`;
     } finally {
       isLoading.value = false;
@@ -61,7 +58,6 @@ export function useJugadores() {
       jugadores.value.push(newJugador);
       return newJugador;
     } catch (err) {
-      console.error('Error al crear el jugador:', err);
       error.value = 'No se pudo crear el jugador. Intente nuevamente más tarde.';
       throw err;
     } finally {
@@ -89,7 +85,6 @@ export function useJugadores() {
       
       return updatedJugador;
     } catch (err) {
-      console.error(`Error al actualizar el jugador con IDFED ${idfed}:`, err);
       error.value = `No se pudo actualizar el jugador. Intente nuevamente más tarde.`;
       throw err;
     } finally {
@@ -114,7 +109,6 @@ export function useJugadores() {
       
       return true;
     } catch (err) {
-      console.error(`Error al eliminar el jugador con IDFED ${idfed}:`, err);
       error.value = `No se pudo eliminar el jugador. Intente nuevamente más tarde.`;
       throw err;
     } finally {

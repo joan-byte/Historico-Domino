@@ -9,7 +9,8 @@ engine = create_engine(
     settings.DATABASE_URL,
     # Desactivar el pooling para entornos de desarrollo
     poolclass=NullPool if settings.DEBUG else None,
-    echo=settings.DEBUG,  # Mostrar consultas SQL en modo debug
+    echo=False,  # Desactivar consultas SQL siempre
+    echo_pool=False,  # Desactivar logs de pool
 )
 
 # Crear la sesión

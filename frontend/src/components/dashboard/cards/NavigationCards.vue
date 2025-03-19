@@ -19,7 +19,7 @@ const handleCardClick = (route: string) => {
     if (!isExpanded('Jugadores')) {
       toggleExpand('Jugadores');
     }
-  } else if (route.includes('/campeonato')) {
+  } else if (route.includes('/campeonatos')) {
     if (!isExpanded('Campeonatos')) {
       toggleExpand('Campeonatos');
     }
@@ -33,7 +33,7 @@ const handleCardClick = (route: string) => {
   router.push(route);
   
   // Actualizar la vista según la ruta
-  if (route.includes('/clubes')) {
+  if (route.includes('/clubes') || route.includes('/jugadores') || route.includes('/campeonatos')) {
     currentView.value = 'crud';
   }
 };
@@ -86,7 +86,7 @@ const handleCardClick = (route: string) => {
     <!-- Tarjeta de Campeonatos -->
     <div 
       class="aspect-[3/2] rounded-md bg-amber-50 border border-amber-200 shadow-sm p-3 flex flex-col hover:bg-amber-100 transition-colors cursor-pointer"
-      @click="handleCardClick('/campeonato')"
+      @click="handleCardClick('/campeonatos')"
     >
       <div class="flex items-center justify-between mb-1">
         <h3 class="text-sm font-medium text-amber-800">Campeonatos</h3>

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
-from .routes import club, jugador, tipo_campeonato, resultado
+from .routes import club, jugador, tipo_campeonato, resultado, campeonato
 from .db.database import Base, engine
 from .db.session import get_db
 from .db.init_db import init_tipos_campeonatos
@@ -71,4 +71,5 @@ app.mount("/static", StaticFiles(directory=os.path.dirname(current_dir)), name="
 app.include_router(club.router, prefix="/api")
 app.include_router(jugador.router, prefix="/api")
 app.include_router(tipo_campeonato.router, prefix="/api")
-app.include_router(resultado.router, prefix="/api") 
+app.include_router(resultado.router, prefix="/api")
+app.include_router(campeonato.router, prefix="/api") 

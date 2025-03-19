@@ -145,7 +145,7 @@ const confirmarEliminacion = async () => {
       showConfirmDialog.value = false;
       jugadorToDelete.value = null;
     } catch (err) {
-      console.error('Error al eliminar el jugador:', err);
+      // No vamos a registrar el error en la consola, ya usamos el valor error
     }
   }
 };

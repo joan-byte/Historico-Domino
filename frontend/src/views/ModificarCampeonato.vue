@@ -1,16 +1,29 @@
+<!-- ModificarCampeonato.vue - Formulario para editar un campeonato existente -->
 <script setup lang="ts">
-// Componente para crear y editar campeonatos
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useCampeonatos } from '../composables/useCampeonatos';
 import StatusMessage from '../components/ui/StatusMessage.vue';
-import type { CampeonatoCreate, TipoCampeonatoResponse } from '../lib/campeonatoService';
+import type { CampeonatoResponse, CampeonatoCreate } from '../lib/campeonatoService';
 
-// Router para la navegación
+// Router y route para la navegación y acceso a parámetros
 const router = useRouter();
+const route = useRoute();
+const campeonatoId = computed(() => {
+  const id = route.params.id;
+  return typeof id === 'string' ? parseInt(id, 10) : 0;
+});
 
 // Composable para campeonatos
-const { createCampeonato, isLoading, error, fetchTiposCampeonato, tiposCampeonato } = useCampeonatos();
+const { 
+  fetchCampeonatoById, 
+  fetchTiposCampeonato,
+  updateCampeonato, 
+  isLoading, 
+  error, 
+  selectedCampeonato, 
+  tiposCampeonato 
+} = useCampeonatos();
 
 // Estado para el formulario
 const campeonato = ref<CampeonatoCreate>({
@@ -65,26 +78,18 @@ const handleSubmit = async () => {
   if (!validateForm()) return;
   
   try {
-    const newCampeonato = await createCampeonato(campeonato.value);
+    const updatedCampeonato = await updateCampeonato(campeonatoId.value, campeonato.value);
     
     // Mostrar mensaje de éxito
-    successMessage.value = `Campeonato "${newCampeonato.nombre}" creado con éxito.`;
+    successMessage.value = `Campeonato "${updatedCampeonato.nombre}" actualizado con éxito.`;
     showSuccess.value = true;
-    
-    // Limpiar formulario
-    campeonato.value = {
-      nombre: '',
-      fecha_inicio: new Date().toISOString().substring(0, 10),
-      fecha_fin: new Date().toISOString().substring(0, 10),
-      tipo_campeonato_id: 0
-    };
     
     // Volver a la lista después de un breve retraso
     setTimeout(() => {
       router.push({ name: 'CampeonatosLista' });
     }, 2000);
   } catch (err) {
-    console.error('Error al crear campeonato:', err);
+    console.error('Error al actualizar campeonato:', err);
   }
 };
 
@@ -101,6 +106,25 @@ const tiposCampeonatoOptions = computed(() => {
   }));
 });
 
+// Cargar datos del campeonato cuando cambia el ID
+watch(campeonatoId, async (newId) => {
+  if (newId) {
+    await fetchCampeonatoById(newId);
+  }
+}, { immediate: true });
+
+// Actualizar el formulario cuando se carga el campeonato seleccionado
+watch(selectedCampeonato, (newCampeonato) => {
+  if (newCampeonato) {
+    campeonato.value = {
+      nombre: newCampeonato.nombre,
+      fecha_inicio: newCampeonato.fecha_inicio,
+      fecha_fin: newCampeonato.fecha_fin,
+      tipo_campeonato_id: newCampeonato.tipo_campeonato_id
+    };
+  }
+});
+
 // Obtener los tipos de campeonato al cargar el componente
 onMounted(async () => {
   await fetchTiposCampeonato();
@@ -109,7 +133,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-6">Crear Nuevo Campeonato</h1>
+    <h1 class="text-2xl font-bold mb-6">Modificar Campeonato</h1>
     
     <!-- Mensajes de error y éxito -->
     <StatusMessage v-if="error" 
@@ -124,8 +148,13 @@ onMounted(async () => {
                  :show="true"
                  class="mb-4" />
     
+    <!-- Loading spinner -->
+    <div v-if="isLoading" class="flex justify-center my-8">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    </div>
+    
     <!-- Formulario -->
-    <form @submit.prevent="handleSubmit" class="bg-white p-6 rounded-lg shadow-md">
+    <form v-else @submit.prevent="handleSubmit" class="bg-white p-6 rounded-lg shadow-md">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Campo: Nombre -->
         <div class="col-span-2">
@@ -226,8 +255,4 @@ onMounted(async () => {
       </div>
     </form>
   </div>
-</template>
-
-<style scoped>
-/* Estilos específicos para este componente */
-</style> 
+</template> 

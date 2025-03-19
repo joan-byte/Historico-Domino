@@ -15,6 +15,9 @@ class Resultado(Base):
     # Número campeonato Histórico (autoincremental)
     nch = Column(Integer, primary_key=True, autoincrement=True)
     
+    # Referencia al campeonato
+    campeonato_id = Column(Integer, ForeignKey('campeonatos.id'), nullable=True)
+    
     # Información del campeonato
     nombre_campeonato = Column(String(200), nullable=False)
     fecha_campeonato = Column(Date, nullable=False, primary_key=True)
@@ -52,6 +55,9 @@ class Resultado(Base):
     
     # Relación con tipo de campeonato
     tipo_campeonato = relationship("TipoCampeonato", back_populates="resultados")
+    
+    # Relación con campeonato
+    campeonato = relationship("Campeonato", back_populates="resultados")
     
     # Propiedad híbrida para acceder al código del tipo de campeonato
     @hybrid_property

@@ -1,7 +1,8 @@
-// campeonatoService.ts - Servicio para gestionar los campeonatos
-import { apiService } from './apiService';
+// campeonatoService.ts - Servicio para manejar las llamadas a la API de campeonatos
+import axios from 'axios';
+import { API_URL } from '../config.js';
 
-// Tipo para la respuesta de Campeonato desde el backend
+// Tipos de datos
 export interface CampeonatoResponse {
   id: number;
   nombre: string;
@@ -11,7 +12,6 @@ export interface CampeonatoResponse {
   nombre_tipo_campeonato?: string;
 }
 
-// Tipo para los datos para crear un Campeonato
 export interface CampeonatoCreate {
   nombre: string;
   fecha_inicio: string;
@@ -19,48 +19,57 @@ export interface CampeonatoCreate {
   tipo_campeonato_id: number;
 }
 
-// Tipo para la respuesta de TipoCampeonato
 export interface TipoCampeonatoResponse {
   id: number;
   nombre: string;
-  descripcion?: string;
+  descripcion: string;
 }
 
-// Endpoints para campeonatos
-const CAMPEONATOS_ENDPOINT = '/api/campeonatos/';
-const TIPO_CAMPEONATOS_ENDPOINT = '/api/tipos-campeonato/';
+// Clase para el servicio de campeonatos
+class CampeonatoService {
+  private baseUrl = `${API_URL}/campeonatos`;
 
-// Servicio para gestionar campeonatos
-export const campeonatoService = {
   // Obtener todos los campeonatos
-  getAll: () => apiService.getAll<CampeonatoResponse[]>(CAMPEONATOS_ENDPOINT),
-  
-  // Obtener un campeonato por su ID
-  getById: (id: number) => apiService.getById<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id),
-  
+  async getCampeonatos(): Promise<CampeonatoResponse[]> {
+    const response = await axios.get(this.baseUrl);
+    return response.data;
+  }
+
+  // Obtener un campeonato por ID
+  async getCampeonatoById(id: number): Promise<CampeonatoResponse> {
+    const response = await axios.get(`${this.baseUrl}/${id}`);
+    return response.data;
+  }
+
   // Crear un nuevo campeonato
-  create: (campeonatoData: CampeonatoCreate) => 
-    apiService.create<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, campeonatoData),
-  
-  // Actualizar un campeonato existente
-  update: (id: number, campeonatoData: Partial<CampeonatoCreate>) => 
-    apiService.update<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id, campeonatoData),
-  
+  async createCampeonato(campeonato: CampeonatoCreate): Promise<CampeonatoResponse> {
+    const response = await axios.post(this.baseUrl, campeonato);
+    return response.data;
+  }
+
+  // Actualizar un campeonato
+  async updateCampeonato(id: number, campeonato: CampeonatoCreate): Promise<CampeonatoResponse> {
+    const response = await axios.put(`${this.baseUrl}/${id}`, campeonato);
+    return response.data;
+  }
+
   // Eliminar un campeonato
-  delete: (id: number) => apiService.delete<any>(CAMPEONATOS_ENDPOINT, id),
-  
+  async deleteCampeonato(id: number): Promise<void> {
+    await axios.delete(`${this.baseUrl}/${id}`);
+  }
+
   // Obtener todos los tipos de campeonato
-  getAllTipos: () => apiService.getAll<TipoCampeonatoResponse[]>(TIPO_CAMPEONATOS_ENDPOINT),
-  
-  // Obtener un tipo de campeonato por su ID
-  getTipoById: (id: number) => 
-    apiService.getById<TipoCampeonatoResponse>(TIPO_CAMPEONATOS_ENDPOINT, id),
-  
+  async getTiposCampeonato(): Promise<TipoCampeonatoResponse[]> {
+    const response = await axios.get(`${this.baseUrl}/tipos`);
+    return response.data;
+  }
+
   // Crear un nuevo tipo de campeonato
-  createTipo: (data: { nombre: string, descripcion?: string }) => 
-    apiService.create<TipoCampeonatoResponse>(TIPO_CAMPEONATOS_ENDPOINT, data),
-  
-  // Obtener campeonatos activos (fecha_fin > hoy)
-  getActivos: () => 
-    apiService.custom<CampeonatoResponse[]>(`${CAMPEONATOS_ENDPOINT}/activos`)
-}; 
+  async createTipoCampeonato(tipo: { nombre: string; descripcion: string }): Promise<TipoCampeonatoResponse> {
+    const response = await axios.post(`${this.baseUrl}/tipos`, tipo);
+    return response.data;
+  }
+}
+
+// Exportar una instancia del servicio
+export const campeonatoService = new CampeonatoService(); 

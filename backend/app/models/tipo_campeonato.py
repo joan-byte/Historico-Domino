@@ -23,6 +23,9 @@ class TipoCampeonato(Base):
     # Relación inversa con Resultado
     resultados = relationship("Resultado", back_populates="tipo_campeonato")
     
+    # Relación inversa con Campeonato
+    campeonatos = relationship("Campeonato", back_populates="tipo_campeonato")
+    
     # Restricciones de formato
     __table_args__ = (
         CheckConstraint("codigo ~ '^[A-Z]{2}$'", name='check_codigo_formato'),

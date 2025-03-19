@@ -2,176 +2,143 @@
 import { ref, computed } from 'vue';
 import { campeonatoService, type CampeonatoResponse, type CampeonatoCreate, type TipoCampeonatoResponse } from '../lib/campeonatoService';
 
+// Estado global para campeonatos
+const campeonatos = ref<CampeonatoResponse[]>([]);
+const tiposCampeonato = ref<TipoCampeonatoResponse[]>([]);
+const selectedCampeonato = ref<CampeonatoResponse | null>(null);
+const isLoading = ref(false);
+const error = ref<string | null>(null);
+
+// Función para obtener todos los campeonatos
+const fetchCampeonatos = async () => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.getCampeonatos();
+    campeonatos.value = response;
+  } catch (err) {
+    error.value = 'Error al cargar los campeonatos';
+    console.error('Error en fetchCampeonatos:', err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para obtener un campeonato por ID
+const fetchCampeonatoById = async (id: number) => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.getCampeonatoById(id);
+    selectedCampeonato.value = response;
+  } catch (err) {
+    error.value = 'Error al cargar el campeonato';
+    console.error('Error en fetchCampeonatoById:', err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para crear un nuevo campeonato
+const createCampeonato = async (campeonato: CampeonatoCreate) => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.createCampeonato(campeonato);
+    await fetchCampeonatos(); // Recargar la lista
+    return response;
+  } catch (err) {
+    error.value = 'Error al crear el campeonato';
+    console.error('Error en createCampeonato:', err);
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para actualizar un campeonato
+const updateCampeonato = async (id: number, campeonato: CampeonatoCreate) => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.updateCampeonato(id, campeonato);
+    await fetchCampeonatos(); // Recargar la lista
+    return response;
+  } catch (err) {
+    error.value = 'Error al actualizar el campeonato';
+    console.error('Error en updateCampeonato:', err);
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para eliminar un campeonato
+const deleteCampeonato = async (id: number) => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    await campeonatoService.deleteCampeonato(id);
+    await fetchCampeonatos(); // Recargar la lista
+  } catch (err) {
+    error.value = 'Error al eliminar el campeonato';
+    console.error('Error en deleteCampeonato:', err);
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para obtener todos los tipos de campeonato
+const fetchTiposCampeonato = async () => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.getTiposCampeonato();
+    tiposCampeonato.value = response;
+  } catch (err) {
+    error.value = 'Error al cargar los tipos de campeonato';
+    console.error('Error en fetchTiposCampeonato:', err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Función para crear un nuevo tipo de campeonato
+const createTipoCampeonato = async (tipo: { nombre: string; descripcion: string }) => {
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await campeonatoService.createTipoCampeonato(tipo);
+    await fetchTiposCampeonato(); // Recargar la lista
+    return response;
+  } catch (err) {
+    error.value = 'Error al crear el tipo de campeonato';
+    console.error('Error en createTipoCampeonato:', err);
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Computed property para ordenar campeonatos por fecha de inicio
+const sortedCampeonatos = computed(() => {
+  return [...campeonatos.value].sort((a, b) => {
+    const fechaA = new Date(a.fecha_inicio);
+    const fechaB = new Date(b.fecha_inicio);
+    return fechaB.getTime() - fechaA.getTime(); // Ordenar de más reciente a más antiguo
+  });
+});
+
+// Exportar el composable
 export function useCampeonatos() {
-  // Estado
-  const campeonatos = ref<CampeonatoResponse[]>([]);
-  const tiposCampeonato = ref<TipoCampeonatoResponse[]>([]);
-  const selectedCampeonato = ref<CampeonatoResponse | null>(null);
-  const isLoading = ref(false);
-  const error = ref<string | null>(null);
-
-  // Acciones
-  const fetchCampeonatos = async () => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      campeonatos.value = await campeonatoService.getAll();
-    } catch (err) {
-      console.error('Error al cargar los campeonatos:', err);
-      error.value = 'No se pudieron cargar los campeonatos. Intente nuevamente más tarde.';
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const fetchCampeonatosActivos = async () => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      campeonatos.value = await campeonatoService.getActivos();
-    } catch (err) {
-      console.error('Error al cargar los campeonatos activos:', err);
-      error.value = 'No se pudieron cargar los campeonatos activos. Intente nuevamente más tarde.';
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const fetchCampeonatoById = async (id: number) => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      selectedCampeonato.value = await campeonatoService.getById(id);
-    } catch (err) {
-      console.error(`Error al cargar el campeonato ${id}:`, err);
-      error.value = `No se pudo cargar el campeonato ${id}. Intente nuevamente más tarde.`;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const fetchTiposCampeonato = async () => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      tiposCampeonato.value = await campeonatoService.getAllTipos();
-    } catch (err) {
-      console.error('Error al cargar los tipos de campeonato:', err);
-      error.value = 'No se pudieron cargar los tipos de campeonato. Intente nuevamente más tarde.';
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const createCampeonato = async (campeonatoData: CampeonatoCreate) => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      const newCampeonato = await campeonatoService.create(campeonatoData);
-      campeonatos.value.push(newCampeonato);
-      return newCampeonato;
-    } catch (err) {
-      console.error('Error al crear el campeonato:', err);
-      error.value = 'No se pudo crear el campeonato. Intente nuevamente más tarde.';
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const createTipoCampeonato = async (data: { nombre: string, descripcion?: string }) => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      const newTipo = await campeonatoService.createTipo(data);
-      tiposCampeonato.value.push(newTipo);
-      return newTipo;
-    } catch (err) {
-      console.error('Error al crear el tipo de campeonato:', err);
-      error.value = 'No se pudo crear el tipo de campeonato. Intente nuevamente más tarde.';
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const updateCampeonato = async (id: number, campeonatoData: Partial<CampeonatoCreate>) => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      const updatedCampeonato = await campeonatoService.update(id, campeonatoData);
-      
-      // Actualizar el campeonato en la lista si existe
-      const index = campeonatos.value.findIndex(c => c.id === id);
-      if (index !== -1) {
-        campeonatos.value[index] = updatedCampeonato;
-      }
-      
-      // Actualizar el campeonato seleccionado si es el mismo
-      if (selectedCampeonato.value?.id === id) {
-        selectedCampeonato.value = updatedCampeonato;
-      }
-      
-      return updatedCampeonato;
-    } catch (err) {
-      console.error(`Error al actualizar el campeonato ${id}:`, err);
-      error.value = `No se pudo actualizar el campeonato ${id}. Intente nuevamente más tarde.`;
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const deleteCampeonato = async (id: number) => {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      await campeonatoService.delete(id);
-      
-      // Eliminar el campeonato de la lista
-      campeonatos.value = campeonatos.value.filter(c => c.id !== id);
-      
-      // Limpiar el campeonato seleccionado si es el mismo
-      if (selectedCampeonato.value?.id === id) {
-        selectedCampeonato.value = null;
-      }
-      
-      return true;
-    } catch (err) {
-      console.error(`Error al eliminar el campeonato ${id}:`, err);
-      error.value = `No se pudo eliminar el campeonato ${id}. Intente nuevamente más tarde.`;
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  // Getters
-  const sortedCampeonatos = computed(() => 
-    [...campeonatos.value].sort((a, b) => a.nombre.localeCompare(b.nombre))
-  );
-
-  const campeonatosActivos = computed(() => 
-    campeonatos.value.filter(c => {
-      const hoy = new Date();
-      const fechaFin = new Date(c.fecha_fin);
-      return fechaFin >= hoy;
-    })
-  );
-
-  const sortedTiposCampeonato = computed(() => 
-    [...tiposCampeonato.value].sort((a, b) => a.nombre.localeCompare(b.nombre))
-  );
-
-  // Retornar estado, acciones y getters
   return {
     // Estado
     campeonatos,
@@ -179,20 +146,15 @@ export function useCampeonatos() {
     selectedCampeonato,
     isLoading,
     error,
+    sortedCampeonatos,
     
-    // Acciones
+    // Métodos
     fetchCampeonatos,
-    fetchCampeonatosActivos,
     fetchCampeonatoById,
-    fetchTiposCampeonato,
     createCampeonato,
-    createTipoCampeonato,
     updateCampeonato,
     deleteCampeonato,
-    
-    // Getters
-    sortedCampeonatos,
-    campeonatosActivos,
-    sortedTiposCampeonato
+    fetchTiposCampeonato,
+    createTipoCampeonato
   };
 } 

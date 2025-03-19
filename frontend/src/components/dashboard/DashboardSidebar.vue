@@ -70,10 +70,10 @@ const handleJugadoresClick = () => {
 };
 
 const handleCampeonatosClick = () => {
-  // Solo expandir/colapsar el menú de Campeonatos
+  // Expandir/colapsar el menú de Campeonatos
   toggleExpand('Campeonatos');
-  // Por ahora, no navegar a ninguna ruta
-  // router.push('/campeonato');
+  // Navegar a la ruta principal de campeonatos
+  router.push('/campeonatos');
 };
 
 const handleResultadosClick = () => {

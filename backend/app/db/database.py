@@ -15,6 +15,13 @@ logging.getLogger('sqlalchemy.pool').disabled = True
 logging.getLogger('sqlalchemy.dialects').disabled = True
 logging.getLogger('sqlalchemy.orm').disabled = True
 
+# Configurar nivel ERROR para todos los loggers relacionados con SQLAlchemy
+logging.getLogger('sqlalchemy').setLevel(logging.ERROR)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.ERROR)
+logging.getLogger('sqlalchemy.dialects').setLevel(logging.ERROR)
+logging.getLogger('sqlalchemy.orm').setLevel(logging.ERROR)
+
 # Obtener la URL de la base de datos desde las variables de entorno
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 

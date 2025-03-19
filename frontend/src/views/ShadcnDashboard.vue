@@ -49,7 +49,7 @@ watch(() => route.path, (newPath) => {
   } else if (newPath.includes('/jugadores/') || newPath === '/jugadores') {
     // Si estamos en rutas relacionadas con jugadores, mostrar la vista de CRUD
     currentView.value = 'crud';
-  } else if (newPath.includes('/campeonato/') || newPath === '/campeonato') {
+  } else if (newPath.includes('/campeonatos/') || newPath === '/campeonatos') {
     // Si estamos en rutas relacionadas con campeonatos, mostrar la vista de CRUD
     currentView.value = 'crud';
   } else if (newPath.includes('/resultados/') || newPath === '/resultados') {
@@ -66,7 +66,7 @@ onMounted(() => {
   // Inicializar la vista según la ruta actual
   if (route.path === '/clubes' || route.path.includes('/clubes/') ||
       route.path === '/jugadores' || route.path.includes('/jugadores/') ||
-      route.path === '/campeonato' || route.path.includes('/campeonato/') ||
+      route.path === '/campeonatos' || route.path.includes('/campeonatos/') ||
       route.path === '/resultados' || route.path.includes('/resultados/')) {
     currentView.value = 'crud';
   } else {
@@ -134,12 +134,13 @@ const navigation = ref<NavSection[]>([
       },
       {
         title: 'Campeonatos',
-        href: '/campeonato',
+        href: '/campeonatos',
         icon: 'M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z',
         children: [
-          { title: 'CRUD', href: '/campeonato/crud' },
-          { title: 'Lista', href: '/campeonato' },
-          { title: 'Estadísticas', href: '/campeonato/estadisticas' }
+          { title: 'CRUD', href: '/campeonatos/crud' },
+          { title: 'Lista', href: '/campeonatos/lista' },
+          { title: 'Estadísticas', href: '/campeonatos/estadisticas' },
+          { title: 'Tipos', href: '/campeonatos/tipos' }
         ]
       },
       {
@@ -157,7 +158,7 @@ const navigation = ref<NavSection[]>([
         href: '#',
         icon: 'M9.954 2.21a9.99 9.99 0 0 1 4.091-.002A3.993 3.993 0 0 0 16 5.07a3.993 3.993 0 0 0 3.457.261A9.99 9.99 0 0 1 21.5 8.876 3.993 3.993 0 0 0 20 12c0 1.264.586 2.391 1.502 3.124a10.043 10.043 0 0 1-2.046 3.543 3.993 3.993 0 0 0-3.456.261 3.993 3.993 0 0 0-1.954 2.86 9.99 9.99 0 0 1-4.091.004A3.993 3.993 0 0 0 8 18.927a3.993 3.993 0 0 0-3.457-.26A9.99 9.99 0 0 1 2.5 15.121 3.993 3.993 0 0 0 4 11.999a3.993 3.993 0 0 0-1.502-3.124 10.043 10.043 0 0 1 2.046-3.543A3.993 3.993 0 0 0 8 5.071a3.993 3.993 0 0 0 1.954-2.86zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
         children: [
-          { title: 'Tipo de Campeonato', href: '/campeonato' }
+          { title: 'Tipo de Campeonato', href: '/campeonatos' }
         ]
       }
     ]
@@ -245,7 +246,7 @@ const handleMainCardClick = (route: string): void => {
     if (!isExpanded('Jugadores')) {
       toggleExpand('Jugadores');
     }
-  } else if (route.includes('/campeonato')) {
+  } else if (route.includes('/campeonatos')) {
     if (!isExpanded('Campeonatos')) {
       toggleExpand('Campeonatos');
     }
@@ -259,7 +260,7 @@ const handleMainCardClick = (route: string): void => {
   router.push(route);
   
   // Actualizar la vista según la ruta
-  if (route.includes('/clubes')) {
+  if (route.includes('/clubes') || route.includes('/jugadores') || route.includes('/campeonatos')) {
     currentView.value = 'crud';
   } else {
     currentView.value = 'default';
@@ -325,28 +326,35 @@ const getCrudOptions = () => {
   }
   
   // Opciones para Campeonatos
-  if (path.includes('/campeonato')) {
+  if (path.includes('/campeonatos')) {
     return [
       { 
         title: 'CRUD',
-        href: '/campeonato/crud',
+        href: '/campeonatos/crud',
         description: 'Gestionar operaciones CRUD de campeonatos',
         icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
         color: 'bg-amber-100 text-amber-800 border-amber-300'
       },
       { 
         title: 'Lista',
-        href: '/campeonato', 
+        href: '/campeonatos/lista', 
         description: 'Ver todos los campeonatos',
         icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
         color: 'bg-orange-100 text-orange-800 border-orange-300'
       },
       { 
         title: 'Estadísticas',
-        href: '/campeonato/estadisticas', 
+        href: '/campeonatos/estadisticas', 
         description: 'Ver métricas y estadísticas de campeonatos',
         icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
         color: 'bg-red-100 text-red-800 border-red-300'
+      },
+      { 
+        title: 'Tipos',
+        href: '/campeonatos/tipos', 
+        description: 'Gestionar tipos de campeonatos',
+        icon: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>',
+        color: 'bg-pink-100 text-pink-800 border-pink-300'
       }
     ];
   }
@@ -416,7 +424,7 @@ const getCardButtonLabel = (option: any) => {
   if (option.title === 'CRUD') {
     if (path.includes('/clubes')) return 'Gestionar clubs';
     if (path.includes('/jugadores')) return 'Gestionar jugadores';
-    if (path.includes('/campeonato')) return 'Gestionar campeonatos';
+    if (path.includes('/campeonatos')) return 'Gestionar campeonatos';
     if (path.includes('/resultados')) return 'Gestionar resultados';
     return 'Gestionar';
   }
@@ -424,7 +432,7 @@ const getCardButtonLabel = (option: any) => {
   if (option.title === 'Lista') {
     if (path.includes('/clubes')) return 'Ver todos los clubs';
     if (path.includes('/jugadores')) return 'Ver todos los jugadores';
-    if (path.includes('/campeonato')) return 'Ver todos los campeonatos';
+    if (path.includes('/campeonatos')) return 'Ver todos los campeonatos';
     if (path.includes('/resultados')) return 'Ver todos los resultados';
     return 'Ver lista';
   }
@@ -653,7 +661,7 @@ const getDynamicHref = (option: any): string => {
             
             <div 
               class="aspect-[3/2] rounded-md bg-amber-50 border border-amber-200 shadow-sm p-3 flex flex-col hover:bg-amber-100 transition-colors cursor-pointer"
-              @click="handleMainCardClick('/campeonato')"
+              @click="handleMainCardClick('/campeonatos')"
             >
               <div class="flex items-center justify-between mb-1">
                 <h3 class="text-sm font-medium text-amber-800">Campeonatos</h3>
@@ -669,8 +677,8 @@ const getDynamicHref = (option: any): string => {
                   Acceder a Campeonatos
                 </span>
               </div>
-          </div>
-          
+            </div>
+            
             <div 
               class="aspect-[3/2] rounded-md bg-purple-50 border border-purple-200 shadow-sm p-3 flex flex-col hover:bg-purple-100 transition-colors cursor-pointer"
               @click="handleMainCardClick('/resultados')"

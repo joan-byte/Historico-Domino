@@ -1,239 +1,222 @@
 <script setup lang="ts">
 // Componente para gestionar tipos de campeonatos
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useCampeonatos } from '../composables/useCampeonatos';
+import { usePagination } from '../composables/usePagination';
+import StatusMessage from '../components/ui/StatusMessage.vue';
+import Pagination from '../components/ui/Pagination.vue';
+import DataTable from '../components/ui/DataTable.vue';
+import type { TipoCampeonatoResponse } from '../lib/campeonatoService';
 
-// Datos de ejemplo para los tipos de campeonatos
-const tiposCampeonato = ref([
-  {
-    id: 1,
-    nombre: 'Liga Regular',
-    descripcion: 'Todos los equipos se enfrentan entre sí en partidos de ida y vuelta.',
-    duracionPromedio: '3-4 meses',
-    puntuacion: 'Victoria: 3 puntos, Empate: 1 punto, Derrota: 0 puntos',
-    activo: true
-  },
-  {
-    id: 2,
-    nombre: 'Eliminación Directa',
-    descripcion: 'Los equipos se enfrentan en rondas eliminatorias hasta determinar un ganador.',
-    duracionPromedio: '2-3 semanas',
-    puntuacion: 'Avanza el ganador de cada enfrentamiento',
-    activo: true
-  },
-  {
-    id: 3,
-    nombre: 'Grupos + Eliminatorias',
-    descripcion: 'Primera fase de grupos seguida de rondas eliminatorias entre los mejores clasificados.',
-    duracionPromedio: '1-2 meses',
-    puntuacion: 'Fase de grupos: Victoria: 3 puntos, Empate: 1 punto, Derrota: 0 puntos. Fase eliminatoria: Avanza el ganador',
-    activo: true
-  },
-  {
-    id: 4,
-    nombre: 'Torneo Suizo',
-    descripcion: 'Sistema de emparejamiento que evita que los participantes jueguen contra los mismos oponentes.',
-    duracionPromedio: '2-3 semanas',
-    puntuacion: 'Victoria: 1 punto, Derrota: 0 puntos',
-    activo: false
-  }
-]);
+// Router para la navegación
+const router = useRouter();
 
-// Estado para el formulario de nuevo tipo
-const mostrarFormulario = ref(false);
+// Composable para campeonatos
+const { 
+  fetchTiposCampeonato, 
+  tiposCampeonato, 
+  createTipoCampeonato,
+  isLoading, 
+  error 
+} = useCampeonatos();
+
+// Estado para el formulario
 const nuevoTipo = ref({
   nombre: '',
-  descripcion: '',
-  duracionPromedio: '',
-  puntuacion: '',
-  activo: true
+  descripcion: ''
 });
 
-// Función para alternar la visibilidad del formulario
-const toggleFormulario = () => {
-  mostrarFormulario.value = !mostrarFormulario.value;
-  if (mostrarFormulario.value) {
-    // Resetear el formulario
+// Estado para mensajes
+const successMessage = ref<string>('');
+const showSuccess = ref(false);
+const formErrors = ref<Record<string, string>>({});
+
+// Configurar paginación
+const { 
+  currentPage, 
+  pageSize, 
+  totalPages, 
+  paginatedItems, 
+  canGoPrev, 
+  canGoNext, 
+  pageRange,
+  pageSizeOptions,
+  goToPage, 
+  nextPage, 
+  prevPage, 
+  setPageSize,
+  firstPage,
+  lastPage
+} = usePagination(tiposCampeonato);
+
+// Definir columnas para la tabla
+const columns = computed(() => [
+  { field: 'id', header: 'ID', sortable: true },
+  { field: 'nombre', header: 'Nombre', sortable: true },
+  { field: 'descripcion', header: 'Descripción', sortable: true },
+]);
+
+// Validar el formulario
+const validateForm = (): boolean => {
+  formErrors.value = {};
+  let isValid = true;
+
+  if (!nuevoTipo.value.nombre.trim()) {
+    formErrors.value.nombre = 'El nombre es obligatorio';
+    isValid = false;
+  }
+
+  return isValid;
+};
+
+// Enviar formulario
+const handleSubmit = async () => {
+  if (!validateForm()) return;
+  
+  try {
+    const tipoCampeonatoData = {
+      nombre: nuevoTipo.value.nombre,
+      descripcion: nuevoTipo.value.descripcion
+    };
+    
+    const nuevoTipoCampeonato = await createTipoCampeonato(tipoCampeonatoData);
+    
+    // Mostrar mensaje de éxito
+    successMessage.value = `Tipo de campeonato "${nuevoTipoCampeonato.nombre}" creado con éxito.`;
+    showSuccess.value = true;
+    
+    // Limpiar formulario
     nuevoTipo.value = {
       nombre: '',
-      descripcion: '',
-      duracionPromedio: '',
-      puntuacion: '',
-      activo: true
+      descripcion: ''
     };
+    
+    // Recargar la lista
+    await fetchTiposCampeonato();
+  } catch (err) {
+    console.error('Error al crear tipo de campeonato:', err);
   }
 };
 
-// Función para guardar un nuevo tipo de campeonato
-const guardarTipo = () => {
-  // Validación básica
-  if (!nuevoTipo.value.nombre || !nuevoTipo.value.descripcion) {
-    alert('Por favor, completa los campos obligatorios');
-    return;
-  }
-  
-  // Añadir el nuevo tipo a la lista
-  tiposCampeonato.value.push({
-    id: tiposCampeonato.value.length + 1,
-    ...nuevoTipo.value
-  });
-  
-  // Cerrar el formulario
-  toggleFormulario();
-};
-
-// Función para cambiar el estado activo de un tipo
-const cambiarEstado = (id: number) => {
-  const tipo = tiposCampeonato.value.find(t => t.id === id);
-  if (tipo) {
-    tipo.activo = !tipo.activo;
-  }
-};
+// Cargar tipos de campeonato al montar el componente
+onMounted(async () => {
+  await fetchTiposCampeonato();
+});
 </script>
 
 <template>
-  <div class="container mx-auto p-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Tipos de Campeonato</h1>
-      <button 
-        @click="toggleFormulario" 
-        class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
-      >
-        {{ mostrarFormulario ? 'Cancelar' : 'Nuevo Tipo' }}
-      </button>
-    </div>
+  <div class="max-w-4xl mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-6">Gestión de Tipos de Campeonato</h1>
     
-    <!-- Formulario para nuevo tipo de campeonato -->
-    <div v-if="mostrarFormulario" class="bg-white border rounded-md shadow-sm p-6 mb-6">
-      <h2 class="text-lg font-medium mb-4">Crear Nuevo Tipo de Campeonato</h2>
+    <!-- Mensajes de error y éxito -->
+    <StatusMessage v-if="error" 
+                 :message="error" 
+                 :type="'error'" 
+                 :show="true"
+                 class="mb-4" />
+                 
+    <StatusMessage v-if="showSuccess" 
+                 :message="successMessage" 
+                 :type="'success'" 
+                 :show="true"
+                 class="mb-4" />
+    
+    <!-- Formulario para crear nuevo tipo de campeonato -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-lg font-semibold mb-4">Crear Nuevo Tipo de Campeonato</h2>
       
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div class="space-y-1">
-          <label class="block text-sm font-medium text-gray-700">
-            Nombre *
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Campo: Nombre -->
+          <div>
+            <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
+              Nombre *
+            </label>
             <input 
-              id="nombre" 
-              v-model="nuevoTipo.nombre" 
               type="text" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+              id="nombre" 
+              v-model="nuevoTipo.nombre"
+              class="w-full px-3 py-2 border rounded-md" 
+              :class="{ 'border-red-500': formErrors.nombre }"
               placeholder="Ej: Liga Regular"
             />
-          </label>
-        </div>
-        
-        <div class="space-y-1">
-          <label class="block text-sm font-medium text-gray-700">
-            Duración Promedio
+            <p v-if="formErrors.nombre" class="mt-1 text-sm text-red-600">
+              {{ formErrors.nombre }}
+            </p>
+          </div>
+          
+          <!-- Campo: Descripción -->
+          <div>
+            <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">
+              Descripción
+            </label>
             <input 
-              id="duracion" 
-              v-model="nuevoTipo.duracionPromedio" 
               type="text" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              placeholder="Ej: 3-4 meses"
-            />
-          </label>
-        </div>
-        
-        <div class="space-y-1 md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">
-            Descripción *
-            <textarea 
               id="descripcion" 
-              v-model="nuevoTipo.descripcion" 
-              rows="3" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              placeholder="Describe cómo funciona este tipo de campeonato"
-            ></textarea>
-          </label>
-        </div>
-        
-        <div class="space-y-1 md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">
-            Sistema de Puntuación
-            <textarea 
-              id="puntuacion" 
-              v-model="nuevoTipo.puntuacion" 
-              rows="2" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              placeholder="Ej: Victoria: 3 puntos, Empate: 1 punto, Derrota: 0 puntos"
-            ></textarea>
-          </label>
-        </div>
-        
-        <div class="space-y-1">
-          <label class="flex items-center">
-            <input 
-              id="activo"
-              name="activo"
-              type="checkbox" 
-              v-model="nuevoTipo.activo" 
-              class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+              v-model="nuevoTipo.descripcion"
+              class="w-full px-3 py-2 border rounded-md"
+              placeholder="Breve descripción"
             />
-            <span class="ml-2 text-sm text-gray-700">Activo</span>
-          </label>
+          </div>
         </div>
+        
+        <!-- Botón para enviar -->
+        <div class="flex justify-end">
+          <button 
+            type="submit" 
+            class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading">Guardando...</span>
+            <span v-else>Guardar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Tabla de tipos de campeonato existentes -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-lg font-semibold mb-4">Tipos de Campeonato Existentes</h2>
+      
+      <!-- Loading spinner -->
+      <div v-if="isLoading" class="flex justify-center my-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
       
-      <div class="flex justify-end">
-        <button 
-          @click="guardarTipo" 
-          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+      <!-- Tabla -->
+      <div v-else>
+        <DataTable 
+          :items="paginatedItems"
+          :columns="columns"
+          item-key="id"
+          class="mb-4"
         >
-          Guardar
-        </button>
+          <!-- Template para cuando no hay datos -->
+          <template #no-data>
+            <div class="text-center py-4">
+              <p>No hay tipos de campeonato para mostrar.</p>
+            </div>
+          </template>
+        </DataTable>
+        
+        <!-- Paginación -->
+        <Pagination 
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :page-range="pageRange"
+          :can-go-prev="canGoPrev"
+          :can-go-next="canGoNext"
+          :page-size="pageSize"
+          :page-size-options="pageSizeOptions"
+          @go-to-page="goToPage"
+          @next-page="nextPage"
+          @prev-page="prevPage"
+          @update-page-size="setPageSize"
+          @first-page="firstPage"
+          @last-page="lastPage"
+        />
       </div>
-    </div>
-    
-    <!-- Lista de tipos de campeonato -->
-    <div class="bg-white border rounded-md shadow-sm overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="tipo in tiposCampeonato" :key="tipo.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tipo.nombre }}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">
-              <div class="max-w-md">
-                <p>{{ tipo.descripcion }}</p>
-                <p v-if="tipo.puntuacion" class="mt-1 text-xs text-gray-500">
-                  <span class="font-medium">Puntuación:</span> {{ tipo.puntuacion }}
-                </p>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tipo.duracionPromedio || 'No especificada' }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              <span 
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
-                :class="tipo.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-              >
-                {{ tipo.activo ? 'Activo' : 'Inactivo' }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              <button 
-                @click="cambiarEstado(tipo.id)" 
-                class="text-blue-600 hover:text-blue-900"
-                aria-label="Cambiar estado de tipo de campeonato"
-              >
-                {{ tipo.activo ? 'Desactivar' : 'Activar' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    
-    <!-- Información adicional -->
-    <div class="mt-6 bg-gray-50 border rounded-md p-4 text-sm text-gray-600">
-      <h3 class="font-medium mb-2">¿Qué son los tipos de campeonato?</h3>
-      <p>Los tipos de campeonato definen la estructura y reglas básicas para organizar competiciones. Cada tipo tiene sus propias características en cuanto a duración, sistema de puntuación y formato de competición.</p>
-      <p class="mt-2">Al crear un nuevo campeonato, podrás seleccionar uno de estos tipos como base para configurar automáticamente sus reglas y estructura.</p>
     </div>
   </div>
 </template>

@@ -51,12 +51,13 @@ export function useNavigation() {
         },
         {
           title: 'Campeonatos',
-          href: '/campeonato',
+          href: '/campeonatos',
           icon: 'M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z',
           children: [
-            { title: 'CRUD', href: '/campeonato/nuevo' },
-            { title: 'Lista', href: '/campeonato' },
-            { title: 'Estadísticas', href: '/campeonato/estadisticas' }
+            { title: 'CRUD', href: '/campeonatos/crud' },
+            { title: 'Lista', href: '/campeonatos/lista' },
+            { title: 'Estadísticas', href: '/campeonatos/estadisticas' },
+            { title: 'Tipos', href: '/campeonatos/tipos' }
           ]
         },
         {
