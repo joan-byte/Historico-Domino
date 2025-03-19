@@ -57,6 +57,12 @@ const {
 const sortBy = ref('apellidos');
 const sortDir = ref(1); // 1 = asc, -1 = desc
 
+// Estado para confirmación de eliminación
+const showConfirmDialog = ref(false);
+const jugadorToDelete = ref<JugadorResponse | null>(null);
+const successMessage = ref<string>('');
+const showSuccess = ref(false);
+
 // Definir las columnas para la tabla
 const columns = computed<Column[]>(() => {
   const baseColumns: Column[] = [
@@ -68,19 +74,14 @@ const columns = computed<Column[]>(() => {
     { field: 'email', header: 'Email', sortable: true }
   ];
   
-  // Si estamos en modo edición o eliminación, añadir columna de acciones
-  if (route.query.action === 'edit' || route.query.action === 'delete') {
+  // Solo añadir acciones en modo edición, no en modo eliminación
+  if (route.query.action === 'edit') {
     baseColumns.push({
       field: 'acciones',
       header: 'Acciones',
       sortable: false,
       render: (item: JugadorResponse) => {
-        if (route.query.action === 'edit') {
-          return `<button class="text-blue-600 hover:text-blue-800" onclick="document.dispatchEvent(new CustomEvent('edit-jugador', {detail: '${item.idfed}' }))" type="button" aria-label="Editar jugador">Editar</button>`;
-        } else if (route.query.action === 'delete') {
-          return `<button class="text-red-600 hover:text-red-800" onclick="document.dispatchEvent(new CustomEvent('delete-jugador', {detail: '${item.idfed}' }))" type="button" aria-label="Eliminar jugador">Eliminar</button>`;
-        }
-        return '';
+        return `<button class="text-blue-600 hover:text-blue-800" onclick="document.dispatchEvent(new CustomEvent('edit-jugador', {detail: '${item.idfed}' }))" type="button" aria-label="Editar jugador">Editar</button>`;
       }
     });
   }
@@ -92,11 +93,13 @@ const columns = computed<Column[]>(() => {
 const handleRowClick = (item: JugadorResponse) => {
   selectedJugador.value = item;
   
-  // Si estamos en modo edición o eliminación, navegar a la página correspondiente
+  // Si estamos en modo edición, navegar a la página correspondiente
   if (route.query.action === 'edit') {
     editarJugador(null, item.idfed);
   } else if (route.query.action === 'delete') {
-    eliminarJugador(null, item.idfed);
+    // En modo eliminación, mostrar diálogo de confirmación en lugar de navegar
+    jugadorToDelete.value = item;
+    showConfirmDialog.value = true;
   }
 };
 
@@ -124,10 +127,33 @@ const editarJugador = (event: MouseEvent | null, idfed: string) => {
   router.push(`/jugadores/modificar/${idfed}`);
 };
 
-// Función para eliminar un jugador
-const eliminarJugador = (event: MouseEvent | null, idfed: string) => {
-  if (event) event.stopPropagation();
-  router.push(`/jugadores/eliminar/${idfed}`);
+// Función para confirmar eliminación de jugador
+const confirmarEliminacion = async () => {
+  if (jugadorToDelete.value) {
+    try {
+      await deleteJugador(jugadorToDelete.value.idfed);
+      
+      // Mostrar mensaje de éxito
+      successMessage.value = `El jugador ${jugadorToDelete.value.nombre} ${jugadorToDelete.value.apellidos} ha sido eliminado correctamente.`;
+      showSuccess.value = true;
+      
+      // Ocultar el mensaje después de 3 segundos
+      setTimeout(() => {
+        showSuccess.value = false;
+      }, 3000);
+      
+      showConfirmDialog.value = false;
+      jugadorToDelete.value = null;
+    } catch (err) {
+      console.error('Error al eliminar el jugador:', err);
+    }
+  }
+};
+
+// Función para cancelar eliminación
+const cancelarEliminacion = () => {
+  showConfirmDialog.value = false;
+  jugadorToDelete.value = null;
 };
 
 // Función para obtener la clase de fila basada en el contexto
@@ -145,23 +171,17 @@ const handleEditJugador = (e: any) => {
   editarJugador(null, e.detail);
 };
 
-const handleDeleteJugador = (e: any) => {
-  eliminarJugador(null, e.detail);
-};
-
 // Cargar los jugadores al montar el componente
 onMounted(() => {
   fetchJugadores();
   
-  // Agregar escuchadores para los eventos de edición y eliminación
+  // Agregar escuchadores para los eventos de edición
   document.addEventListener('edit-jugador', handleEditJugador);
-  document.addEventListener('delete-jugador', handleDeleteJugador);
 });
 
 // Limpiar los escuchadores de eventos al desmontar el componente
 onUnmounted(() => {
   document.removeEventListener('edit-jugador', handleEditJugador);
-  document.removeEventListener('delete-jugador', handleDeleteJugador);
 });
 
 // Determinar si estamos en la ruta principal de jugadores o una subruta
@@ -247,13 +267,18 @@ const navigateTo = (routePath: string) => {
       <!-- Título dinámico según el contexto -->
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold">
-          {{ route.query.action === 'edit' ? 'Elige el jugador a editar' : 'Lista de Jugadores' }}
+          {{ route.query.action === 'edit' ? 'Elige el jugador a editar' : route.query.action === 'delete' ? 'Elige el jugador a eliminar' : 'Lista de Jugadores' }}
         </h1>
       </div>
 
       <!-- Instrucciones para el modo edición -->
       <div v-if="route.query.action === 'edit'" class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
         Haz clic en el jugador que deseas editar. Se abrirá el formulario de edición con los datos del jugador seleccionado.
+      </div>
+      
+      <!-- Instrucciones para el modo eliminación -->
+      <div v-if="route.query.action === 'delete'" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        Haz clic en el jugador que deseas eliminar. Se abrirá la pantalla de confirmación para eliminar el jugador seleccionado.
       </div>
       
       <!-- Mensajes de estado -->
@@ -268,6 +293,14 @@ const navigateTo = (routePath: string) => {
         type="loading"
         :show="isLoading"
         message="Cargando jugadores..."
+        class="mb-4"
+      />
+      
+      <!-- Mensaje de éxito -->
+      <StatusMessage
+        type="success"
+        :show="showSuccess"
+        :message="successMessage"
         class="mb-4"
       />
       
@@ -310,6 +343,37 @@ const navigateTo = (routePath: string) => {
           @last-page="lastPage"
           @update:page-size="setPageSize"
         />
+      </div>
+      
+      <!-- Modal de confirmación para eliminar jugador -->
+      <div v-if="showConfirmDialog" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex">
+        <div class="relative p-6 bg-white w-full max-w-md m-auto rounded-md shadow-lg">
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">¿Estás seguro de eliminar este jugador?</h3>
+            <p class="mt-2 text-sm text-gray-500">
+              Esta acción no se puede deshacer. El jugador 
+              <span class="font-medium">{{ jugadorToDelete?.nombre }} {{ jugadorToDelete?.apellidos }}</span> 
+              será eliminado permanentemente.
+            </p>
+          </div>
+          
+          <div class="bg-gray-50 p-4 -mx-6 -mb-6 rounded-b-md">
+            <div class="flex justify-end gap-2">
+              <button 
+                @click="cancelarEliminacion" 
+                class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                @click="confirmarEliminacion" 
+                class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

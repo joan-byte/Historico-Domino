@@ -77,12 +77,6 @@ const routes = [
         props: true
       },
       {
-        path: '/jugadores/eliminar/:idfed',
-        name: 'EliminarJugador',
-        component: () => import('../views/EliminarJugador.vue'),
-        props: true
-      },
-      {
         path: '/jugadores/estadisticas',
         name: 'EstadisticasJugadores',
         component: () => import('../views/EstadisticasJugadores.vue')
