@@ -6,8 +6,8 @@ from ..models.tipo_campeonato import TipoCampeonato
 from ..schemas.tipo_campeonato import TipoCampeonatoCreate, TipoCampeonatoResponse
 
 router = APIRouter(
-    prefix="/tipos-campeonatos",
-    tags=["tipos-campeonatos"]
+    prefix="/tipos-campeonato",
+    tags=["tipos-campeonato"]
 )
 
 @router.post("/", response_model=TipoCampeonatoResponse)

@@ -3,8 +3,8 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCampeonatos } from '../composables/useCampeonatos';
+import type { CampeonatoUpdate } from '../lib/campeonatoService';
 import StatusMessage from '../components/ui/StatusMessage.vue';
-import type { CampeonatoResponse, CampeonatoCreate } from '../lib/campeonatoService';
 
 // Router y route para la navegación y acceso a parámetros
 const router = useRouter();
@@ -20,16 +20,16 @@ const {
   fetchTiposCampeonato,
   updateCampeonato, 
   isLoading, 
-  error, 
+  error: campeonatoError, 
   selectedCampeonato, 
   tiposCampeonato 
 } = useCampeonatos();
 
 // Estado para el formulario
-const campeonato = ref<CampeonatoCreate>({
+const campeonato = ref<CampeonatoUpdate>({
   nombre: '',
-  fecha_inicio: new Date().toISOString().substring(0, 10),
-  fecha_fin: new Date().toISOString().substring(0, 10),
+  fecha_inicio: '',
+  fecha_fin: '',
   tipo_campeonato_id: 0
 });
 
@@ -43,37 +43,21 @@ const validateForm = (): boolean => {
   formErrors.value = {};
   let isValid = true;
 
-  if (!campeonato.value.nombre.trim()) {
+  if (campeonato.value.nombre !== undefined && !campeonato.value.nombre.trim()) {
     formErrors.value.nombre = 'El nombre es obligatorio';
     isValid = false;
   }
 
-  if (!campeonato.value.fecha_inicio) {
-    formErrors.value.fecha_inicio = 'La fecha de inicio es obligatoria';
-    isValid = false;
-  }
-
-  if (!campeonato.value.fecha_fin) {
-    formErrors.value.fecha_fin = 'La fecha de fin es obligatoria';
-    isValid = false;
-  } else {
-    const fechaInicio = new Date(campeonato.value.fecha_inicio);
-    const fechaFin = new Date(campeonato.value.fecha_fin);
-    if (fechaFin < fechaInicio) {
-      formErrors.value.fecha_fin = 'La fecha de fin debe ser posterior a la fecha de inicio';
-      isValid = false;
-    }
-  }
-
-  if (!campeonato.value.tipo_campeonato_id) {
-    formErrors.value.tipo_campeonato_id = 'El tipo de campeonato es obligatorio';
+  if (campeonato.value.fecha_inicio && campeonato.value.fecha_fin && 
+      campeonato.value.fecha_inicio > campeonato.value.fecha_fin) {
+    formErrors.value.fecha_fin = 'La fecha de fin debe ser posterior a la fecha de inicio';
     isValid = false;
   }
 
   return isValid;
 };
 
-// Enviar formulario
+// Manejar el envío del formulario
 const handleSubmit = async () => {
   if (!validateForm()) return;
   
@@ -86,7 +70,7 @@ const handleSubmit = async () => {
     
     // Volver a la lista después de un breve retraso
     setTimeout(() => {
-      router.push({ name: 'CampeonatosLista' });
+      router.push('/campeonatos/lista');
     }, 2000);
   } catch (err) {
     console.error('Error al actualizar campeonato:', err);
@@ -98,22 +82,7 @@ const handleCancel = () => {
   router.go(-1);
 };
 
-// Opciones para el selector de tipo de campeonato
-const tiposCampeonatoOptions = computed(() => {
-  return tiposCampeonato.value.map(tipo => ({
-    value: tipo.id,
-    label: tipo.nombre
-  }));
-});
-
-// Cargar datos del campeonato cuando cambia el ID
-watch(campeonatoId, async (newId) => {
-  if (newId) {
-    await fetchCampeonatoById(newId);
-  }
-}, { immediate: true });
-
-// Actualizar el formulario cuando se carga el campeonato seleccionado
+// Observar cambios en el campeonato seleccionado
 watch(selectedCampeonato, (newCampeonato) => {
   if (newCampeonato) {
     campeonato.value = {
@@ -125,9 +94,14 @@ watch(selectedCampeonato, (newCampeonato) => {
   }
 });
 
-// Obtener los tipos de campeonato al cargar el componente
+// Cargar datos al montar el componente
 onMounted(async () => {
-  await fetchTiposCampeonato();
+  if (campeonatoId.value) {
+    await Promise.all([
+      fetchCampeonatoById(campeonatoId.value),
+      fetchTiposCampeonato()
+    ]);
+  }
 });
 </script>
 
@@ -135,22 +109,26 @@ onMounted(async () => {
   <div class="max-w-4xl mx-auto p-4">
     <h1 class="text-2xl font-bold mb-6">Modificar Campeonato</h1>
     
-    <!-- Mensajes de error y éxito -->
-    <StatusMessage v-if="error" 
-                 :message="error" 
-                 :type="'error'" 
-                 :show="true"
-                 class="mb-4" />
-                 
-    <StatusMessage v-if="showSuccess" 
-                 :message="successMessage" 
-                 :type="'success'" 
-                 :show="true"
-                 class="mb-4" />
+    <!-- Mensajes de estado -->
+    <StatusMessage 
+      v-if="campeonatoError" 
+      :message="campeonatoError" 
+      type="error" 
+      :show="true"
+      class="mb-4" 
+    />
+    
+    <StatusMessage 
+      v-if="showSuccess" 
+      :message="successMessage" 
+      type="success" 
+      :show="true"
+      class="mb-4" 
+    />
     
     <!-- Loading spinner -->
     <div v-if="isLoading" class="flex justify-center my-8">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
     </div>
     
     <!-- Formulario -->
@@ -221,11 +199,11 @@ onMounted(async () => {
           >
             <option :value="0" disabled>Seleccione un tipo</option>
             <option 
-              v-for="option in tiposCampeonatoOptions" 
-              :key="option.value" 
-              :value="option.value"
+              v-for="tipo in tiposCampeonato" 
+              :key="tipo.id" 
+              :value="tipo.id"
             >
-              {{ option.label }}
+              {{ tipo.nombre }} ({{ tipo.codigo }})
             </option>
           </select>
           <p v-if="formErrors.tipo_campeonato_id" class="mt-1 text-sm text-red-600">
@@ -246,7 +224,7 @@ onMounted(async () => {
         </button>
         <button 
           type="submit" 
-          class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+          class="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           :disabled="isLoading"
         >
           <span v-if="isLoading">Guardando...</span>

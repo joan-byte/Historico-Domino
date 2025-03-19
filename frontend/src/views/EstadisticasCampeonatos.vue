@@ -25,7 +25,7 @@ const estadisticas = computed(() => {
   // Estadísticas por tipo de campeonato
   const campeonatosPorTipo: Record<string, number> = {};
   campeonatos.value.forEach(c => {
-    const tipo = c.nombre_tipo_campeonato || 'Sin tipo';
+    const tipo = c.tipo_campeonato?.nombre || 'Sin tipo';
     campeonatosPorTipo[tipo] = (campeonatosPorTipo[tipo] || 0) + 1;
   });
   

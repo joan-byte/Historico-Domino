@@ -228,12 +228,15 @@ onMounted(() => {
             :key="`${item[itemKey]}-${column.field}`"
             :class="getCellClasses(column)"
           >
-            <template v-if="column.render">
-              <div v-html="getCellValue(item, column)" role="button" tabindex="0"></div>
-            </template>
-            <template v-else>
-              {{ getCellValue(item, column) }}
-            </template>
+            <!-- Slot personalizado para la celda -->
+            <slot :name="`cell-${column.field}`" :item="item" :value="getCellValue(item, column)">
+              <template v-if="column.render">
+                <div v-html="getCellValue(item, column)" role="button" tabindex="0"></div>
+              </template>
+              <template v-else>
+                {{ getCellValue(item, column) }}
+              </template>
+            </slot>
           </td>
           
           <!-- Slot para acciones personalizadas por fila -->

@@ -110,19 +110,28 @@ const routes = [
         props: true
       },
       {
+        path: '/campeonatos/lista',
+        name: 'ListaCampeonatos',
+        component: () => import('../views/ListaCampeonatos.vue')
+      },
+      {
         path: '/campeonatos/estadisticas',
         name: 'EstadisticasCampeonatos',
         component: () => import('../views/EstadisticasCampeonatos.vue')
       },
+
+      // Rutas para el módulo de Settings/Configuración
       {
-        path: '/campeonatos/lista',
-        name: 'CampeonatosLista',
-        component: () => import('../views/Campeonatos.vue')
-      },
-      {
-        path: '/campeonatos/tipos',
-        name: 'TiposCampeonato',
-        component: () => import('../views/TipoCampeonato.vue')
+        path: '/settings',
+        component: () => import('../views/Settings.vue'),
+        name: 'SettingsRoot',
+        children: [
+          {
+            path: 'tipos-campeonato',
+            name: 'TiposCampeonato',
+            component: () => import('../views/TipoCampeonato.vue')
+          }
+        ]
       }
     ]
   }

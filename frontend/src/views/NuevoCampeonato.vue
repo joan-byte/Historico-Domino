@@ -1,16 +1,16 @@
 <script setup lang="ts">
 // Componente para crear y editar campeonatos
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCampeonatos } from '../composables/useCampeonatos';
+import type { CampeonatoCreate } from '../lib/campeonatoService';
 import StatusMessage from '../components/ui/StatusMessage.vue';
-import type { CampeonatoCreate, TipoCampeonatoResponse } from '../lib/campeonatoService';
 
 // Router para la navegación
 const router = useRouter();
 
 // Composable para campeonatos
-const { createCampeonato, isLoading, error, fetchTiposCampeonato, tiposCampeonato } = useCampeonatos();
+const { createCampeonato, fetchTiposCampeonato, tiposCampeonato, error: campeonatoError, isLoading } = useCampeonatos();
 
 // Estado para el formulario
 const campeonato = ref<CampeonatoCreate>({
@@ -43,13 +43,11 @@ const validateForm = (): boolean => {
   if (!campeonato.value.fecha_fin) {
     formErrors.value.fecha_fin = 'La fecha de fin es obligatoria';
     isValid = false;
-  } else {
-    const fechaInicio = new Date(campeonato.value.fecha_inicio);
-    const fechaFin = new Date(campeonato.value.fecha_fin);
-    if (fechaFin < fechaInicio) {
-      formErrors.value.fecha_fin = 'La fecha de fin debe ser posterior a la fecha de inicio';
-      isValid = false;
-    }
+  }
+
+  if (campeonato.value.fecha_inicio > campeonato.value.fecha_fin) {
+    formErrors.value.fecha_fin = 'La fecha de fin debe ser posterior a la fecha de inicio';
+    isValid = false;
   }
 
   if (!campeonato.value.tipo_campeonato_id) {
@@ -81,7 +79,7 @@ const handleSubmit = async () => {
     
     // Volver a la lista después de un breve retraso
     setTimeout(() => {
-      router.push({ name: 'CampeonatosLista' });
+      router.push('/campeonatos/lista');
     }, 2000);
   } catch (err) {
     console.error('Error al crear campeonato:', err);
@@ -93,15 +91,7 @@ const handleCancel = () => {
   router.go(-1);
 };
 
-// Opciones para el selector de tipo de campeonato
-const tiposCampeonatoOptions = computed(() => {
-  return tiposCampeonato.value.map(tipo => ({
-    value: tipo.id,
-    label: tipo.nombre
-  }));
-});
-
-// Obtener los tipos de campeonato al cargar el componente
+// Cargar tipos de campeonato al montar el componente
 onMounted(async () => {
   await fetchTiposCampeonato();
 });
@@ -111,18 +101,22 @@ onMounted(async () => {
   <div class="max-w-4xl mx-auto p-4">
     <h1 class="text-2xl font-bold mb-6">Crear Nuevo Campeonato</h1>
     
-    <!-- Mensajes de error y éxito -->
-    <StatusMessage v-if="error" 
-                 :message="error" 
-                 :type="'error'" 
-                 :show="true"
-                 class="mb-4" />
-                 
-    <StatusMessage v-if="showSuccess" 
-                 :message="successMessage" 
-                 :type="'success'" 
-                 :show="true"
-                 class="mb-4" />
+    <!-- Mensajes de estado -->
+    <StatusMessage 
+      v-if="campeonatoError" 
+      :message="campeonatoError" 
+      type="error" 
+      :show="true"
+      class="mb-4" 
+    />
+    
+    <StatusMessage 
+      v-if="showSuccess" 
+      :message="successMessage" 
+      type="success" 
+      :show="true"
+      class="mb-4" 
+    />
     
     <!-- Formulario -->
     <form @submit.prevent="handleSubmit" class="bg-white p-6 rounded-lg shadow-md">
@@ -192,11 +186,11 @@ onMounted(async () => {
           >
             <option :value="0" disabled>Seleccione un tipo</option>
             <option 
-              v-for="option in tiposCampeonatoOptions" 
-              :key="option.value" 
-              :value="option.value"
+              v-for="tipo in tiposCampeonato" 
+              :key="tipo.id" 
+              :value="tipo.id"
             >
-              {{ option.label }}
+              {{ tipo.nombre }} ({{ tipo.codigo }})
             </option>
           </select>
           <p v-if="formErrors.tipo_campeonato_id" class="mt-1 text-sm text-red-600">
@@ -217,7 +211,7 @@ onMounted(async () => {
         </button>
         <button 
           type="submit" 
-          class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+          class="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           :disabled="isLoading"
         >
           <span v-if="isLoading">Guardando...</span>

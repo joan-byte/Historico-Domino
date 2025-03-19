@@ -139,8 +139,7 @@ const navigation = ref<NavSection[]>([
         children: [
           { title: 'CRUD', href: '/campeonatos/crud' },
           { title: 'Lista', href: '/campeonatos/lista' },
-          { title: 'Estadísticas', href: '/campeonatos/estadisticas' },
-          { title: 'Tipos', href: '/campeonatos/tipos' }
+          { title: 'Estadísticas', href: '/campeonatos/estadisticas' }
         ]
       },
       {
@@ -155,10 +154,10 @@ const navigation = ref<NavSection[]>([
       },
       {
         title: 'Settings',
-        href: '#',
+        href: '/settings',
         icon: 'M9.954 2.21a9.99 9.99 0 0 1 4.091-.002A3.993 3.993 0 0 0 16 5.07a3.993 3.993 0 0 0 3.457.261A9.99 9.99 0 0 1 21.5 8.876 3.993 3.993 0 0 0 20 12c0 1.264.586 2.391 1.502 3.124a10.043 10.043 0 0 1-2.046 3.543 3.993 3.993 0 0 0-3.456.261 3.993 3.993 0 0 0-1.954 2.86 9.99 9.99 0 0 1-4.091.004A3.993 3.993 0 0 0 8 18.927a3.993 3.993 0 0 0-3.457-.26A9.99 9.99 0 0 1 2.5 15.121 3.993 3.993 0 0 0 4 11.999a3.993 3.993 0 0 0-1.502-3.124 10.043 10.043 0 0 1 2.046-3.543A3.993 3.993 0 0 0 8 5.071a3.993 3.993 0 0 0 1.954-2.86zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
         children: [
-          { title: 'Tipo de Campeonato', href: '/campeonatos' }
+          { title: 'Tipos de Campeonato', href: '/settings/tipos-campeonato' }
         ]
       }
     ]
@@ -348,13 +347,6 @@ const getCrudOptions = () => {
         description: 'Ver métricas y estadísticas de campeonatos',
         icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
         color: 'bg-red-100 text-red-800 border-red-300'
-      },
-      { 
-        title: 'Tipos',
-        href: '/campeonatos/tipos', 
-        description: 'Gestionar tipos de campeonatos',
-        icon: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>',
-        color: 'bg-pink-100 text-pink-800 border-pink-300'
       }
     ];
   }
