@@ -173,6 +173,8 @@ const cancelar = () => {
             <label class="block text-sm font-medium text-gray-700">
               Código Postal
               <input 
+                id="cp-readonly"
+                name="cp-readonly"
                 type="text"
                 :value="cp"
                 readonly
@@ -185,6 +187,8 @@ const cancelar = () => {
             <label class="block text-sm font-medium text-gray-700">
               Número de Club
               <input 
+                id="numero-club-readonly"
+                name="numero-club-readonly"
                 type="text"
                 :value="numeroClub"
                 readonly
@@ -197,6 +201,8 @@ const cancelar = () => {
             <label class="block text-sm font-medium text-gray-700">
               Código Club
               <input 
+                id="codigo-club-readonly"
+                name="codigo-club-readonly"
                 type="text"
                 :value="(cp || '00') + (numeroClub || '0000')"
                 readonly

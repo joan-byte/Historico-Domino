@@ -100,6 +100,8 @@ const inputClasses = computed(() => {
       
       <!-- Campo de entrada -->
       <input
+        :id="id"
+        :name="id"
         :type="type"
         :value="modelValue"
         :placeholder="placeholder"

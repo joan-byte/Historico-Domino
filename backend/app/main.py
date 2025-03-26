@@ -68,8 +68,8 @@ async def custom_swagger_ui_html(request: Request):
 app.mount("/static", StaticFiles(directory=os.path.dirname(current_dir)), name="static")
 
 # Incluir routers con prefijo /api
-app.include_router(club.router, prefix="/api")
-app.include_router(jugador.router, prefix="/api")
-app.include_router(tipo_campeonato.router, prefix="/api")
-app.include_router(resultado.router, prefix="/api")
-app.include_router(campeonato.router, prefix="/api") 
+app.include_router(club.router, prefix="/api", tags=["clubs"])
+app.include_router(jugador.router, prefix="/api", tags=["jugadores"])
+app.include_router(tipo_campeonato.router, prefix="/api", tags=["tipos_campeonatos"])
+app.include_router(resultado.router, prefix="/api", tags=["resultados"])
+app.include_router(campeonato.router, prefix="/api", tags=["campeonatos"]) 

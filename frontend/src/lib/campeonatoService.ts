@@ -1,6 +1,6 @@
 // campeonatoService.ts - Servicio para manejar las llamadas a la API de campeonatos
 import axios from 'axios';
-import { API_URL } from '../config.js';
+import { API_URL } from '../config';
 
 // Tipos para campeonatos
 export interface TipoCampeonato {
@@ -52,7 +52,7 @@ class CampeonatoService {
 
   // Obtener todos los campeonatos
   async getCampeonatos(): Promise<CampeonatoResponse[]> {
-    const response = await axios.get(this.baseUrl);
+    const response = await axios.get(`${this.baseUrl}/`);
     return response.data;
   }
 
@@ -64,7 +64,7 @@ class CampeonatoService {
 
   // Crear un nuevo campeonato
   async createCampeonato(campeonato: CampeonatoCreate): Promise<CampeonatoResponse> {
-    const response = await axios.post(this.baseUrl, campeonato);
+    const response = await axios.post(`${this.baseUrl}/`, campeonato);
     return response.data;
   }
 

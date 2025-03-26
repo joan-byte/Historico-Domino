@@ -104,6 +104,8 @@ const selectClasses = computed(() => {
       
       <!-- Campo de selección -->
       <select
+        :id="id"
+        :name="id"
         :value="modelValue"
         :required="required"
         :disabled="disabled"

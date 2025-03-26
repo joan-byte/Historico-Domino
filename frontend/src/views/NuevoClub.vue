@@ -204,6 +204,8 @@ const cancelar = () => {
           <label class="block text-sm font-medium text-gray-700">
             Código Club (generado automáticamente)
             <input 
+              id="codigo-club-generado"
+              name="codigo-club-generado"
               type="text"
               :value="(cp || '00') + (numeroClub || '0000')"
               readonly

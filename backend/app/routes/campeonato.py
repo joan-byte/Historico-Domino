@@ -6,7 +6,7 @@ from ..models.campeonato import Campeonato
 from ..schemas.campeonato import CampeonatoCreate, CampeonatoUpdate, Campeonato as CampeonatoSchema
 
 router = APIRouter(
-    prefix="/api/campeonatos",
+    prefix="/campeonatos",
     tags=["campeonatos"]
 )
 
