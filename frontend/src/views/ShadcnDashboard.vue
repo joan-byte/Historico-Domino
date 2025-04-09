@@ -113,7 +113,7 @@ interface NavSection {
 
 const navigation = ref<NavSection[]>([
   {
-    title: 'Dashboard',
+    title: 'Gestion',
     items: [
       {
         title: 'Clubs',
@@ -167,17 +167,29 @@ const navigation = ref<NavSection[]>([
     ]
   },
   {
-    title: 'Projects',
+    title: 'Herramientas',
     items: [
       {
-        title: 'Design Engineering',
+        title: 'Importaciones',
         href: '#',
-        icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6zm1 3h10a1 1 0 0 1 0 2H7a1 1 0 1 1 0-2zm0 4h10a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2zm0 4h5a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2z'
+        icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6zm1 3h10a1 1 0 0 1 0 2H7a1 1 0 1 1 0-2zm0 4h10a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2zm0 4h5a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2z',
+        children: [
+          { title: 'Clubs', href: '#' },
+          { title: 'Jugadores', href: '#' },
+          { title: 'Campeonatos', href: '#' },
+          { title: 'Resultados', href: '#' }
+        ]
       },
       {
-        title: 'Sales & Marketing',
+        title: 'Exportaciones',
         href: '#',
-        icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-5 8a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0H7z'
+        icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-5 8a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0H7z',
+        children: [
+          { title: 'Clubs', href: '#' },
+          { title: 'Jugadores', href: '#' },
+          { title: 'Campeonatos', href: '#' },
+          { title: 'Resultados', href: '#' }
+        ]
       },
       {
         title: 'Travel',
@@ -489,18 +501,7 @@ const getDynamicHref = (option: any): string => {
                   v-if="item.children && item.children.length > 0"
                   class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
                   :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
-                  @click="() => {
-                    toggleExpand(item.title);
-                    if (item.title === 'Settings') {
-                      // Navegar al primer hijo para Settings
-                      if (item.children && item.children[0] && item.children[0].href) {
-                        router.push(item.children[0].href);
-                      }
-                    } else if (item.href) {
-                      // Navegar a la ruta principal para los demás
-                      router.push(item.href);
-                    }
-                  }"
+                  @click="toggleExpand(item.title)"
                 >
                   <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
                     <path :d="item.icon"></path>
