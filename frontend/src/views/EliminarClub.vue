@@ -1,30 +1,22 @@
 <script setup lang="ts">
 // Componente para eliminar clubes
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useClubs } from '../composables/useClubs';
 import { clubService, type ClubResponse } from '../lib/clubService';
+import StatusMessage from '../components/ui/StatusMessage.vue';
 
 const router = useRouter();
-const clubs = ref<ClubResponse[]>([]);
-const isLoading = ref(false);
-const isLoadingData = ref(true);
-const generalError = ref('');
+const { clubs, fetchClubs, deleteClub, isLoading, error: generalError, sortedClubs } = useClubs();
 const selectedClub = ref<ClubResponse | null>(null);
 const showConfirmation = ref(false);
+const showModal = ref(false);
+const clubAEliminar = ref<ClubResponse | null>(null);
+const errorEliminacion = ref('');
 
 // Cargar la lista de clubes
-onMounted(async () => {
-  isLoadingData.value = true;
-  generalError.value = '';
-  
-  try {
-    clubs.value = await clubService.getAll();
-  } catch (err: any) {
-    console.error('Error al cargar los clubes:', err);
-    generalError.value = err.message || 'No se pudieron cargar los clubes';
-  } finally {
-    isLoadingData.value = false;
-  }
+onMounted(() => {
+  fetchClubs();
 });
 
 // Seleccionar un club
@@ -73,9 +65,42 @@ const eliminarClub = async () => {
   }
 };
 
-// Volver a la lista de clubes
-const volver = () => {
-  router.push('/clubes');
+// Iniciar proceso de eliminación
+const intentarEliminarClub = (club: ClubResponse) => {
+  errorEliminacion.value = ''; // Limpiar error anterior
+  if (club.jugadores_count > 0) {
+    // Mostrar error directamente si hay jugadores
+    errorEliminacion.value = `No se puede eliminar el club ${club.nombre} (${club.codigo_club}) porque tiene ${club.jugadores_count} jugador(es) asociado(s). Elimine o reasigne los jugadores primero.`;
+    showModal.value = false; // Asegurarse de que el modal no se muestre
+    clubAEliminar.value = null; // Desseleccionar
+  } else {
+    // No hay jugadores, mostrar modal de confirmación
+    clubAEliminar.value = club;
+    showModal.value = true;
+  }
+};
+
+// Confirmar y ejecutar la eliminación (desde el modal)
+const confirmarEliminarClub = async () => {
+  if (!clubAEliminar.value) return;
+  
+  errorEliminacion.value = ''; // Limpiar errores específicos
+  
+  try {
+    await deleteClub(clubAEliminar.value.codigo_club);
+    showModal.value = false;
+    clubAEliminar.value = null;
+  } catch (err: any) {
+    console.error('Error al eliminar el club:', err);
+    errorEliminacion.value = err.message || 'Ocurrió un error inesperado al intentar eliminar el club.';
+    showModal.value = false; // Ocultar modal si hubo error
+  }
+};
+
+// Cancelar eliminación (desde el modal)
+const cancelarEliminar = () => {
+  showModal.value = false;
+  clubAEliminar.value = null;
 };
 </script>
 
@@ -91,13 +116,13 @@ const volver = () => {
       </button>
     </div>
     
-    <!-- Mensaje de error general -->
-    <div v-if="generalError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {{ generalError }}
+    <!-- Mensaje de error general/eliminación -->
+    <div v-if="generalError || errorEliminacion" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      {{ generalError || errorEliminacion }}
     </div>
     
     <!-- Estado de carga inicial -->
-    <div v-if="isLoadingData" class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+    <div v-if="isLoading" class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
       Cargando clubes...
     </div>
     
@@ -133,7 +158,8 @@ const volver = () => {
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="club in clubs" :key="club.codigo_club" :class="{'bg-red-50': selectedClub?.codigo_club === club.codigo_club}">
+            <tr v-for="club in clubs" :key="club.codigo_club" 
+                :class="{ 'bg-red-50': clubAEliminar?.codigo_club === club.codigo_club && showModal }">
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ club.codigo_club }}
               </td>
@@ -147,59 +173,46 @@ const volver = () => {
                 {{ club.numero_club }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click="selectClub(club)"
-                  class="text-blue-600 hover:text-blue-900"
-                  :class="{'text-red-600 hover:text-red-900': selectedClub?.codigo_club === club.codigo_club}"
-                >
-                  {{ selectedClub?.codigo_club === club.codigo_club ? 'Seleccionado' : 'Seleccionar' }}
+                <button @click="intentarEliminarClub(club)" 
+                        class="px-3 py-1 text-sm rounded-md" 
+                        :class="clubAEliminar?.codigo_club === club.codigo_club && !showModal && errorEliminacion ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'"
+                        :disabled="clubAEliminar?.codigo_club === club.codigo_club && !showModal && errorEliminacion">
+                  {{ clubAEliminar?.codigo_club === club.codigo_club && !showModal && errorEliminacion ? 'Bloqueado' : 'Eliminar' }}
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      
-      <!-- Botón de eliminar -->
-      <div class="flex justify-end">
-        <button 
-          @click="confirmarEliminacion"
-          class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-          :disabled="!selectedClub || isLoading"
-        >
-          {{ isLoading ? 'Procesando...' : 'Eliminar Club Seleccionado' }}
-        </button>
-      </div>
     </div>
     
-    <!-- Modal de confirmación -->
-    <div v-if="showConfirmation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Confirmar eliminación</h3>
-        <p class="text-gray-700 mb-1">¿Está seguro que desea eliminar el siguiente club?</p>
-        <p class="text-gray-900 font-medium mb-4" v-if="selectedClub">
-          {{ selectedClub.nombre }} ({{ selectedClub.codigo_club }})
-        </p>
-        <p class="text-red-600 text-sm mb-6">Esta acción no se puede deshacer.</p>
-        
-        <div class="flex justify-end gap-2">
-          <button 
-            @click="cancelarEliminacion"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            :disabled="isLoading"
-          >
-            Cancelar
-          </button>
-          <button 
-            @click="eliminarClub"
-            class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-            :disabled="isLoading"
-          >
-            {{ isLoading ? 'Eliminando...' : 'Confirmar Eliminación' }}
-          </button>
+    <!-- Modal de Confirmación -->
+    <transition name="fade">
+      <div v-if="showModal && clubAEliminar" 
+           class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-2">Confirmar eliminación</h3>
+          <div class="mt-2">
+            <p class="text-sm text-gray-500">
+              ¿Está seguro que desea eliminar el siguiente club?
+              <strong class="block mt-1">{{ clubAEliminar.nombre }} ({{ clubAEliminar.codigo_club }})</strong>
+            </p>
+            <p class="text-sm text-red-600 mt-2">Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="mt-4 flex justify-end space-x-3">
+            <button @click="cancelarEliminar" 
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button @click="confirmarEliminarClub" 
+                    :disabled="isLoading"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+              {{ isLoading ? 'Eliminando...' : 'Confirmar Eliminación' }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 

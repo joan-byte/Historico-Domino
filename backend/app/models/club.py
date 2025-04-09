@@ -15,7 +15,7 @@ class Club(Base):
     cp = Column(String(2), nullable=False)
     
     # Número asignado por el usuario
-    numero_club = Column('numero_usuario', String(4), nullable=False)  # Mapeado a 'numero_usuario' en la BD
+    numero_club = Column(String(4), nullable=False)
     
     # Clave única compuesta por CP + número de club
     codigo_club = Column(String(6), unique=True, nullable=False)
@@ -58,10 +58,11 @@ class Club(Base):
     @validates('codigo_club')
     def validar_codigo_club(self, key, codigo):
         """
-        Asegura que el código del club sea la concatenación de CP y número de club
+        Asegura que el código del club sea la concatenación de CP y número de club (rellenado)
         """
-        if codigo != f"{self.cp}{self.numero_club}":
-            raise ValueError("El código del club debe ser CP + número de club")
+        numero_club_rellenado = self.numero_club.zfill(4)
+        if codigo != f"{self.cp}{numero_club_rellenado}":
+            raise ValueError("El código del club debe ser CP + número de club rellenado a 4 dígitos")
         return codigo
     
     @validates('email')

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Componente para crear un nuevo club
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { clubService, type ClubCreate } from '../lib/clubService';
+import provinciasData from '../data/provincias_cp.json' with { type: 'json' };
 
 const router = useRouter();
 const nombre = ref('');
@@ -12,6 +13,7 @@ const personaContacto = ref('');
 const telefono = ref('');
 const direccion = ref('');
 const email = ref('');
+const provinciaDetectada = ref('');
 
 // Referencias para manejar errores de validación
 const errores = ref({
@@ -25,6 +27,17 @@ const errores = ref({
 // Estado de carga
 const isLoading = ref(false);
 const generalError = ref('');
+
+// Watcher para detectar cambios en cp y buscar provincia
+watch(cp, (newCp) => {
+  provinciaDetectada.value = '';
+  if (newCp && newCp.length === 2) {
+    const provinciaInfo = provinciasData.find(p => p.cp === newCp);
+    if (provinciaInfo) {
+      provinciaDetectada.value = provinciaInfo.provincia;
+    }
+  }
+});
 
 // Validar campos del formulario
 const validarFormulario = () => {
@@ -79,6 +92,14 @@ const validarFormulario = () => {
   }
   
   return esValido;
+};
+
+// NUEVA Función para aplicar padding al numeroClub en blur
+const formatearNumeroClub = () => {
+  if (numeroClub.value && numeroClub.value.length > 0 && /^[0-9]+$/.test(numeroClub.value)) {
+    // Solo formatear si es numérico
+    numeroClub.value = numeroClub.value.padStart(4, '0');
+  }
 };
 
 // Guardar el club
@@ -169,17 +190,23 @@ const cancelar = () => {
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">
             Código Postal (2 dígitos) <span class="text-red-500">*</span>
+          </label>
+          <!-- Contenedor Flex para CP y Provincia -->
+          <div class="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" 
+               :class="{ 'border-red-500': errores.cp }">
             <input 
               name="cp-club"
               v-model="cp" 
               type="text" 
               autocomplete="postal-code"
               maxlength="2"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              :class="{ 'border-red-500': errores.cp }"
-              placeholder="Ej: 28"
-            />
-          </label>
+              class="w-12 border-none p-0 px-1 focus:ring-0 text-sm" 
+              placeholder="CP">
+            <!-- Mostrar provincia si se detecta -->
+            <span v-if="provinciaDetectada" class="ml-2 text-gray-600 text-sm truncate">
+              {{ provinciaDetectada }}
+            </span>
+          </div>
           <p v-if="errores.cp" class="text-red-500 text-xs mt-1">{{ errores.cp }}</p>
         </div>
         
@@ -192,6 +219,7 @@ const cancelar = () => {
               type="text" 
               autocomplete="off"
               maxlength="4"
+              @blur="formatearNumeroClub"
               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
               :class="{ 'border-red-500': errores.numeroClub }"
               placeholder="Ej: 1234"
@@ -207,7 +235,7 @@ const cancelar = () => {
               id="codigo-club-generado"
               name="codigo-club-generado"
               type="text"
-              :value="(cp || '00') + (numeroClub || '0000')"
+              :value="((cp || '').padStart(2, '0') || '') + ((numeroClub || '').padStart(4, '0') || '')"
               readonly
               aria-readonly="true"
               class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, validator, EmailStr
-from typing import Optional
+from pydantic import BaseModel, validator, EmailStr, computed_field
+from typing import Optional, List
 import re
 
 class ClubBase(BaseModel):
@@ -37,6 +37,11 @@ class ClubCreate(ClubBase):
 class ClubResponse(ClubBase):
     id: int
     codigo_club: str
+
+    @computed_field
+    @property
+    def jugadores_count(self) -> int:
+        return len(self.jugadores) if hasattr(self, 'jugadores') and self.jugadores is not None else 0
 
     class Config:
         from_attributes = True 

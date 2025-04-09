@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Componente para crear un nuevo jugador
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useJugadores } from '../composables/useJugadores';
 import { useClubs } from '../composables/useClubs';
@@ -20,6 +20,14 @@ const codigo_club = ref('');
 const dni = ref('');
 const telefono = ref('');
 const email = ref('');
+
+// ID FED generado (computado)
+const idfedGenerado = computed(() => {
+  const clubSeleccionado = clubs.value.find(c => c.codigo_club === codigo_club.value);
+  const cp = clubSeleccionado ? clubSeleccionado.cp : ''; // Obtener CP del club seleccionado
+  // ¡Importante! Usar el CP del club, no el código completo
+  return `${cp}${(numero_jugador.value || '').padStart(4, '0')}`;
+});
 
 // Cargar la lista de clubes al montar el componente
 onMounted(() => {
@@ -41,16 +49,10 @@ const validarFormulario = (): boolean => {
     validationErrors.value.apellidos = 'Los apellidos son obligatorios';
   }
   
-  if (!cp.value.trim()) {
-    validationErrors.value.cp = 'El CP es obligatorio';
-  } else if (!/^\d{2}$/.test(cp.value)) {
-    validationErrors.value.cp = 'El CP debe ser exactamente 2 dígitos numéricos';
-  }
-  
   if (!numero_jugador.value.trim()) {
     validationErrors.value.numero_jugador = 'El número de jugador es obligatorio';
-  } else if (!/^\d{5}$/.test(numero_jugador.value)) {
-    validationErrors.value.numero_jugador = 'El número debe tener exactamente 5 dígitos numéricos';
+  } else if (!/^\d{1,4}$/.test(numero_jugador.value)) {
+    validationErrors.value.numero_jugador = 'El número debe tener entre 1 y 4 dígitos numéricos';
   }
   
   if (!codigo_club.value) {
@@ -64,27 +66,53 @@ const validarFormulario = (): boolean => {
   return Object.keys(validationErrors.value).length === 0;
 };
 
+// Función para aplicar padding al numero_jugador en blur
+const formatearNumeroJugador = () => {
+  if (numero_jugador.value && numero_jugador.value.length > 0 && /^[0-9]+$/.test(numero_jugador.value)) {
+    // Solo formatear si es numérico
+    numero_jugador.value = numero_jugador.value.padStart(4, '0');
+  }
+};
+
 const guardarJugador = async () => {
+  // 1. Re-validar (por si acaso)
   if (!validarFormulario()) {
+    console.log('Validación fallida:', validationErrors.value);
     return;
   }
   
+  // 2. Encontrar el club seleccionado para obtener el CP correcto
+  const selectedClub = clubs.value.find(c => c.codigo_club === codigo_club.value);
+  if (!selectedClub) {
+    validationErrors.value.codigo_club = 'Club seleccionado no válido o no encontrado.';
+    console.error('Error: Club seleccionado no encontrado');
+    return;
+  }
+  const correctCp = selectedClub.cp;
+  
+  // 3. Obtener el número de jugador sin ceros a la izquierda para enviar al backend
+  const numeroJugadorSinPadding = parseInt(numero_jugador.value, 10).toString(); 
+
+  // 4. Construir los datos a enviar
   const jugadorData: JugadorCreate = {
-    nombre: nombre.value,
-    apellidos: apellidos.value,
-    cp: cp.value,
-    numero_jugador: numero_jugador.value,
-    codigo_club: codigo_club.value,
+    nombre: nombre.value.trim(),
+    apellidos: apellidos.value.trim(),
+    cp: correctCp, // <-- Usar el CP del club
+    numero_jugador: numeroJugadorSinPadding, // <-- Usar el número sin padding
+    codigo_club: codigo_club.value, // <-- Código del club para la relación
     dni: dni.value || undefined,
     telefono: telefono.value || undefined,
     email: email.value || undefined
   };
   
+  console.log('Enviando datos al backend:', jugadorData); // Log para depuración
+
+  // 5. Intentar crear el jugador
   try {
     await createJugador(jugadorData);
     router.push('/jugadores');
   } catch (error) {
-    console.error('Error al crear el jugador:', error);
+    console.error('Error explícito en guardarJugador catch:', error);
   }
 };
 
@@ -190,20 +218,35 @@ const cancelar = () => {
         
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">
-            Número de jugador (máx 5 dígitos) <span class="text-red-500">*</span>
+            Número de jugador (máx 4 dígitos) <span class="text-red-500">*</span>
             <input 
               name="numero-jugador" 
               v-model="numero_jugador" 
               type="text" 
-              maxlength="5"
+              maxlength="4"
+              @blur="formatearNumeroJugador"
               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
               :class="{'border-red-500': validationErrors.numero_jugador}"
-              placeholder="Ej: 12345"
+              placeholder="Ej: 1234"
             />
           </label>
           <p v-if="validationErrors.numero_jugador" class="text-red-500 text-xs mt-1">
             {{ validationErrors.numero_jugador }}
           </p>
+        </div>
+        
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">
+            ID FED (generado)
+            <input 
+              name="idfed-generado"
+              type="text" 
+              :value="idfedGenerado"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
+            />
+          </label>
+          <p class="text-xs text-gray-500">Se genera con el CP del club + número de jugador.</p>
         </div>
         
         <div class="space-y-2">

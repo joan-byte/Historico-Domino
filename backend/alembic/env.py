@@ -7,15 +7,26 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde .env
+# Asegúrate de que la ruta al .env sea correcta desde la ubicación de env.py
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env') # Sube un nivel desde alembic/ a backend/
+load_dotenv(dotenv_path=dotenv_path)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Configurar sqlalchemy.url desde la variable de entorno DATABASE_URL
+# Esto sobreescribirá el valor de alembic.ini si la variable existe
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+else:
+    # Opcional: manejar caso si DATABASE_URL no está en .env, usar alembic.ini
+    print("ADVERTENCIA: DATABASE_URL no encontrada en .env, usando valor de alembic.ini")
+
+# Interpretar el archivo de configuración para el logging de Python.
+# Esta línea asume que el archivo ini ya está configurado para logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -25,12 +36,10 @@ from app.models.base import Base
 from app.models.club import Club
 from app.models.jugador import Jugador
 from app.models.tipo_campeonato import TipoCampeonato
+from app.models.campeonato import Campeonato
 from app.models.resultado import Resultado
 
 target_metadata = Base.metadata
-
-# Sobrescribir la URL de la base de datos con la variable de entorno
-config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -50,7 +59,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Usar la URL configurada (desde .env o .ini)
+    url = config.get_main_option("sqlalchemy.url") 
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -69,6 +79,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Usar engine_from_config que ya utiliza la sección [alembic] 
+    # donde hemos configurado sqlalchemy.url
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

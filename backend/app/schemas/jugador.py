@@ -19,8 +19,8 @@ class JugadorBase(BaseModel):
 
     @validator('numero_jugador')
     def validar_numero_jugador(cls, v):
-        if not v.isdigit() or len(v) != 5:
-            raise ValueError('Número de jugador debe tener exactamente 5 dígitos')
+        if not v.isdigit() or not (1 <= len(v) <= 4):
+            raise ValueError('Número de jugador debe tener entre 1 y 4 dígitos')
         return v
 
     @validator('dni')

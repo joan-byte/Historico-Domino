@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Componente para modificar un jugador existente
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useJugadores } from '../composables/useJugadores';
 import { useClubs } from '../composables/useClubs';
@@ -39,6 +39,13 @@ const email = ref('');
 
 // Estado para errores de validación
 const validationErrors = ref<Record<string, string>>({});
+
+// ID FED generado (computado)
+const idfedGenerado = computed(() => {
+  const clubSeleccionado = clubs.value.find(c => c.codigo_club === codigo_club.value);
+  const cp = clubSeleccionado ? clubSeleccionado.cp : ''; // Obtener CP del club seleccionado
+  return `${cp}${(numero_jugador.value || '').padStart(4, '0')}`;
+});
 
 // Cargar datos del jugador y los clubes
 onMounted(async () => {
@@ -189,6 +196,7 @@ const cancelar = () => {
           </p>
         </div>
         
+        <!-- Campo Número Jugador (solo lectura, estructura normal) -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">
             Número de Jugador
@@ -202,8 +210,23 @@ const cancelar = () => {
             />
           </label>
           <p class="text-xs text-gray-500">
-            Cinco dígitos numéricos (no editable)
+            Cuatro dígitos numéricos (no editable)
           </p>
+        </div>
+        
+        <!-- NUEVO Campo ID FED (calculado, solo lectura) -->
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">
+            ID FED (calculado)
+            <input 
+              name="idfed-calculado"
+              type="text" 
+              :value="idfedGenerado"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
+            />
+          </label>
+           <p class="text-xs text-gray-500">Se calcula con el CP + número de jugador.</p>
         </div>
         
         <!-- Datos personales -->

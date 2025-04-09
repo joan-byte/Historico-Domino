@@ -16,10 +16,10 @@ class Jugador(Base):
     cp = Column(String(2), nullable=False)
     
     # Número asignado por el usuario (5 dígitos)
-    numero_jugador = Column('numero_usuario', String(5), nullable=False)  # Mapeado a 'numero_usuario' en la BD
+    numero_jugador = Column(String(4), nullable=False)
     
     # IDFED (CP + número jugador = 7 dígitos)
-    idfed = Column(String(7), unique=True, nullable=False)
+    idfed = Column(String(6), unique=True, nullable=False)
     
     # Datos personales obligatorios
     nombre = Column(String(100), nullable=False)
@@ -45,7 +45,7 @@ class Jugador(Base):
     # Restricciones de formato
     __table_args__ = (
         CheckConstraint("cp ~ '^[0-9]{2}$'", name='check_cp_formato_jugador'),
-        CheckConstraint("numero_usuario ~ '^[0-9]{5}$'", name='check_numero_jugador_formato'),  # Cambiado a numero_usuario para coincidir con la BD
+        CheckConstraint("numero_jugador ~ '^[0-9]{1,4}$'", name='check_numero_jugador_formato'),
     )
     
     @validates('cp')
@@ -60,19 +60,22 @@ class Jugador(Base):
     @validates('numero_jugador')
     def validar_numero_jugador(self, key, numero):
         """
-        Valida que el número de jugador sea numérico y tenga exactamente 5 dígitos
+        Valida que el número de jugador sea numérico y tenga entre 1 y 4 dígitos
         """
-        if not numero.isdigit() or len(numero) != 5:
-            raise ValueError("El número debe ser numérico y tener exactamente 5 dígitos")
+        if not numero.isdigit() or not (1 <= len(numero) <= 4):
+            raise ValueError("El número debe tener entre 1 y 4 dígitos numéricos")
         return numero
     
     @validates('idfed')
     def validar_idfed(self, key, idfed):
         """
-        Asegura que el IDFED sea la concatenación de CP y número de jugador
+        Asegura que el IDFED sea la concatenación de CP y número de jugador (rellenado)
         """
-        if idfed != f"{self.cp}{self.numero_jugador}":
-            raise ValueError("El IDFED debe ser CP + número de jugador")
+        # Rellenar el numero_jugador para la comparación
+        numero_rellenado = self.numero_jugador.zfill(4)
+        if idfed != f"{self.cp}{numero_rellenado}":
+            # Actualizar mensaje de error para mayor claridad
+            raise ValueError(f"El IDFED '{idfed}' debe ser la concatenación del CP '{self.cp}' y el número de jugador rellenado '{numero_rellenado}'")
         return idfed
     
     @validates('dni')

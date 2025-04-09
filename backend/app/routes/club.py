@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from ..db.session import get_db
 from ..models.club import Club
@@ -15,17 +15,19 @@ def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
     """
     Crear un nuevo club
     """
-    # Generar código_club
-    codigo_club = f"{club.cp}{club.numero_club}"
+    # Generar código_club con relleno para numero_club
+    numero_club_rellenado = club.numero_club.zfill(4) # Rellena con ceros a 4 dígitos
+    codigo_club = f"{club.cp}{numero_club_rellenado}"
     
     # Verificar si ya existe
     db_club = db.query(Club).filter(Club.codigo_club == codigo_club).first()
     if db_club:
         raise HTTPException(status_code=400, detail="El código de club ya existe")
     
+    # Guardar el numero_club CON relleno
     nuevo_club = Club(
         cp=club.cp,
-        numero_club=club.numero_club,
+        numero_club=numero_club_rellenado,
         codigo_club=codigo_club,
         nombre=club.nombre,
         persona_contacto=club.persona_contacto,
@@ -44,18 +46,19 @@ def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=List[ClubResponse])
-def listar_clubs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def obtener_clubs(db: Session = Depends(get_db)):
     """
-    Listar todos los clubs
+    Obtener todos los clubs con carga eager de jugadores
     """
-    return db.query(Club).offset(skip).limit(limit).all()
+    clubs = db.query(Club).options(joinedload(Club.jugadores)).all()
+    return clubs
 
 @router.get("/{codigo_club}", response_model=ClubResponse)
 def obtener_club(codigo_club: str, db: Session = Depends(get_db)):
     """
-    Obtener un club por su código
+    Obtener un club por su código con carga eager de jugadores
     """
-    club = db.query(Club).filter(Club.codigo_club == codigo_club).first()
+    club = db.query(Club).options(joinedload(Club.jugadores)).filter(Club.codigo_club == codigo_club).first()
     if not club:
         raise HTTPException(status_code=404, detail="Club no encontrado")
     return club
@@ -66,24 +69,34 @@ def actualizar_club(codigo_club: str, club_data: ClubCreate, db: Session = Depen
     Actualizar un club existente
     """
     # Buscar el club
-    club = db.query(Club).filter(Club.codigo_club == codigo_club).first()
-    if not club:
+    club_db = db.query(Club).filter(Club.codigo_club == codigo_club).first() # Renombrado a club_db para evitar conflicto
+    if not club_db:
         raise HTTPException(status_code=404, detail="Club no encontrado")
     
-    # Actualizar los campos
-    club.nombre = club_data.nombre
-    club.cp = club_data.cp
-    club.numero_club = club_data.numero_club
-    club.codigo_club = f"{club_data.cp}{club_data.numero_club}"
-    club.persona_contacto = club_data.persona_contacto
-    club.telefono = club_data.telefono
-    club.direccion = club_data.direccion
-    club.email = club_data.email
+    # Generar nuevo código con relleno
+    numero_club_rellenado = club_data.numero_club.zfill(4)
+    nuevo_codigo_club = f"{club_data.cp}{numero_club_rellenado}"
+
+    # Verificar si el nuevo código ya existe (y no es el club actual)
+    if nuevo_codigo_club != codigo_club:
+        conflicto = db.query(Club).filter(Club.codigo_club == nuevo_codigo_club).first()
+        if conflicto:
+            raise HTTPException(status_code=400, detail=f"El nuevo código de club '{nuevo_codigo_club}' generado ya está en uso.")
+
+    # Actualizar los campos guardando numero_club CON relleno
+    club_db.nombre = club_data.nombre
+    club_db.cp = club_data.cp
+    club_db.numero_club = numero_club_rellenado
+    club_db.codigo_club = nuevo_codigo_club
+    club_db.persona_contacto = club_data.persona_contacto
+    club_db.telefono = club_data.telefono
+    club_db.direccion = club_data.direccion
+    club_db.email = club_data.email
     
     try:
         db.commit()
-        db.refresh(club)
-        return club
+        db.refresh(club_db)
+        return club_db
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))

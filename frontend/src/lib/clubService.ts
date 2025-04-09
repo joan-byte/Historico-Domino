@@ -12,6 +12,7 @@ export interface ClubResponse {
   telefono?: string;
   direccion?: string;
   email?: string;
+  jugadores_count: number;
 }
 
 // Tipo para los datos para crear un Club

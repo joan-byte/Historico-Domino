@@ -3,6 +3,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { clubService, type ClubResponse, type ClubCreate } from '../lib/clubService';
+import provinciasData from '../data/provincias_cp.json' with { type: 'json' }; // Importar datos JSON
 
 const router = useRouter();
 const route = useRoute();
@@ -17,6 +18,7 @@ const clubId = ref('');
 const isLoading = ref(false);
 const isLoadingData = ref(true);
 const generalError = ref('');
+const provinciaDetectada = ref(''); // <-- Añadir ref para provincia
 
 // Referencias para manejar errores de validación
 const errores = ref({
@@ -53,6 +55,13 @@ onMounted(async () => {
     telefono.value = club.telefono || '';
     direccion.value = club.direccion || '';
     email.value = club.email || '';
+    
+    // Buscar provincia una vez que tenemos el CP
+    const provinciaInfo = provinciasData.find(p => p.cp === cp.value);
+    if (provinciaInfo) {
+      provinciaDetectada.value = provinciaInfo.provincia;
+    }
+    
   } catch (err: any) {
     console.error('Error al cargar el club:', err);
     generalError.value = err.message || 'No se pudo cargar la información del club';
@@ -172,14 +181,10 @@ const cancelar = () => {
           <div class="space-y-2">
             <label class="block text-sm font-medium text-gray-700">
               Código Postal
-              <input 
-                id="cp-readonly"
-                name="cp-readonly"
-                type="text"
-                :value="cp"
-                readonly
-                class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
-              />
+              <div class="flex items-center w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1">
+                <span class="w-10 px-1">{{ cp }}</span>
+                <span v-if="provinciaDetectada" class="ml-2 truncate">{{ provinciaDetectada }}</span>
+              </div>
             </label>
           </div>
 
@@ -190,7 +195,7 @@ const cancelar = () => {
                 id="numero-club-readonly"
                 name="numero-club-readonly"
                 type="text"
-                :value="numeroClub"
+                :value="(numeroClub || '').padStart(4, '0')"
                 readonly
                 class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
               />
@@ -204,7 +209,7 @@ const cancelar = () => {
                 id="codigo-club-readonly"
                 name="codigo-club-readonly"
                 type="text"
-                :value="(cp || '00') + (numeroClub || '0000')"
+                :value="(cp || '') + (numeroClub || '').padStart(4, '0')"
                 readonly
                 class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
               />

@@ -15,18 +15,20 @@ def crear_jugador(jugador: JugadorCreate, db: Session = Depends(get_db)):
     """
     Crear un nuevo jugador
     """
-    # Generar IDFED
-    idfed = f"{jugador.cp}{jugador.numero_jugador}"
+    # Generar IDFED con relleno para numero_jugador
+    numero_jugador_rellenado = jugador.numero_jugador.zfill(4) # Rellenar a 4 dígitos
+    idfed = f"{jugador.cp}{numero_jugador_rellenado}" # Usar el número rellenado
     
-    # Verificar si ya existe
+    # Verificar si ya existe el IDFED
     db_jugador = db.query(Jugador).filter(Jugador.idfed == idfed).first()
     if db_jugador:
         raise HTTPException(status_code=400, detail="El IDFED ya existe")
     
+    # Crear la instancia guardando el numero_jugador CON relleno
     nuevo_jugador = Jugador(
         cp=jugador.cp,
-        numero_jugador=jugador.numero_jugador,
-        idfed=idfed,
+        numero_jugador=numero_jugador_rellenado, # <-- GUARDAR EL RELLENADO
+        idfed=idfed, 
         nombre=jugador.nombre,
         apellidos=jugador.apellidos,
         codigo_club=jugador.codigo_club,
