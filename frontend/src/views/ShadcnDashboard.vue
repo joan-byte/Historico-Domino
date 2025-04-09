@@ -188,16 +188,6 @@ const navigation = ref<NavSection[]>([
   }
 ]);
 
-// Función para manejar el clic en Clubs en el sidebar
-const handleClubsClick = () => {
-  // Llamar a toggleExpand para usar la lógica común de abrir/cerrar
-  toggleExpand('Clubs');
-  
-  // Navegar directamente a /clubes/lista
-  router.push('/clubes/lista');
-  currentView.value = 'crud';
-};
-
 // Modificar la función toggleExpand para no manejar el clic en Clubs
 const toggleExpand = (title: string): void => {
   const index = expandedItems.value.indexOf(title);
@@ -499,7 +489,18 @@ const getDynamicHref = (option: any): string => {
                   v-if="item.children && item.children.length > 0"
                   class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900"
                   :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
-                  @click="item.title === 'Clubs' ? handleClubsClick() : toggleExpand(item.title)"
+                  @click="() => {
+                    toggleExpand(item.title);
+                    if (item.title === 'Settings') {
+                      // Navegar al primer hijo para Settings
+                      if (item.children && item.children[0] && item.children[0].href) {
+                        router.push(item.children[0].href);
+                      }
+                    } else if (item.href) {
+                      // Navegar a la ruta principal para los demás
+                      router.push(item.href);
+                    }
+                  }"
                 >
                   <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
                     <path :d="item.icon"></path>
