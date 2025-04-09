@@ -179,13 +179,13 @@ const cancelar = () => {
         <!-- Primera columna: Información no modificable del club -->
         <div class="space-y-4">
           <div class="space-y-2">
-            <label class="block text-sm font-medium text-gray-700">
+            <div class="block text-sm font-medium text-gray-700">
               Código Postal
               <div class="flex items-center w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1">
                 <span class="w-10 px-1">{{ cp }}</span>
                 <span v-if="provinciaDetectada" class="ml-2 truncate">{{ provinciaDetectada }}</span>
               </div>
-            </label>
+            </div>
           </div>
 
           <div class="space-y-2">

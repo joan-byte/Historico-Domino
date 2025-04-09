@@ -188,13 +188,16 @@ const cancelar = () => {
         </div>
         
         <div class="space-y-2">
-          <label class="block text-sm font-medium text-gray-700">
+          <label 
+            for="cp-club"
+            class="block text-sm font-medium text-gray-700">
             Código Postal (2 dígitos) <span class="text-red-500">*</span>
           </label>
           <!-- Contenedor Flex para CP y Provincia -->
           <div class="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" 
                :class="{ 'border-red-500': errores.cp }">
             <input 
+              id="cp-club"
               name="cp-club"
               v-model="cp" 
               type="text" 

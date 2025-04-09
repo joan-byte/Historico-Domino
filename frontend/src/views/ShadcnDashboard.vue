@@ -38,11 +38,15 @@ const router = useRouter();
 // Estado para controlar la vista actual
 const currentView = ref<string>('default');
 
+// Expandir/colapsar elementos de navegación
+const expandedItems = ref<string[]>([]);
+
 // Vigilar los cambios de ruta para actualizar la vista automáticamente
 watch(() => route.path, (newPath) => {
   if (newPath === '/') {
     // En la ruta principal, mostrar las tarjetas principales
     currentView.value = 'default';
+    expandedItems.value = [];
   } else if (newPath.includes('/clubes/') || newPath === '/clubes') {
     // Si estamos en rutas relacionadas con clubes, mantener las tarjetas CRUD
     currentView.value = 'crud';
@@ -184,15 +188,10 @@ const navigation = ref<NavSection[]>([
   }
 ]);
 
-// Expandir/colapsar elementos de navegación
-const expandedItems = ref<string[]>(['Clubs']);
-
-// Función separada para manejar el clic en Clubs en el sidebar
+// Función para manejar el clic en Clubs en el sidebar
 const handleClubsClick = () => {
-  // Expandir el elemento si no está expandido
-  if (!isExpanded('Clubs')) {
-    expandedItems.value.push('Clubs');
-  }
+  // Llamar a toggleExpand para usar la lógica común de abrir/cerrar
+  toggleExpand('Clubs');
   
   // Navegar directamente a /clubes/lista
   router.push('/clubes/lista');
