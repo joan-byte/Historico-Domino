@@ -87,7 +87,7 @@ export function useNavigation() {
           href: '#',
           icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6zm1 3h10a1 1 0 0 1 0 2H7a1 1 0 1 1 0-2zm0 4h10a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2zm0 4h5a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2z',
           children: [
-            { title: 'Importar Clubs', href: '#' },
+            { title: 'Importar Clubs', href: '/importar-clubs' },
             { title: 'Importar Jugadores', href: '#' },
             { title: 'Importar Resultados', href: '#' }
           ]

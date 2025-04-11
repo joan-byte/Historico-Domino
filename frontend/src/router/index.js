@@ -165,6 +165,13 @@ const routes = [
             component: () => import('../views/TipoCampeonato.vue')
           }
         ]
+      },
+
+      // Rutas para el módulo de Importar Clubs
+      {
+        path: '/importar-clubs',
+        name: 'ImportarClubs',
+        component: () => import('../views/ImportClubsView.vue')
       }
     ]
   }

@@ -75,5 +75,6 @@ const navigateTo = (route: string): void => {
         <p class="text-sm">{{ option.description }}</p>
       </div>
     </div>
+
   </div>
 </template> 

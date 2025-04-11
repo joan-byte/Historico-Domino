@@ -17,4 +17,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      // Redirigir cualquier petición que empiece por /api al backend
+      '/api': {
+        target: 'http://localhost:8000', // URL de tu backend FastAPI
+        changeOrigin: true, // Necesario para hosts virtuales
+      }
+    }
+  }
 })

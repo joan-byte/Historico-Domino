@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from .routes import club, jugador, tipo_campeonato, resultado, campeonato
+from .routes import import_export
 from .db.database import Base, engine
 from .db.session import get_db
 from .db.init_db import init_tipos_campeonatos
@@ -72,4 +73,5 @@ app.include_router(club.router, prefix="/api", tags=["clubs"])
 app.include_router(jugador.router, prefix="/api", tags=["jugadores"])
 app.include_router(tipo_campeonato.router, prefix="/api", tags=["tipos_campeonatos"])
 app.include_router(resultado.router, prefix="/api", tags=["resultados"])
-app.include_router(campeonato.router, prefix="/api", tags=["campeonatos"]) 
+app.include_router(campeonato.router, prefix="/api", tags=["campeonatos"])
+app.include_router(import_export.router, prefix="/api/import", tags=["import_export"]) 
