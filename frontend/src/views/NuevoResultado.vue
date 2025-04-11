@@ -1,322 +1,423 @@
 <script setup lang="ts">
-// Componente para registrar nuevos resultados de partidas
-import { ref, onMounted, computed } from 'vue';
+// Componente para registrar nuevos resultados de campeonatos
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useResultados } from '../composables/useResultados';
+import { useTiposCampeonato } from '../composables/useTiposCampeonato';
+import { useJugadores } from '../composables/useJugadores';
+import { useClubs } from '../composables/useClubs';
+import type { ResultadoCreate, ResultadoResponse } from '../lib/resultadoService';
+import type { TipoCampeonatoResponse } from '../lib/tipoCampeonatoService';
+import type { JugadorResponse } from '../lib/jugadorService';
+import type { ClubResponse } from '../lib/clubService';
+import StatusMessage from '../components/ui/StatusMessage.vue';
 
-// Datos del formulario
-const resultado = ref({
-  fecha: '',
-  campeonato: '',
-  club: '',
-  equipoA: '',
-  equipoB: '',
-  puntosEquipoA: 0,
-  puntosEquipoB: 0,
-  notas: ''
+const router = useRouter();
+
+// Usar composables
+const { 
+  addResultado, 
+  isLoading: isLoadingResultado, 
+  error: errorResultado 
+} = useResultados();
+
+const { 
+  tiposCampeonato, 
+  fetchTiposCampeonato, 
+  isLoading: isLoadingTipos, 
+  error: errorTipos 
+} = useTiposCampeonato();
+
+const { 
+  jugadores, 
+  fetchJugadores, 
+  isLoading: isLoadingJugadores, 
+  error: errorJugadores 
+} = useJugadores();
+
+const { 
+  clubs, 
+  fetchClubs, 
+  isLoading: isLoadingClubs, 
+  error: errorClubs 
+} = useClubs();
+
+// Datos del formulario (refleja ResultadoCreate)
+const form = ref<Partial<ResultadoCreate>>({
+  tipo_campeonato_id: undefined,
+  nombre_campeonato: '', // Se autocompleta al seleccionar tipo
+  fecha_campeonato: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+  idfed_jugador: undefined,
+  nombre_jugador: '', // Se autocompleta al seleccionar jugador
+  apellido_jugador: '', // Se autocompleta al seleccionar jugador
+  codigo_club_jugador: undefined, // Se autocompleta al seleccionar jugador
+  nombre_club_jugador: '', // Se autocompleta al seleccionar jugador
+  idfed_pareja: undefined,
+  nombre_pareja: '', // Se autocompleta al seleccionar pareja
+  apellido_pareja: '', // Se autocompleta al seleccionar pareja
+  codigo_club_pareja: undefined, // Se autocompleta al seleccionar pareja
+  nombre_club_pareja: '', // Se autocompleta al seleccionar pareja
+  partida: 1, // Valor por defecto
+  mesa: 1, // Valor por defecto
+  gb: true, // Valor por defecto (A)
+  pg: 0,
+  dif: 0,
+  pv: 0,
+  pt: 0,
+  mg: 0,
+  pos: 0,
 });
 
-// Listas de opciones para los selectores
-const campeonatos = ref([
-  { id: 1, nombre: 'Campeonato Regional 2023' },
-  { id: 2, nombre: 'Torneo Verano 2023' },
-  { id: 3, nombre: 'Campeonato Nacional 2023' },
-  { id: 4, nombre: 'Torneo Primavera 2024' }
-]);
-
-const clubes = ref([
-  { id: 1, nombre: 'Club Domino A' },
-  { id: 2, nombre: 'Club Domino B' },
-  { id: 3, nombre: 'Club Domino C' },
-  { id: 4, nombre: 'Club Domino D' },
-  { id: 5, nombre: 'Club Domino E' }
-]);
-
-const equipos = ref([
-  { id: 1, nombre: 'Equipo Rojo', clubId: 1 },
-  { id: 2, nombre: 'Equipo Azul', clubId: 1 },
-  { id: 3, nombre: 'Equipo Verde', clubId: 2 },
-  { id: 4, nombre: 'Equipo Amarillo', clubId: 2 },
-  { id: 5, nombre: 'Equipo Naranja', clubId: 3 },
-  { id: 6, nombre: 'Equipo Morado', clubId: 3 },
-  { id: 7, nombre: 'Equipo Blanco', clubId: 4 },
-  { id: 8, nombre: 'Equipo Negro', clubId: 4 },
-  { id: 9, nombre: 'Equipo Gris', clubId: 5 },
-  { id: 10, nombre: 'Equipo Marrón', clubId: 5 }
-]);
-
-// Equipos filtrados según el club seleccionado
-const equiposFiltrados = computed(() => {
-  if (!resultado.value.club) return [];
-  return equipos.value.filter(equipo => equipo.clubId === parseInt(resultado.value.club));
+// Cargar datos necesarios al montar
+onMounted(() => {
+  fetchTiposCampeonato();
+  fetchJugadores(); // Cargar todos los jugadores por defecto
+  fetchClubs(); // Cargar todos los clubs por defecto
 });
 
-// Determinar el ganador basado en los puntos
-const ganador = computed(() => {
-  const puntosA = resultado.value.puntosEquipoA;
-  const puntosB = resultado.value.puntosEquipoB;
-  
-  if (puntosA > puntosB) {
-    return 'Equipo A';
-  } else if (puntosB > puntosA) {
-    return 'Equipo B';
-  } else if (puntosA > 0 && puntosB > 0) {
-    return 'Empate';
+// Autocompletar nombre del campeonato al seleccionar tipo
+watch(() => form.value.tipo_campeonato_id, (newId) => {
+  // Añadir tipo explícito al parámetro del find
+  const tipo = tiposCampeonato.value.find((t: TipoCampeonatoResponse) => t.id === newId);
+  form.value.nombre_campeonato = tipo ? tipo.nombre : '';
+});
+
+// Autocompletar datos del jugador principal al seleccionar IDFED
+watch(() => form.value.idfed_jugador, (newIdfed) => {
+  const jugador = jugadores.value.find(j => j.idfed === newIdfed);
+  if (jugador) {
+    form.value.nombre_jugador = jugador.nombre;
+    form.value.apellido_jugador = jugador.apellidos;
+    form.value.codigo_club_jugador = jugador.codigo_club;
+    form.value.nombre_club_jugador = jugador.nombre_club;
   } else {
-    return 'No determinado';
+    form.value.nombre_jugador = '';
+    form.value.apellido_jugador = '';
+    form.value.codigo_club_jugador = undefined;
+    form.value.nombre_club_jugador = '';
   }
 });
 
-// Establecer fecha mínima para el campo de fecha (hoy)
-const fechaMinima = new Date().toISOString().split('T')[0];
+// Autocompletar datos de la pareja al seleccionar IDFED
+watch(() => form.value.idfed_pareja, (newIdfed) => {
+  if (!newIdfed) {
+    form.value.nombre_pareja = '';
+    form.value.apellido_pareja = '';
+    form.value.codigo_club_pareja = undefined;
+    form.value.nombre_club_pareja = '';
+    return;
+  }
+  const pareja = jugadores.value.find(j => j.idfed === newIdfed);
+  if (pareja) {
+    form.value.nombre_pareja = pareja.nombre;
+    form.value.apellido_pareja = pareja.apellidos;
+    form.value.codigo_club_pareja = pareja.codigo_club;
+    form.value.nombre_club_pareja = pareja.nombre_club;
+  } else {
+    form.value.nombre_pareja = '';
+    form.value.apellido_pareja = '';
+    form.value.codigo_club_pareja = undefined;
+    form.value.nombre_club_pareja = '';
+  }
+});
 
-// Función para guardar el resultado
-const guardarResultado = () => {
-  // Validación básica
-  if (!resultado.value.fecha || !resultado.value.campeonato || !resultado.value.club || 
-      !resultado.value.equipoA || !resultado.value.equipoB) {
-    alert('Por favor, completa los campos obligatorios');
+// Estado de carga general
+const isLoading = computed(() => 
+  isLoadingResultado.value || isLoadingTipos.value || isLoadingJugadores.value || isLoadingClubs.value
+);
+
+// Errores combinados
+const formError = computed(() => 
+  errorResultado.value || errorTipos.value || errorJugadores.value || errorClubs.value
+);
+
+// Estado para errores de validación
+const validationErrors = ref<Record<string, string>>({});
+
+// Validar formulario
+const validarFormulario = (): boolean => {
+  validationErrors.value = {};
+  const data = form.value;
+  
+  if (!data.tipo_campeonato_id) validationErrors.value.tipo_campeonato_id = 'Selecciona un tipo de campeonato.';
+  if (!data.fecha_campeonato) validationErrors.value.fecha_campeonato = 'La fecha es obligatoria.';
+  if (!data.idfed_jugador) validationErrors.value.idfed_jugador = 'Selecciona un jugador principal.';
+  if (data.idfed_jugador && data.idfed_pareja === data.idfed_jugador) validationErrors.value.idfed_pareja = 'La pareja no puede ser el mismo jugador.';
+  if (data.partida === undefined || data.partida <= 0) validationErrors.value.partida = 'El número de partida debe ser positivo.';
+  if (data.mesa === undefined || data.mesa <= 0) validationErrors.value.mesa = 'El número de mesa debe ser positivo.';
+  // Añadir más validaciones según sea necesario (PG, DIF, PV, PT, MG, POS)
+  if (data.pg === undefined || data.pg < 0) validationErrors.value.pg = 'PG debe ser 0 o positivo.';
+  // ... otras validaciones numéricas ...
+  
+  return Object.keys(validationErrors.value).length === 0;
+};
+
+// Función para guardar
+const guardarResultado = async () => {
+  if (!validarFormulario()) {
     return;
   }
   
-  if (resultado.value.equipoA === resultado.value.equipoB) {
-    alert('Los equipos no pueden ser iguales');
-    return;
+  try {
+    // Asegurarse de que todos los campos requeridos por ResultadoCreate estén presentes
+    const resultadoData: ResultadoCreate = {
+      tipo_campeonato_id: form.value.tipo_campeonato_id!,
+      nombre_campeonato: form.value.nombre_campeonato!,
+      fecha_campeonato: form.value.fecha_campeonato!,
+      idfed_jugador: form.value.idfed_jugador!,
+      nombre_jugador: form.value.nombre_jugador!,
+      apellido_jugador: form.value.apellido_jugador!,
+      codigo_club_jugador: form.value.codigo_club_jugador!,
+      nombre_club_jugador: form.value.nombre_club_jugador!,
+      idfed_pareja: form.value.idfed_pareja || undefined,
+      nombre_pareja: form.value.idfed_pareja ? form.value.nombre_pareja || '' : undefined,
+      apellido_pareja: form.value.idfed_pareja ? form.value.apellido_pareja || '' : undefined,
+      codigo_club_pareja: form.value.idfed_pareja ? form.value.codigo_club_pareja || undefined : undefined,
+      nombre_club_pareja: form.value.idfed_pareja ? form.value.nombre_club_pareja || '' : undefined,
+      partida: form.value.partida!,
+      mesa: form.value.mesa!,
+      gb: form.value.gb!,
+      pg: form.value.pg!,
+      dif: form.value.dif!,
+      pv: form.value.pv!,
+      pt: form.value.pt!,
+      mg: form.value.mg!,
+      pos: form.value.pos!,
+    };
+    
+    await addResultado(resultadoData);
+    router.push('/resultados'); // O a la lista de resultados
+  } catch (error) {
+    // El error se muestra a través de formError
+    console.error("Error al guardar resultado:", error);
   }
-  
-  // Aquí iría la lógica para guardar en la base de datos
-  console.log('Guardando resultado:', {
-    ...resultado.value,
-    ganador: ganador.value
-  });
-  
-  alert('Resultado guardado correctamente (simulado)');
-  
-  // Resetear formulario
-  resultado.value = {
-    fecha: '',
-    campeonato: '',
-    club: '',
-    equipoA: '',
-    equipoB: '',
-    puntosEquipoA: 0,
-    puntosEquipoB: 0,
-    notas: ''
-  };
 };
 
-// Función para cambiar el club y resetear los equipos seleccionados
-const cambiarClub = () => {
-  resultado.value.equipoA = '';
-  resultado.value.equipoB = '';
+// Función para cancelar
+const cancelar = () => {
+  router.push('/resultados');
 };
 
-// Obtener nombre del equipo por ID
-const getNombreEquipo = (id: string) => {
-  if (!id) return '';
-  const equipo = equipos.value.find(e => e.id === parseInt(id));
-  return equipo ? equipo.nombre : '';
-};
 </script>
 
 <template>
   <div class="container mx-auto p-6">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold">Registrar Nuevo Resultado</h1>
-      <a 
-        href="/resultados" 
-        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50"
-      >
-        Volver
-      </a>
+      <div class="flex gap-2">
+        <button 
+          @click="cancelar"
+          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Cancelar
+        </button>
+        <button 
+          @click="guardarResultado"
+          :disabled="isLoading"
+          class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ isLoading ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
     </div>
-    
+
+    <!-- Mensaje de error general -->
+    <StatusMessage type="error" :show="!!formError" :message="formError || ''" class="mb-4" />
+
     <div class="bg-white border rounded-md shadow-sm p-6">
       <form @submit.prevent="guardarResultado" class="space-y-6">
-        <!-- Fecha, Campeonato y Club Local -->
+        <!-- Sección Campeonato y Fecha -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Fecha -->
           <div>
             <label class="block text-sm font-medium text-gray-700">
-              Fecha *
+              Tipo de Campeonato <span class="text-red-500">*</span>
+              <select
+                v-model="form.tipo_campeonato_id"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                :class="{'border-red-500': validationErrors.tipo_campeonato_id}"
+                :disabled="isLoadingTipos"
+              >
+                <option :value="undefined" disabled>Seleccionar tipo</option>
+                <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">
+                  {{ tipo.codigo }} - {{ tipo.nombre }}
+                </option>
+              </select>
+            </label>
+            <p v-if="validationErrors.tipo_campeonato_id" class="text-red-500 text-xs mt-1">{{ validationErrors.tipo_campeonato_id }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Nombre Campeonato</label>
+            <input type="text" :value="form.nombre_campeonato" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">
+              Fecha Campeonato <span class="text-red-500">*</span>
               <input
-                v-model="resultado.fecha"
+                v-model="form.fecha_campeonato"
                 type="date"
                 required
-                :max="fechaMinima"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                :class="{'border-red-500': validationErrors.fecha_campeonato}"
               />
             </label>
+            <p v-if="validationErrors.fecha_campeonato" class="text-red-500 text-xs mt-1">{{ validationErrors.fecha_campeonato }}</p>
           </div>
+        </div>
 
-          <!-- Campeonato -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700">
-              Campeonato *
-              <select
-                v-model="resultado.campeonato"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              >
-                <option value="">Seleccionar campeonato</option>
-                <option v-for="campeonato in campeonatos" :key="campeonato.id" :value="campeonato.id">
-                  {{ campeonato.nombre }}
-                </option>
-              </select>
-            </label>
+        <!-- Sección Jugador Principal -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-medium mb-4">Jugador Principal</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Jugador (IDFED) <span class="text-red-500">*</span>
+                <select
+                  v-model="form.idfed_jugador"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                  :class="{'border-red-500': validationErrors.idfed_jugador}"
+                  :disabled="isLoadingJugadores"
+                >
+                  <option :value="undefined" disabled>Seleccionar jugador</option>
+                  <option v-for="jugador in jugadores" :key="jugador.idfed" :value="jugador.idfed">
+                    {{ jugador.idfed }} - {{ jugador.apellidos }}, {{ jugador.nombre }}
+                  </option>
+                </select>
+              </label>
+              <p v-if="validationErrors.idfed_jugador" class="text-red-500 text-xs mt-1">{{ validationErrors.idfed_jugador }}</p>
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">Nombre</label>
+              <input type="text" :value="form.nombre_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">Apellidos</label>
+              <input type="text" :value="form.apellido_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Club</label>
+              <input type="text" :value="form.nombre_club_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+            </div>
           </div>
+        </div>
 
-          <!-- Club local -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700">
-              Club Local *
-              <select
-                v-model="resultado.club"
-                required
-                @change="cambiarClub"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              >
-                <option value="">Seleccionar club local</option>
-                <option v-for="club in clubes" :key="club.id" :value="club.id">
-                  {{ club.nombre }}
-                </option>
-              </select>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Mensaje cuando no hay club seleccionado -->
-        <div v-if="!resultado.club" class="py-4 text-center text-amber-700 bg-amber-50 rounded-md">
-          Selecciona un club local para poder elegir los equipos
-        </div>
-        
-        <!-- Equipos y puntuaciones -->
-        <div>
-          <h2 class="text-lg font-medium mb-4">Equipos y Puntuación</h2>
-          
-          <div v-if="!resultado.club" class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
-            <p class="text-sm text-yellow-700">
-              Selecciona primero un club anfitrión para ver los equipos disponibles.
-            </p>
-          </div>
-          
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Equipo A -->
-            <div class="border rounded-md p-4">
-              <h3 class="text-sm font-medium mb-3">Equipo A</h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Seleccionar Equipo *
-                    <select 
-                      v-model="resultado.equipoA" 
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-                    >
-                      <option value="">Selecciona un equipo</option>
-                      <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
-                        {{ equipo.nombre }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Puntos
-                    <input 
-                      v-model.number="resultado.puntosEquipoA" 
-                      type="number" 
-                      min="0"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-                    />
-                  </label>
-                </div>
-              </div>
+        <!-- Sección Pareja (Opcional) -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-medium mb-4">Pareja (Opcional)</h2>
+           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Pareja (IDFED)
+                <select
+                  v-model="form.idfed_pareja"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                   :class="{'border-red-500': validationErrors.idfed_pareja}"
+                  :disabled="isLoadingJugadores"
+                >
+                  <option :value="undefined">Sin pareja</option>
+                  <option v-for="jugador in jugadores" :key="jugador.idfed" :value="jugador.idfed">
+                    {{ jugador.idfed }} - {{ jugador.apellidos }}, {{ jugador.nombre }}
+                  </option>
+                </select>
+              </label>
+               <p v-if="validationErrors.idfed_pareja" class="text-red-500 text-xs mt-1">{{ validationErrors.idfed_pareja }}</p>
             </div>
-            
-            <!-- Equipo B -->
-            <div class="border rounded-md p-4">
-              <h3 class="text-sm font-medium mb-3">Equipo B</h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Seleccionar Equipo *
-                    <select 
-                      v-model="resultado.equipoB" 
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-                    >
-                      <option value="">Selecciona un equipo</option>
-                      <option v-for="equipo in equiposFiltrados" :key="equipo.id" :value="equipo.id">
-                        {{ equipo.nombre }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Puntos
-                    <input 
-                      v-model.number="resultado.puntosEquipoB" 
-                      type="number" 
-                      min="0"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-                    />
-                  </label>
-                </div>
-              </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Nombre Pareja
+                <input type="text" :value="form.nombre_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              </label>
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Apellidos Pareja
+                <input type="text" :value="form.apellido_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              </label>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Club Pareja
+                <input type="text" :value="form.nombre_club_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              </label>
             </div>
           </div>
-          
-          <!-- Resumen del resultado -->
-          <div v-if="resultado.equipoA && resultado.equipoB" class="mt-4 p-4 bg-gray-50 border rounded-md">
-            <h3 class="text-sm font-medium mb-2">Resumen del Resultado</h3>
-            <div class="flex items-center justify-center text-lg font-medium">
-              <span :class="{ 'text-green-600': ganador === 'Equipo A' }">
-                {{ getNombreEquipo(resultado.equipoA) }}
-              </span>
-              <span class="mx-2 text-gray-500">{{ resultado.puntosEquipoA }} - {{ resultado.puntosEquipoB }}</span>
-              <span :class="{ 'text-green-600': ganador === 'Equipo B' }">
-                {{ getNombreEquipo(resultado.equipoB) }}
-              </span>
+        </div>
+
+        <!-- Sección Detalles Partida -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-medium mb-4">Detalles Partida</h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Partida <span class="text-red-500">*</span>
+                <input v-model.number="form.partida" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.partida}"/>
+              </label>
+              <p v-if="validationErrors.partida" class="text-red-500 text-xs mt-1">{{ validationErrors.partida }}</p>
             </div>
-            <p class="text-center text-sm mt-1">
-              <span v-if="ganador === 'Empate'" class="text-gray-500">Empate</span>
-              <span v-else-if="ganador === 'No determinado'" class="text-gray-500">Resultado no determinado</span>
-              <span v-else class="text-green-600">Ganador: {{ ganador === 'Equipo A' ? getNombreEquipo(resultado.equipoA) : getNombreEquipo(resultado.equipoB) }}</span>
-            </p>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Mesa <span class="text-red-500">*</span>
+                <input v-model.number="form.mesa" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mesa}"/>
+              </label>
+               <p v-if="validationErrors.mesa" class="text-red-500 text-xs mt-1">{{ validationErrors.mesa }}</p>
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                GB (Grupo/Banda) <span class="text-red-500">*</span>
+                <select v-model="form.gb" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1">
+                  <option :value="true">A</option>
+                  <option :value="false">B</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                POS (Posición)
+                <input v-model.number="form.pos" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+              </label>
+            </div>
           </div>
         </div>
-        
-        <!-- Notas adicionales -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Notas Adicionales
-            <textarea 
-              v-model="resultado.notas" 
-              rows="3" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-              placeholder="Añade cualquier información relevante sobre la partida"
-            ></textarea>
-          </label>
+
+        <!-- Sección Puntuación -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-medium mb-4">Puntuación</h2>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                PG <span class="text-red-500">*</span>
+                <input v-model.number="form.pg" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pg}"/>
+              </label>
+              <p v-if="validationErrors.pg" class="text-red-500 text-xs mt-1">{{ validationErrors.pg }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                DIF
+                <input v-model.number="form.dif" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+              </label>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                PV
+                <input v-model.number="form.pv" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+              </label>
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                PT
+                <input v-model.number="form.pt" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+              </label>
+            </div>
+             <div>
+              <label class="block text-sm font-medium text-gray-700">
+                MG
+                <input v-model.number="form.mg" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+              </label>
+            </div>
+          </div>
         </div>
-        
-        <!-- Botones de acción -->
-        <div class="flex justify-end space-x-3">
-          <button 
-            type="button" 
-            @click="$router.push('/resultados')"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
-          >
-            Guardar Resultado
-          </button>
-        </div>
+
       </form>
     </div>
   </div>

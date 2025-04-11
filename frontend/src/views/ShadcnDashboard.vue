@@ -149,10 +149,10 @@ const navigation = ref<NavSection[]>([
       {
         title: 'Resultados',
         href: '/resultados',
-        icon: 'M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z',
+        icon: 'M4 6h16M4 10h16M4 14h16M4 18h16',
         children: [
           { title: 'CRUD', href: '/resultados/crud' },
-          { title: 'Lista', href: '/resultados' },
+          { title: 'Lista', href: '/resultados/lista' },
           { title: 'Estadísticas', href: '/resultados/estadisticas' }
         ]
       },
@@ -173,23 +173,12 @@ const navigation = ref<NavSection[]>([
         title: 'Importaciones',
         href: '#',
         icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6zm1 3h10a1 1 0 0 1 0 2H7a1 1 0 1 1 0-2zm0 4h10a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2zm0 4h5a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2z',
-        children: [
-          { title: 'Clubs', href: '#' },
-          { title: 'Jugadores', href: '#' },
-          { title: 'Campeonatos', href: '#' },
-          { title: 'Resultados', href: '#' }
-        ]
+        children: []
       },
       {
-        title: 'Exportaciones',
+        title: 'Sales & Marketing',
         href: '#',
-        icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-5 8a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0H7z',
-        children: [
-          { title: 'Clubs', href: '#' },
-          { title: 'Jugadores', href: '#' },
-          { title: 'Campeonatos', href: '#' },
-          { title: 'Resultados', href: '#' }
-        ]
+        icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-5 8a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0H7z'
       },
       {
         title: 'Travel',
@@ -364,7 +353,7 @@ const getCrudOptions = () => {
       },
       { 
         title: 'Lista',
-        href: '/resultados', 
+        href: '/resultados/lista', 
         description: 'Ver todos los resultados registrados',
         icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
         color: 'bg-violet-100 text-violet-800 border-violet-300'

@@ -1,453 +1,410 @@
 <script setup lang="ts">
-// Componente para mostrar el listado de resultados de partidas
-import { ref, computed, onMounted } from 'vue';
+// Vista para mostrar y gestionar los resultados de los campeonatos
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useResultados } from '../composables/useResultados';
+import { usePagination } from '../composables/usePagination';
+import type { ResultadoResponse, ResultadosListParams } from '../lib/resultadoService';
+import DataTable from '../components/ui/DataTable.vue';
+import Pagination from '../components/ui/Pagination.vue';
+import StatusMessage from '../components/ui/StatusMessage.vue';
+import ConfirmationDialog from '../components/ui/ConfirmationDialog.vue'; // Asumiendo que existe
+import { PAGINATION_CONFIG } from '../config';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-// Datos de resultados (simulados)
-const resultados = ref([
-  {
-    id: 1,
-    fecha: '2023-05-15',
-    campeonato: 'Campeonato Regional 2023',
-    club: 'Club Domino A',
-    equipoA: 'Equipo Rojo',
-    equipoB: 'Equipo Verde',
-    puntosEquipoA: 5,
-    puntosEquipoB: 3,
-    ganador: 'Equipo Rojo',
-    estado: 'Finalizado'
-  },
-  {
-    id: 2,
-    fecha: '2023-06-20',
-    campeonato: 'Torneo Verano 2023',
-    club: 'Club Domino B',
-    equipoA: 'Equipo Amarillo',
-    equipoB: 'Equipo Naranja',
-    puntosEquipoA: 4,
-    puntosEquipoB: 4,
-    ganador: 'Empate',
-    estado: 'Finalizado'
-  },
-  {
-    id: 3,
-    fecha: '2023-07-10',
-    campeonato: 'Campeonato Nacional 2023',
-    club: 'Club Domino C',
-    equipoA: 'Equipo Morado',
-    equipoB: 'Equipo Blanco',
-    puntosEquipoA: 2,
-    puntosEquipoB: 6,
-    ganador: 'Equipo Blanco',
-    estado: 'Finalizado'
-  },
-  {
-    id: 4,
-    fecha: '2023-08-05',
-    campeonato: 'Campeonato Regional 2023',
-    club: 'Club Domino D',
-    equipoA: 'Equipo Negro',
-    equipoB: 'Equipo Gris',
-    puntosEquipoA: 7,
-    puntosEquipoB: 1,
-    ganador: 'Equipo Negro',
-    estado: 'Finalizado'
-  },
-  {
-    id: 5,
-    fecha: '2023-09-12',
-    campeonato: 'Torneo Verano 2023',
-    club: 'Club Domino E',
-    equipoA: 'Equipo Marrón',
-    equipoB: 'Equipo Rojo',
-    puntosEquipoA: 3,
-    puntosEquipoB: 3,
-    ganador: 'Empate',
-    estado: 'Finalizado'
-  },
-  {
-    id: 6,
-    fecha: '2023-10-20',
-    campeonato: 'Campeonato Nacional 2023',
-    club: 'Club Domino A',
-    equipoA: 'Equipo Azul',
-    equipoB: 'Equipo Verde',
-    puntosEquipoA: 4,
-    puntosEquipoB: 2,
-    ganador: 'Equipo Azul',
-    estado: 'Finalizado'
-  },
-  {
-    id: 7,
-    fecha: '2023-11-15',
-    campeonato: 'Campeonato Regional 2023',
-    club: 'Club Domino B',
-    equipoA: 'Equipo Amarillo',
-    equipoB: 'Equipo Morado',
-    puntosEquipoA: 5,
-    puntosEquipoB: 5,
-    ganador: 'Empate',
-    estado: 'Finalizado'
-  },
-  {
-    id: 8,
-    fecha: '2023-12-05',
-    campeonato: 'Torneo Primavera 2024',
-    club: 'Club Domino C',
-    equipoA: 'Equipo Naranja',
-    equipoB: 'Equipo Negro',
-    puntosEquipoA: 2,
-    puntosEquipoB: 8,
-    ganador: 'Equipo Negro',
-    estado: 'Finalizado'
-  },
-  {
-    id: 9,
-    fecha: '2024-01-10',
-    campeonato: 'Torneo Primavera 2024',
-    club: 'Club Domino D',
-    equipoA: 'Equipo Blanco',
-    equipoB: 'Equipo Gris',
-    puntosEquipoA: 6,
-    puntosEquipoB: 3,
-    ganador: 'Equipo Blanco',
-    estado: 'Finalizado'
-  },
-  {
-    id: 10,
-    fecha: '2024-02-20',
-    campeonato: 'Torneo Primavera 2024',
-    club: 'Club Domino E',
-    equipoA: 'Equipo Marrón',
-    equipoB: 'Equipo Azul',
-    puntosEquipoA: 4,
-    puntosEquipoB: 4,
-    ganador: 'Empate',
-    estado: 'Programado'
+// Router y route
+const router = useRouter();
+const route = useRoute();
+
+// Usar el composable de resultados
+const {
+  resultados,
+  selectedResultado,
+  isLoading,
+  error,
+  fetchResultados,
+  removeResultado
+} = useResultados();
+
+// Paginación
+const {
+  currentPage,
+  pageSize,
+  totalPages,
+  paginatedItems,
+  canGoPrev,
+  canGoNext,
+  pageRange,
+  pageSizeOptions,
+  goToPage,
+  nextPage,
+  prevPage,
+  setPageSize,
+  firstPage,
+  lastPage
+} = usePagination(resultados, { 
+  initialPageSize: PAGINATION_CONFIG.defaultPageSize, 
+  initialPage: 1 
+});
+
+// Estado para ordenamiento
+const sortBy = ref('fecha_campeonato');
+const sortDir = ref(-1); // -1 = desc, 1 = asc
+
+// Estado para filtros
+const filtros = ref<ResultadosListParams>({
+  tipo_campeonato_id: undefined,
+  fecha_desde: undefined,
+  fecha_hasta: undefined,
+  idfed_jugador: undefined,
+});
+
+// Estado para confirmación de eliminación
+const showConfirmDialog = ref(false);
+const resultadoToDelete = ref<ResultadoResponse | null>(null);
+const successMessage = ref<string>('');
+const showSuccess = ref(false);
+
+// Determinar el modo actual (list, edit, delete) basado en query param
+const currentMode = computed(() => {
+  const action = route.query.action;
+  if (action === 'edit') return 'edit';
+  if (action === 'delete') return 'delete';
+  return 'list'; // Por defecto, modo lista
+});
+
+// Obtener parámetros de la ruta para filtros y paginación inicial
+onMounted(() => {
+  const queryParams = route.query;
+  currentPage.value = parseInt(queryParams.page as string || '1', 10);
+  pageSize.value = parseInt(queryParams.size as string || PAGINATION_CONFIG.defaultPageSize.toString(), 10);
+  // TODO: Leer filtros iniciales de la query si es necesario
+  
+  // Cargar resultados iniciales
+  fetchResultados({
+    skip: (currentPage.value - 1) * pageSize.value,
+    limit: pageSize.value,
+    ...filtros.value // Aplicar filtros iniciales si existen
+  });
+});
+
+// Observar cambios en filtros, paginación y ordenamiento para recargar datos
+watch([currentPage, pageSize, filtros, sortBy, sortDir], () => {
+  const params: ResultadosListParams = {
+    skip: (currentPage.value - 1) * pageSize.value,
+    limit: pageSize.value,
+    ...filtros.value,
+    // TODO: Añadir parámetros de ordenamiento si la API los soporta
+  };
+  fetchResultados(params);
+  
+  // Actualizar query params (opcional, para mantener estado en URL)
+  router.replace({ query: { 
+    ...route.query, // Mantener otros query params
+    page: currentPage.value.toString(), 
+    size: pageSize.value.toString(),
+    // ...otros filtros...
+  }});
+}, { deep: true });
+
+// Resultados ordenados
+const sortedResultados = computed(() => {
+  const sorted = [...resultados.value]; // Usar resultados directamente, la paginación se encarga del resto
+  if (sortBy.value) {
+    sorted.sort((a, b) => {
+      let valA = (a as any)[sortBy.value];
+      let valB = (b as any)[sortBy.value];
+
+      // Manejo especial para fechas
+      if (sortBy.value === 'fecha_campeonato') {
+        valA = parseISO(valA).getTime();
+        valB = parseISO(valB).getTime();
+      }
+      
+      if (valA < valB) return -1 * sortDir.value;
+      if (valA > valB) return 1 * sortDir.value;
+      return 0;
+    });
   }
-]);
-
-// Filtros
-const filtros = ref({
-  campeonato: '',
-  club: '',
-  equipo: '',
-  estado: '',
-  fechaDesde: '',
-  fechaHasta: ''
+  return sorted;
 });
 
-// Opciones para los filtros
-const campeonatos = computed(() => {
-  const campeonatosUnicos = new Set(resultados.value.map(r => r.campeonato));
-  return Array.from(campeonatosUnicos);
+// Columnas para la tabla
+const columns = computed(() => {
+  const baseColumns = [
+    { field: 'fecha_campeonato', header: 'Fecha', sortable: true, render: (item: ResultadoResponse): string => item.fecha_campeonato ? format(parseISO(item.fecha_campeonato), 'dd/MM/yyyy', { locale: es }) : '-' },
+    { field: 'nombre_campeonato', header: 'Campeonato', sortable: true },
+    { field: 'nch', header: 'NCH', sortable: true },
+    { field: 'nombre_jugador', header: 'Jugador', sortable: true, render: (item: ResultadoResponse): string => `${item.nombre_jugador || ''} ${item.apellido_jugador || ''}`.trim() || '-' },
+    { field: 'nombre_club_jugador', header: 'Club Jugador', sortable: true },
+    { field: 'nombre_pareja', header: 'Pareja', sortable: true, render: (item: ResultadoResponse): string => item.idfed_pareja ? (`${item.nombre_pareja || ''} ${item.apellido_pareja || ''}`.trim() || '-') : '-' },
+    { field: 'nombre_club_pareja', header: 'Club Pareja', sortable: true, render: (item: ResultadoResponse): string => item.codigo_club_pareja ? (item.nombre_club_pareja || '-') : '-' },
+    { field: 'pos', header: 'Pos', sortable: true },
+    { field: 'partida', header: 'Partida', sortable: true },
+    { field: 'mesa', header: 'Mesa', sortable: true },
+    { field: 'gb', header: 'GB', sortable: true, render: (item: ResultadoResponse): string => item.gb ? 'A' : 'B' },
+    { field: 'pg', header: 'PG', sortable: true },
+    { field: 'dif', header: 'DIF', sortable: true },
+    { field: 'pv', header: 'PV', sortable: true },
+    { field: 'pt', header: 'PT', sortable: true },
+    { field: 'mg', header: 'MG', sortable: true },
+  ];
+
+  // Solo añadir columna de acciones si no estamos en modo selección (edit/delete)
+  // Usaremos el slot #acciones para mostrar botones condicionalmente
+  if (currentMode.value === 'list') {
+      baseColumns.push({ field: 'acciones', header: 'Acciones', sortable: false });
+  }
+  
+  return baseColumns;
 });
 
-const clubes = computed(() => {
-  const clubesUnicos = new Set(resultados.value.map(r => r.club));
-  return Array.from(clubesUnicos);
-});
+// Función para ordenar la tabla
+const handleSort = (field: string) => {
+  if (sortBy.value === field) {
+    sortDir.value = -sortDir.value;
+  } else {
+    sortBy.value = field;
+    sortDir.value = 1;
+  }
+};
 
-const equipos = computed(() => {
-  const equiposSet = new Set<string>();
-  resultados.value.forEach(r => {
-    equiposSet.add(r.equipoA);
-    equiposSet.add(r.equipoB);
-  });
-  return Array.from(equiposSet);
-});
+// Función para obtener la dirección de ordenamiento para la UI
+const getSortDir = (field: string) => {
+  if (sortBy.value === field) {
+    return sortDir.value === 1 ? 'asc' : 'desc';
+  }
+  return null;
+};
 
-const estados = computed(() => {
-  const estadosUnicos = new Set(resultados.value.map(r => r.estado));
-  return Array.from(estadosUnicos);
-});
+// Función para navegar a la página de edición
+const editarResultado = (resultado: ResultadoResponse) => {
+  // Navegar a la ruta de modificación con los identificadores
+  router.push(`/resultados/modificar/${resultado.nch}/${resultado.fecha_campeonato}/${resultado.idfed_jugador}`);
+};
 
-// Resultados filtrados
-const resultadosFiltrados = computed(() => {
-  return resultados.value.filter(resultado => {
-    // Filtro por campeonato
-    if (filtros.value.campeonato && resultado.campeonato !== filtros.value.campeonato) {
-      return false;
-    }
-    
-    // Filtro por club
-    if (filtros.value.club && resultado.club !== filtros.value.club) {
-      return false;
-    }
-    
-    // Filtro por equipo
-    if (filtros.value.equipo && resultado.equipoA !== filtros.value.equipo && resultado.equipoB !== filtros.value.equipo) {
-      return false;
-    }
-    
-    // Filtro por estado
-    if (filtros.value.estado && resultado.estado !== filtros.value.estado) {
-      return false;
-    }
-    
-    // Filtro por fecha desde
-    if (filtros.value.fechaDesde && resultado.fecha < filtros.value.fechaDesde) {
-      return false;
-    }
-    
-    // Filtro por fecha hasta
-    if (filtros.value.fechaHasta && resultado.fecha > filtros.value.fechaHasta) {
-      return false;
-    }
-    
-    return true;
-  });
-});
+// Función para iniciar el proceso de eliminación
+const solicitarEliminacion = (resultado: ResultadoResponse) => {
+  resultadoToDelete.value = resultado;
+  showConfirmDialog.value = true;
+};
+
+// Función para confirmar la eliminación
+const confirmarEliminacion = async () => {
+  if (!resultadoToDelete.value) return;
+  
+  try {
+    await removeResultado(
+      resultadoToDelete.value.nch, 
+      resultadoToDelete.value.fecha_campeonato, 
+      resultadoToDelete.value.idfed_jugador
+    );
+    successMessage.value = 'Resultado eliminado correctamente.';
+    showSuccess.value = true;
+    setTimeout(() => showSuccess.value = false, 3000);
+  } catch (err) {
+    // El error ya se maneja en el composable, se muestra en el StatusMessage
+  } finally {
+    showConfirmDialog.value = false;
+    resultadoToDelete.value = null;
+  }
+};
+
+// Función para cancelar la eliminación
+const cancelarEliminacion = () => {
+  showConfirmDialog.value = false;
+  resultadoToDelete.value = null;
+};
+
+// Función para aplicar filtros
+const aplicarFiltros = () => {
+  currentPage.value = 1; // Resetear a la primera página al aplicar filtros
+  // La carga de datos se dispara por el watcher
+};
 
 // Función para limpiar filtros
 const limpiarFiltros = () => {
   filtros.value = {
-    campeonato: '',
-    club: '',
-    equipo: '',
-    estado: '',
-    fechaDesde: '',
-    fechaHasta: ''
+    tipo_campeonato_id: undefined,
+    fecha_desde: undefined,
+    fecha_hasta: undefined,
+    idfed_jugador: undefined,
   };
+  currentPage.value = 1;
+  // La carga de datos se dispara por el watcher
 };
 
-// Función para eliminar un resultado (simulada)
-const eliminarResultado = (id: number) => {
-  if (confirm('¿Estás seguro de que deseas eliminar este resultado?')) {
-    const index = resultados.value.findIndex(r => r.id === id);
-    if (index !== -1) {
-      resultados.value.splice(index, 1);
-      alert('Resultado eliminado correctamente');
-    }
+// Función para manejar click en fila
+const handleRowClick = (item: ResultadoResponse) => {
+  if (currentMode.value === 'edit') {
+    editarResultado(item);
+  } else if (currentMode.value === 'delete') {
+    solicitarEliminacion(item);
+  } else {
+    // Podrías hacer algo en modo lista, como mostrar detalles, o nada
+    console.log('Row clicked in list mode:', item);
   }
 };
 
-// Función para formatear fecha
-const formatearFecha = (fecha: string) => {
-  const opciones: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  };
-  return new Date(fecha).toLocaleDateString('es-ES', opciones);
-};
+// Clase CSS para la fila basada en el modo
+const getRowClass = (item: any) => {
+   if (currentMode.value === 'edit' || currentMode.value === 'delete') {
+     return 'cursor-pointer hover:bg-blue-50';
+   }
+   return '';
+ };
+
 </script>
 
 <template>
   <div class="container mx-auto p-6">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Resultados de Partidas</h1>
-      <a 
-        href="/resultados/nuevo" 
+      <h1 class="text-2xl font-bold">
+        <span v-if="currentMode === 'edit'">Selecciona un Resultado para Modificar</span>
+        <span v-else-if="currentMode === 'delete'">Selecciona un Resultado para Eliminar</span>
+        <span v-else>Lista de Resultados</span>
+      </h1>
+      <!-- Ocultar botón "Nuevo Resultado" en modo edit/delete -->
+      <router-link
+        v-if="currentMode === 'list'"
+        to="/resultados/nuevo"
         class="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
       >
         Nuevo Resultado
-      </a>
+      </router-link>
+       <router-link 
+          v-else
+          to="/resultados/crud"
+          class="text-blue-600 hover:text-blue-800 text-sm"
+        >
+          ← Volver a CRUD
+      </router-link>
     </div>
+
+    <!-- Mensajes de estado -->
+    <StatusMessage type="error" :show="!!error" :message="error || ''" class="mb-4" />
+    <StatusMessage type="success" :show="showSuccess" :message="successMessage" class="mb-4" />
     
     <!-- Filtros -->
     <div class="bg-white border rounded-md shadow-sm p-6 mb-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-medium">Filtros</h2>
-        <button 
-          @click="limpiarFiltros" 
-          class="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Limpiar filtros
-        </button>
+      <h2 class="text-lg font-medium mb-4">Filtros</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <!-- TODO: Añadir select para tipo campeonato si se necesita -->
+        <div>
+          <label for="filtro-idfed" class="block text-sm font-medium text-gray-700">IDFED Jugador</label>
+          <input 
+            id="filtro-idfed"
+            name="filtro-idfed"
+            v-model="filtros.idfed_jugador" 
+            type="text" 
+            placeholder="Filtrar por IDFED" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+          />
+        </div>
+        <div>
+          <label for="filtro-fecha-desde" class="block text-sm font-medium text-gray-700">Fecha Desde</label>
+            <input 
+            id="filtro-fecha-desde"
+            name="filtro-fecha-desde"
+            v-model="filtros.fecha_desde" 
+              type="date" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            />
+        </div>
+        <div>
+          <label for="filtro-fecha-hasta" class="block text-sm font-medium text-gray-700">Fecha Hasta</label>
+            <input 
+            id="filtro-fecha-hasta"
+            name="filtro-fecha-hasta"
+            v-model="filtros.fecha_hasta" 
+              type="date" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+            />
+        </div>
+        <!-- Añadir select para tipo_campeonato_id si se necesita -->
       </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Campeonato
-            <select 
-              id="campeonato-filtro"
-              name="campeonato-filtro"
-              v-model="filtros.campeonato" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            >
-              <option value="">Todos los campeonatos</option>
-              <option v-for="campeonato in campeonatos" :key="campeonato" :value="campeonato">
-                {{ campeonato }}
-              </option>
-            </select>
-          </label>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Club
-            <select 
-              id="club-filtro"
-              name="club-filtro"
-              v-model="filtros.club" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            >
-              <option value="">Todos los clubes</option>
-              <option v-for="club in clubes" :key="club" :value="club">
-                {{ club }}
-              </option>
-            </select>
-          </label>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Equipo
-            <select 
-              id="equipo-filtro"
-              name="equipo-filtro"
-              v-model="filtros.equipo" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            >
-              <option value="">Todos los equipos</option>
-              <option v-for="equipo in equipos" :key="equipo" :value="equipo">
-                {{ equipo }}
-              </option>
-            </select>
-          </label>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Estado
-            <select 
-              id="estado-filtro"
-              name="estado-filtro"
-              v-model="filtros.estado" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            >
-              <option value="">Todos los estados</option>
-              <option v-for="estado in estados" :key="estado" :value="estado">
-                {{ estado }}
-              </option>
-            </select>
-          </label>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Fecha desde
-            <input 
-              id="fecha-desde"
-              name="fecha-desde"
-              type="date" 
-              v-model="filtros.fechaDesde" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            />
-          </label>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700">
-            Fecha hasta
-            <input 
-              id="fecha-hasta"
-              name="fecha-hasta"
-              type="date" 
-              v-model="filtros.fechaHasta" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-            />
-          </label>
-        </div>
+      <div class="flex justify-end gap-2">
+        <button 
+          @click="limpiarFiltros"
+          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Limpiar
+        </button>
+        <button 
+          @click="aplicarFiltros"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+        >
+          Aplicar Filtros
+        </button>
       </div>
     </div>
     
-    <!-- Tabla de resultados -->
-    <div class="bg-white border rounded-md shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Campeonato
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Club
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Equipos
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Resultado
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado
-              </th>
-              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-if="resultadosFiltrados.length === 0">
-              <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
-                No se encontraron resultados con los filtros aplicados
-              </td>
-            </tr>
-            <tr v-for="resultado in resultadosFiltrados" :key="resultado.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ formatearFecha(resultado.fecha) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ resultado.campeonato }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ resultado.club }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <div class="flex flex-col">
-                  <span>{{ resultado.equipoA }}</span>
-                  <span>{{ resultado.equipoB }}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <div class="flex items-center space-x-2">
-                  <span :class="{ 'font-medium': resultado.ganador === resultado.equipoA }">
-                    {{ resultado.puntosEquipoA }}
-                  </span>
-                  <span>-</span>
-                  <span :class="{ 'font-medium': resultado.ganador === resultado.equipoB }">
-                    {{ resultado.puntosEquipoB }}
-                  </span>
-                  <span v-if="resultado.ganador !== 'Empate'" class="ml-2 text-xs text-green-600">
-                    {{ resultado.ganador }}
-                  </span>
-                  <span v-else class="ml-2 text-xs text-gray-500">
-                    Empate
-                  </span>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span 
-                  class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                  :class="{
-                    'bg-green-100 text-green-800': resultado.estado === 'Finalizado',
-                    'bg-yellow-100 text-yellow-800': resultado.estado === 'Programado'
-                  }"
-                >
-                  {{ resultado.estado }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex justify-end space-x-2">
-                  <a href="#" class="text-indigo-600 hover:text-indigo-900">Editar</a>
-                  <button 
-                    @click="eliminarResultado(resultado.id)" 
-                    class="text-red-600 hover:text-red-900"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Tabla de Resultados -->
+    <div class="bg-white border rounded-md shadow-sm overflow-x-auto">
+      <DataTable
+        :items="paginatedItems"
+        :columns="columns"
+        item-key="_uniqueKey"
+        :is-loading="isLoading"
+        :sort-by="sortBy"
+        :sort-dir="sortDir === 1 ? 'asc' : 'desc'"
+        @sort="handleSort"
+        :row-class="getRowClass" 
+        @row-click="handleRowClick" 
+      >
+        <template #acciones="{ item }">
+          <!-- Mostrar botones solo en modo lista -->
+          <div v-if="currentMode === 'list'" class="flex space-x-2">
+            <button 
+              @click.stop="editarResultado(item)"
+              class="text-blue-600 hover:text-blue-800 text-sm"
+              aria-label="Editar resultado"
+            >
+              Editar
+            </button>
+            <button 
+              @click.stop="solicitarEliminacion(item)"
+              class="text-red-600 hover:text-red-800 text-sm"
+              aria-label="Eliminar resultado"
+            >
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </DataTable>
     </div>
+
+    <!-- Paginación -->
+    <Pagination
+      v-if="!isLoading && totalPages > 1"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :page-size="pageSize"
+      :page-size-options="pageSizeOptions"
+      :can-go-prev="canGoPrev"
+      :can-go-next="canGoNext"
+      :page-range="pageRange"
+      @update:currentPage="goToPage"
+      @update:pageSize="setPageSize"
+      @next="nextPage"
+      @prev="prevPage"
+      @first="firstPage"
+      @last="lastPage"
+      class="mt-6"
+    />
+
+    <!-- Diálogo de Confirmación -->
+    <ConfirmationDialog
+      :show="showConfirmDialog"
+      title="Confirmar Eliminación"
+      message="¿Estás seguro de que deseas eliminar este resultado? Esta acción no se puede deshacer."
+      confirm-text="Eliminar"
+      cancel-text="Cancelar"
+      @confirm="confirmarEliminacion"
+      @cancel="cancelarEliminacion"
+    />
+
   </div>
 </template>
 

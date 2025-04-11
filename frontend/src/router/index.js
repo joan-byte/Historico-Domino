@@ -120,6 +120,39 @@ const routes = [
         component: () => import('../views/EstadisticasCampeonatos.vue')
       },
 
+      // Rutas para el módulo de Resultados
+      {
+        path: '/resultados',
+        name: 'ResultadosHome',
+        component: () => import('../views/ResultadosHome.vue')
+      },
+      {
+        path: '/resultados/lista',
+        name: 'ResultadosLista',
+        component: () => import('../views/Resultados.vue')
+      },
+      {
+        path: '/resultados/crud',
+        name: 'CrudResultados',
+        component: () => import('../views/CrudResultados.vue')
+      },
+      {
+        path: '/resultados/nuevo',
+        name: 'CrearResultado',
+        component: () => import('../views/NuevoResultado.vue')
+      },
+      {
+        path: '/resultados/modificar/:nch/:fecha_campeonato/:idfed_jugador',
+        name: 'ModificarResultado',
+        component: () => import('../views/ModificarResultado.vue'),
+        props: true
+      },
+      {
+        path: '/resultados/estadisticas',
+        name: 'EstadisticasResultados',
+        component: () => import('../views/EstadisticasResultados.vue')
+      },
+
       // Rutas para el módulo de Settings/Configuración
       {
         path: '/settings',
