@@ -59,7 +59,7 @@ temp/
 /node_modules/
 
 # Entornos virtuales de Python
-venv/ # Ignorar venv en la raíz (¡IMPORTANTE!)
+venv/ # Aseguramos que esta línea está limpia
 
 # Ignorar __pycache__ y .pyc solo dentro de backend (Correcto)
 backend/**/__pycache__/
