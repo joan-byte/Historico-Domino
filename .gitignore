@@ -54,4 +54,7 @@ pnpm-debug.log*
 *.swp
 *.swo
 .tmp/
-temp/ 
+temp/
+
+# Ignorar node_modules en la raíz del proyecto
+/node_modules/ 
