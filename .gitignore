@@ -65,4 +65,7 @@ venv/ # Ignorar venv en la raíz
 # Ignorar __pycache__ y .pyc solo dentro de backend
 backend/**/__pycache__/
 backend/**/*.pyc
-backend/*.pyo 
+backend/*.pyo
+
+# Ignorar archivo de entorno del backend
+backend/.env 
