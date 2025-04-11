@@ -363,14 +363,14 @@ const getRowClass = (item: any) => {
             >
               Editar
             </button>
-            <button 
+                  <button 
               @click.stop="solicitarEliminacion(item)"
               class="text-red-600 hover:text-red-800 text-sm"
               aria-label="Eliminar resultado"
-            >
-              Eliminar
-            </button>
-          </div>
+                  >
+                    Eliminar
+                  </button>
+                </div>
         </template>
       </DataTable>
     </div>

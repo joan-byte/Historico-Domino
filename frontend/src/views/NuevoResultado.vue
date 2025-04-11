@@ -229,9 +229,10 @@ const cancelar = () => {
         <!-- Sección Campeonato y Fecha -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700">
+            <label for="tipo_campeonato_id" class="block text-sm font-medium text-gray-700">
               Tipo de Campeonato <span class="text-red-500">*</span>
               <select
+                id="tipo_campeonato_id" name="tipo_campeonato_id"
                 v-model="form.tipo_campeonato_id"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
@@ -247,13 +248,14 @@ const cancelar = () => {
             <p v-if="validationErrors.tipo_campeonato_id" class="text-red-500 text-xs mt-1">{{ validationErrors.tipo_campeonato_id }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Nombre Campeonato</label>
-            <input type="text" :value="form.nombre_campeonato" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+            <label for="nombre_campeonato" class="block text-sm font-medium text-gray-700">Nombre Campeonato</label>
+            <input id="nombre_campeonato" name="nombre_campeonato" type="text" :value="form.nombre_campeonato" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">
+            <label for="fecha_campeonato" class="block text-sm font-medium text-gray-700">
               Fecha Campeonato <span class="text-red-500">*</span>
               <input
+                id="fecha_campeonato" name="fecha_campeonato"
                 v-model="form.fecha_campeonato"
                 type="date"
                 required
@@ -270,9 +272,10 @@ const cancelar = () => {
           <h2 class="text-lg font-medium mb-4">Jugador Principal</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="idfed_jugador" class="block text-sm font-medium text-gray-700">
                 Jugador (IDFED) <span class="text-red-500">*</span>
                 <select
+                  id="idfed_jugador" name="idfed_jugador"
                   v-model="form.idfed_jugador"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
@@ -288,16 +291,16 @@ const cancelar = () => {
               <p v-if="validationErrors.idfed_jugador" class="text-red-500 text-xs mt-1">{{ validationErrors.idfed_jugador }}</p>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">Nombre</label>
-              <input type="text" :value="form.nombre_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              <label for="nombre_jugador" class="block text-sm font-medium text-gray-700">Nombre</label>
+              <input id="nombre_jugador" name="nombre_jugador" type="text" :value="form.nombre_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">Apellidos</label>
-              <input type="text" :value="form.apellido_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              <label for="apellido_jugador" class="block text-sm font-medium text-gray-700">Apellidos</label>
+              <input id="apellido_jugador" name="apellido_jugador" type="text" :value="form.apellido_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Club</label>
-              <input type="text" :value="form.nombre_club_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+              <label for="club_jugador" class="block text-sm font-medium text-gray-700">Club</label>
+              <input id="club_jugador" name="club_jugador" type="text" :value="form.nombre_club_jugador" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
             </div>
           </div>
         </div>
@@ -307,9 +310,10 @@ const cancelar = () => {
           <h2 class="text-lg font-medium mb-4">Pareja (Opcional)</h2>
            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="idfed_pareja" class="block text-sm font-medium text-gray-700">
                 Pareja (IDFED)
                 <select
+                  id="idfed_pareja" name="idfed_pareja"
                   v-model="form.idfed_pareja"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
                    :class="{'border-red-500': validationErrors.idfed_pareja}"
@@ -324,21 +328,21 @@ const cancelar = () => {
                <p v-if="validationErrors.idfed_pareja" class="text-red-500 text-xs mt-1">{{ validationErrors.idfed_pareja }}</p>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="nombre_pareja" class="block text-sm font-medium text-gray-700">
                 Nombre Pareja
-                <input type="text" :value="form.nombre_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+                <input id="nombre_pareja" name="nombre_pareja" type="text" :value="form.nombre_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
               </label>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="apellido_pareja" class="block text-sm font-medium text-gray-700">
                 Apellidos Pareja
-                <input type="text" :value="form.apellido_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+                <input id="apellido_pareja" name="apellido_pareja" type="text" :value="form.apellido_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
               </label>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="club_pareja" class="block text-sm font-medium text-gray-700">
                 Club Pareja
-                <input type="text" :value="form.nombre_club_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+                <input id="club_pareja" name="club_pareja" type="text" :value="form.nombre_club_pareja" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
               </label>
             </div>
           </div>
@@ -349,32 +353,32 @@ const cancelar = () => {
           <h2 class="text-lg font-medium mb-4">Detalles Partida</h2>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="partida" class="block text-sm font-medium text-gray-700">
                 Partida <span class="text-red-500">*</span>
-                <input v-model.number="form.partida" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.partida}"/>
+                <input id="partida" name="partida" v-model.number="form.partida" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.partida}"/>
               </label>
               <p v-if="validationErrors.partida" class="text-red-500 text-xs mt-1">{{ validationErrors.partida }}</p>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="mesa" class="block text-sm font-medium text-gray-700">
                 Mesa <span class="text-red-500">*</span>
-                <input v-model.number="form.mesa" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mesa}"/>
+                <input id="mesa" name="mesa" v-model.number="form.mesa" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mesa}"/>
               </label>
                <p v-if="validationErrors.mesa" class="text-red-500 text-xs mt-1">{{ validationErrors.mesa }}</p>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="gb" class="block text-sm font-medium text-gray-700">
                 GB (Grupo/Banda) <span class="text-red-500">*</span>
-                <select v-model="form.gb" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1">
+                <select id="gb" name="gb" v-model="form.gb" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1">
                   <option :value="true">A</option>
                   <option :value="false">B</option>
                 </select>
               </label>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="pos" class="block text-sm font-medium text-gray-700">
                 POS (Posición)
-                <input v-model.number="form.pos" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+                <input id="pos" name="pos" v-model.number="form.pos" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
               </label>
             </div>
           </div>
@@ -385,34 +389,34 @@ const cancelar = () => {
           <h2 class="text-lg font-medium mb-4">Puntuación</h2>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="pg" class="block text-sm font-medium text-gray-700">
                 PG <span class="text-red-500">*</span>
-                <input v-model.number="form.pg" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pg}"/>
+                <input id="pg" name="pg" v-model.number="form.pg" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pg}"/>
               </label>
               <p v-if="validationErrors.pg" class="text-red-500 text-xs mt-1">{{ validationErrors.pg }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="dif" class="block text-sm font-medium text-gray-700">
                 DIF
-                <input v-model.number="form.dif" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+                <input id="dif" name="dif" v-model.number="form.dif" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
               </label>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="pv" class="block text-sm font-medium text-gray-700">
                 PV
-                <input v-model.number="form.pv" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+                <input id="pv" name="pv" v-model.number="form.pv" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
               </label>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="pt" class="block text-sm font-medium text-gray-700">
                 PT
-                <input v-model.number="form.pt" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+                <input id="pt" name="pt" v-model.number="form.pt" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
               </label>
             </div>
              <div>
-              <label class="block text-sm font-medium text-gray-700">
+              <label for="mg" class="block text-sm font-medium text-gray-700">
                 MG
-                <input v-model.number="form.mg" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
+                <input id="mg" name="mg" v-model.number="form.mg" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
               </label>
             </div>
           </div>

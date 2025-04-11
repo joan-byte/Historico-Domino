@@ -2,6 +2,8 @@
 // Vista con diseño de Shadcn
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+// Importar el composable de navegación y la interfaz NavItem
+import { useNavigation, type NavItem } from '@/composables/useNavigation';
 
 // Definir la interfaz para el club
 interface Club {
@@ -25,9 +27,6 @@ const user = {
   avatar: 'https://github.com/shadcn.png'
 };
 
-// Estado para controlar si el sidebar está abierto
-const isOpen = ref(true);
-
 // Estado para almacenar el club seleccionado desde la vista Clubes
 const selectedClub = ref<Club | null>(null);
 
@@ -35,11 +34,19 @@ const selectedClub = ref<Club | null>(null);
 const route = useRoute();
 const router = useRouter();
 
+// Usar el composable de navegación
+const { 
+  navigation, 
+  toggleExpand, 
+  isExpanded, 
+  expandedItems, 
+  isOpen, // Obtener isOpen del composable también
+  toggleSidebar, // Obtener toggleSidebar del composable
+  getClubsChildren // Obtener getClubsChildren del composable
+} = useNavigation();
+
 // Estado para controlar la vista actual
 const currentView = ref<string>('default');
-
-// Expandir/colapsar elementos de navegación
-const expandedItems = ref<string[]>([]);
 
 // Vigilar los cambios de ruta para actualizar la vista automáticamente
 watch(() => route.path, (newPath) => {
@@ -92,123 +99,6 @@ const handleClubSelected = (event: Event) => {
   selectedClub.value = customEvent.detail as Club | null;
 };
 
-// Función para alternar el estado del sidebar
-const toggleSidebar = () => {
-  isOpen.value = !isOpen.value;
-};
-
-// Elementos de navegación
-interface NavItem {
-  title: string;
-  href?: string;
-  icon?: string;
-  children?: NavItem[];
-  isActive?: boolean;
-}
-
-interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
-const navigation = ref<NavSection[]>([
-  {
-    title: 'Gestion',
-    items: [
-      {
-        title: 'Clubs',
-        href: '/clubes',
-        icon: 'M1 22h22V8l-11-6-11 6v14zm3-2V10l8-4.5 8 4.5v10H4zM15 14h1v4h-1v-4zm-4 0h1v4h-1v-4zm-4 0h1v4H7v-4zm-2 6h14v2H5v-2z',
-        isActive: true,
-        children: [
-          { title: 'CRUD', href: '/clubes/crud' },
-          { title: 'Lista', href: '/clubes/lista' },
-          { title: 'Estadísticas', href: '/clubes/estadisticas' }
-        ]
-      },
-      {
-        title: 'Jugadores',
-        href: '/jugadores',
-        icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-        children: [
-          { title: 'CRUD', href: '/jugadores/crud' },
-          { title: 'Lista', href: '/jugadores' },
-          { title: 'Estadísticas', href: '/jugadores/estadisticas' }
-        ]
-      },
-      {
-        title: 'Campeonatos',
-        href: '/campeonatos',
-        icon: 'M11 2a1 1 0 0 1 2 0h1a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4h-1.5l1 3H15v2h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-2H8.5l1-3H8a4 4 0 0 1-4-4V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1h2zm2 17v2H9v-2h4zM8 6H6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6h-2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6z',
-        children: [
-          { title: 'CRUD', href: '/campeonatos/crud' },
-          { title: 'Lista', href: '/campeonatos/lista' },
-          { title: 'Estadísticas', href: '/campeonatos/estadisticas' }
-        ]
-      },
-      {
-        title: 'Resultados',
-        href: '/resultados',
-        icon: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-        children: [
-          { title: 'CRUD', href: '/resultados/crud' },
-          { title: 'Lista', href: '/resultados/lista' },
-          { title: 'Estadísticas', href: '/resultados/estadisticas' }
-        ]
-      },
-      {
-        title: 'Settings',
-        href: '/settings',
-        icon: 'M9.954 2.21a9.99 9.99 0 0 1 4.091-.002A3.993 3.993 0 0 0 16 5.07a3.993 3.993 0 0 0 3.457.261A9.99 9.99 0 0 1 21.5 8.876 3.993 3.993 0 0 0 20 12c0 1.264.586 2.391 1.502 3.124a10.043 10.043 0 0 1-2.046 3.543 3.993 3.993 0 0 0-3.456.261 3.993 3.993 0 0 0-1.954 2.86 9.99 9.99 0 0 1-4.091.004A3.993 3.993 0 0 0 8 18.927a3.993 3.993 0 0 0-3.457-.26A9.99 9.99 0 0 1 2.5 15.121 3.993 3.993 0 0 0 4 11.999a3.993 3.993 0 0 0-1.502-3.124 10.043 10.043 0 0 1 2.046-3.543A3.993 3.993 0 0 0 8 5.071a3.993 3.993 0 0 0 1.954-2.86zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-        children: [
-          { title: 'Tipos de Campeonato', href: '/settings/tipos-campeonato' }
-        ]
-      }
-    ]
-  },
-  {
-    title: 'Herramientas',
-    items: [
-      {
-        title: 'Importaciones',
-        href: '#',
-        icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6zm1 3h10a1 1 0 0 1 0 2H7a1 1 0 1 1 0-2zm0 4h10a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2zm0 4h5a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2z',
-        children: []
-      },
-      {
-        title: 'Sales & Marketing',
-        href: '#',
-        icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-5 8a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0H7z'
-      },
-      {
-        title: 'Travel',
-        href: '#',
-        icon: 'M9 2a1 1 0 0 1 .962.725l.035.102L12.074 10h1.852l2.077-7.173a1 1 0 0 1 1.962.376L17.93 3.4 20.613 10H21a1 1 0 0 1 .993.883L22 11v2a3.003 3.003 0 0 1-2 2.83V19a1 1 0 0 1-.883.993L19 20h-6a1 1 0 0 1-.993-.883L12 19v-3.17a3.003 3.003 0 0 1-1.83-2.607L10.167 13H5.835A3.001 3.001 0 0 1 3 11V9a1 1 0 0 1 1-1h2.528l2.077-5.173a1 1 0 0 1 .962-.824L9.64 2H9zm10 10h-4.17A3.001 3.001 0 0 1 12 14.83V18h6v-3.17A3.001 3.001 0 0 1 19 12zm-9.5 0H5v1a1 1 0 0 0 .883.993L6 14h3.5a1 1 0 0 0 .993-.883L10.5 13v-1z'
-      }
-    ]
-  }
-]);
-
-// Modificar la función toggleExpand para no manejar el clic en Clubs
-const toggleExpand = (title: string): void => {
-  const index = expandedItems.value.indexOf(title);
-  if (index === -1) {
-    expandedItems.value.push(title);
-  } else {
-    expandedItems.value.splice(index, 1);
-  }
-};
-
-const isExpanded = (title: string): boolean => {
-  return expandedItems.value.includes(title);
-};
-
-// Obtener los hijos de Clubs para las tarjetas superiores
-const getClubsChildren = (): NavItem[] => {
-  const clubsItem = navigation.value[0].items.find(item => item.title === 'Clubs');
-  return clubsItem?.children || [];
-};
-
 // Función para manejar el clic en los elementos del sidebar
 const handleSidebarItemClick = (item: NavItem): void => {
   // Navegar directamente a la ruta del elemento
@@ -256,180 +146,13 @@ const handleMainCardClick = (route: string): void => {
   }
 };
 
-// Opciones CRUD dinámicas según la sección activa
-const getCrudOptions = () => {
-  const path = route.path;
-  
-  // Opciones para Clubs
-  if (path.includes('/clubes')) {
-    return [
-      { 
-        title: 'CRUD',
-        href: '/clubes/crud',
-        description: 'Gestionar operaciones CRUD de clubs',
-        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-        color: 'bg-green-100 text-green-800 border-green-300'
-      },
-      { 
-        title: 'Lista',
-        href: '/clubes/lista', 
-        description: 'Ver todos los clubs registrados',
-        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-        color: 'bg-blue-100 text-blue-800 border-blue-300'
-      },
-      { 
-        title: 'Estadísticas',
-        href: '/clubes/estadisticas', 
-        description: 'Ver métricas y estadísticas de clubs',
-        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-        color: 'bg-purple-100 text-purple-800 border-purple-300'
-      }
-    ];
-  }
-  
-  // Opciones para Jugadores
-  if (path.includes('/jugadores')) {
-    return [
-      { 
-        title: 'CRUD',
-        href: '/jugadores/crud',
-        description: 'Gestionar operaciones CRUD de jugadores',
-        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-        color: 'bg-blue-100 text-blue-800 border-blue-300'
-      },
-      { 
-        title: 'Lista',
-        href: '/jugadores', 
-        description: 'Ver todos los jugadores registrados',
-        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-        color: 'bg-indigo-100 text-indigo-800 border-indigo-300'
-      },
-      { 
-        title: 'Estadísticas',
-        href: '/jugadores/estadisticas', 
-        description: 'Ver métricas y estadísticas de jugadores',
-        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-        color: 'bg-purple-100 text-purple-800 border-purple-300'
-      }
-    ];
-  }
-  
-  // Opciones para Campeonatos
-  if (path.includes('/campeonatos')) {
-    return [
-      { 
-        title: 'CRUD',
-        href: '/campeonatos/crud',
-        description: 'Gestionar operaciones CRUD de campeonatos',
-        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-        color: 'bg-amber-100 text-amber-800 border-amber-300'
-      },
-      { 
-        title: 'Lista',
-        href: '/campeonatos/lista', 
-        description: 'Ver todos los campeonatos',
-        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-        color: 'bg-orange-100 text-orange-800 border-orange-300'
-      },
-      { 
-        title: 'Estadísticas',
-        href: '/campeonatos/estadisticas', 
-        description: 'Ver métricas y estadísticas de campeonatos',
-        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-        color: 'bg-red-100 text-red-800 border-red-300'
-      }
-    ];
-  }
-  
-  // Opciones para Resultados
-  if (path.includes('/resultados')) {
-    return [
-      { 
-        title: 'CRUD',
-        href: '/resultados/crud',
-        description: 'Gestionar operaciones CRUD de resultados',
-        icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-        color: 'bg-purple-100 text-purple-800 border-purple-300'
-      },
-      { 
-        title: 'Lista',
-        href: '/resultados/lista', 
-        description: 'Ver todos los resultados registrados',
-        icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-        color: 'bg-violet-100 text-violet-800 border-violet-300'
-      },
-      { 
-        title: 'Estadísticas',
-        href: '/resultados/estadisticas', 
-        description: 'Ver métricas y estadísticas de resultados',
-        icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-        color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300'
-      }
-    ];
-  }
-  
-  // Por defecto, mostrar opciones para Clubs
-  return [
-    { 
-      title: 'CRUD',
-      href: '/clubes/crud',
-      description: 'Gestionar operaciones CRUD de clubs',
-      icon: '<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-      color: 'bg-green-100 text-green-800 border-green-300'
-    },
-    { 
-      title: 'Lista',
-      href: '/clubes/lista', 
-      description: 'Ver todos los clubs registrados',
-      icon: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>',
-      color: 'bg-blue-100 text-blue-800 border-blue-300'
-    },
-    { 
-      title: 'Estadísticas',
-      href: '/clubes/estadisticas', 
-      description: 'Ver métricas y estadísticas de clubs',
-      icon: '<path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16h16V4H4z"></path>',
-      color: 'bg-purple-100 text-purple-800 border-purple-300'
-    }
-  ];
-};
-
-// Referencia reactiva para las opciones CRUD
-const crudOptions = computed(() => {
-  return getCrudOptions();
+// Clases calculadas para el contenedor principal (si es necesario)
+const mainContainerClasses = computed(() => {
+  return {
+    'pl-52': isOpen.value, // Usar isOpen del composable
+    'pl-10': !isOpen.value // Usar isOpen del composable
+  };
 });
-
-// Función para obtener etiquetas dinámicas para los botones de las tarjetas CRUD
-const getCardButtonLabel = (option: any) => {
-  const path = route.path;
-  
-  if (option.title === 'CRUD') {
-    if (path.includes('/clubes')) return 'Gestionar clubs';
-    if (path.includes('/jugadores')) return 'Gestionar jugadores';
-    if (path.includes('/campeonatos')) return 'Gestionar campeonatos';
-    if (path.includes('/resultados')) return 'Gestionar resultados';
-    return 'Gestionar';
-  }
-  
-  if (option.title === 'Lista') {
-    if (path.includes('/clubes')) return 'Ver todos los clubs';
-    if (path.includes('/jugadores')) return 'Ver todos los jugadores';
-    if (path.includes('/campeonatos')) return 'Ver todos los campeonatos';
-    if (path.includes('/resultados')) return 'Ver todos los resultados';
-    return 'Ver lista';
-  }
-  
-  if (option.title === 'Estadísticas') {
-    return 'Ver estadísticas';
-  }
-  
-  return option.title;
-};
-
-// Función para obtener el href dinámico basado en la opción seleccionada
-const getDynamicHref = (option: any): string => {
-  return option.href || '';
-};
 </script>
 
 <template>
