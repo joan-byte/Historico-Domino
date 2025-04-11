@@ -25,13 +25,13 @@ backend/.env
 backend/.env.*
 !backend/.env.example
 backend/coverage/
-# Patrones más generales para ignorar __pycache__ y .pyc
-**/__pycache__/
-**/*.pyc
-backend/*.pyo
+# Eliminamos patrones generales de pycache/pyc
+# **/__pycache__/
+# **/*.pyc
+# backend/*.pyo <-- Eliminamos redundante
 backend/.Python
 backend/env/
-backend/venv/
+# backend/venv/ <-- Eliminamos, venv está en la raíz
 backend/.venv/
 backend/ENV/
 backend/VENV/
@@ -59,13 +59,12 @@ temp/
 /node_modules/
 
 # Entornos virtuales de Python
-venv/ # Ignorar venv en la raíz
-# Si tuvieras otro en backend, sería backend/venv/
+venv/ # Ignorar venv en la raíz (¡IMPORTANTE!)
 
-# Ignorar __pycache__ y .pyc solo dentro de backend
+# Ignorar __pycache__ y .pyc solo dentro de backend (Correcto)
 backend/**/__pycache__/
 backend/**/*.pyc
 backend/*.pyo
 
-# Ignorar archivo de entorno del backend
-backend/.env 
+# Ignorar archivo de entorno del backend (Eliminamos línea repetida de abajo)
+# backend/.env 
