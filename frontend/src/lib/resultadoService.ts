@@ -1,5 +1,7 @@
 // resultadoService.ts - Servicio para gestionar los resultados
 import { API_URL } from '../config';
+import { apiService } from './apiService';
+import type { FiltrosResultados } from '@/types/filtros'; // Asegurarse de que esta ruta es correcta
 
 // Interfaces basadas en los schemas del backend
 export interface ResultadoBase {
@@ -27,14 +29,24 @@ export interface ResultadoBase {
   pos: number;
 }
 
-export interface ResultadoCreate extends ResultadoBase {}
-
-export interface ResultadoUpdate {
-  tipo_campeonato_id?: number;
+export interface ResultadoCreate {
+  nch: number;
+  fecha_campeonato: string; // Formato YYYY-MM-DD
+  idfed_jugador: string;
+  tipo_campeonato_id: number;
   nombre_campeonato?: string;
+  nombre_jugador?: string;
+  apellido_jugador?: string;
+  codigo_club_jugador?: string;
+  nombre_club_jugador?: string;
+  idfed_pareja?: string;
+  nombre_pareja?: string;
+  apellido_pareja?: string;
+  codigo_club_pareja?: string;
+  nombre_club_pareja?: string;
   partida?: number;
   mesa?: number;
-  gb?: boolean;
+  gb?: number;
   pg?: number;
   dif?: number;
   pv?: number;
@@ -43,9 +55,32 @@ export interface ResultadoUpdate {
   pos?: number;
 }
 
-export interface ResultadoResponse extends ResultadoBase {
-  nch: number; // Número de campeonato (parte de la PK)
-  codigo_tipo_campeonato: string;
+export interface ResultadoUpdate extends Partial<Omit<ResultadoCreate, 'nch' | 'fecha_campeonato' | 'idfed_jugador'>> {}
+
+export interface ResultadoResponse {
+    nch: number;
+    fecha_campeonato: string; // Podría ser Date si se transforma
+    idfed_jugador: string;
+    tipo_campeonato_id: number;
+    nombre_campeonato?: string;
+    nombre_jugador?: string;
+    apellido_jugador?: string;
+    codigo_club_jugador?: string;
+    nombre_club_jugador?: string;
+    idfed_pareja?: string;
+    nombre_pareja?: string;
+    apellido_pareja?: string;
+    codigo_club_pareja?: string;
+    nombre_club_pareja?: string;
+    partida?: number;
+    mesa?: number;
+    gb?: number;
+    pg?: number;
+    dif?: number;
+    pv?: number;
+    pt?: number;
+    mg?: number;
+    pos?: number;
 }
 
 // Parámetros de filtro para listar resultados
@@ -57,6 +92,15 @@ export interface ResultadosListParams {
   fecha_hasta?: string; // YYYY-MM-DD
   idfed_jugador?: string;
 }
+
+// --- Añadir Interfaz Paginada y Exportarla --- 
+export interface ResultadosPaginados {
+    total: number;
+    resultados: ResultadoResponse[];
+}
+// --- Fin Interfaz --- 
+
+const RESULTADOS_ENDPOINT = '/api/resultados/';
 
 // Función para construir la URL con query params
 const buildUrl = (baseUrl: string, params: Record<string, any>): string => {
@@ -89,156 +133,67 @@ const handleResponse = async (response: Response) => {
   return response.json();
 };
 
-
-// --- Funciones del Servicio ---
-
-/**
- * Obtener una lista de resultados con filtros y paginación.
- * @param params - Parámetros de filtro y paginación
- * @returns Lista de resultados
- */
-export const getResultados = async (params: ResultadosListParams = {}): Promise<ResultadoResponse[]> => {
-  const url = buildUrl(`${API_URL}/resultados/`, params);
-  try {
-    const response = await fetch(url);
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al obtener resultados:", error);
-    throw error; // Relanzar para que el composable lo maneje
-  }
-};
-
-/**
- * Obtener un resultado específico por su clave primaria compuesta.
- * @param nch - Número de campeonato
- * @param fecha_campeonato - Fecha del campeonato (YYYY-MM-DD)
- * @param idfed_jugador - IDFED del jugador
- * @returns El resultado encontrado
- */
-export const getResultadoById = async (nch: number, fecha_campeonato: string, idfed_jugador: string): Promise<ResultadoResponse> => {
-  const url = `${API_URL}/resultados/${nch}/${fecha_campeonato}/${idfed_jugador}`;
-  try {
-    const response = await fetch(url);
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al obtener el resultado por ID:", error);
-    throw error;
-  }
-};
-
-/**
- * Crear un nuevo resultado.
- * @param resultadoData - Datos del resultado a crear
- * @returns El resultado creado
- */
-export const createResultado = async (resultadoData: ResultadoCreate): Promise<ResultadoResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/resultados/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resultadoData),
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al crear el resultado:", error);
-    throw error;
-  }
-};
-
-/**
- * Actualizar un resultado existente.
- * @param nch - Número de campeonato
- * @param fecha_campeonato - Fecha del campeonato (YYYY-MM-DD)
- * @param idfed_jugador - IDFED del jugador
- * @param resultadoData - Datos a actualizar
- * @returns El resultado actualizado
- */
-export const updateResultado = async (nch: number, fecha_campeonato: string, idfed_jugador: string, resultadoData: ResultadoUpdate): Promise<ResultadoResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/resultados/${nch}/${fecha_campeonato}/${idfed_jugador}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resultadoData),
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al actualizar el resultado:", error);
-    throw error;
-  }
-};
-
-/**
- * Eliminar un resultado.
- * @param nch - Número de campeonato
- * @param fecha_campeonato - Fecha del campeonato (YYYY-MM-DD)
- * @param idfed_jugador - IDFED del jugador
- * @returns El resultado eliminado (según la API actual) o null si la respuesta es 204
- */
-export const deleteResultado = async (nch: number, fecha_campeonato: string, idfed_jugador: string): Promise<ResultadoResponse | null> => {
-  try {
-    const response = await fetch(`${API_URL}/resultados/${nch}/${fecha_campeonato}/${idfed_jugador}`, {
-      method: 'DELETE',
-    });
-    // La API actual devuelve el resultado eliminado, pero podría devolver 204 No Content
-    if (response.status === 204) {
-      return null;
+// Servicio con paginación y filtros para getAll
+export const resultadoService = {
+  getAll: (filtros: FiltrosResultados = {}, skip: number = 0, limit: number = 100) => {
+    const params = new URLSearchParams();
+    params.append('skip', skip.toString());
+    params.append('limit', limit.toString());
+    
+    // Añadir filtros a los parámetros si existen
+    if (filtros.tipo_campeonato_id) {
+        params.append('tipo_campeonato_id', filtros.tipo_campeonato_id.toString());
     }
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al eliminar el resultado:", error);
-    throw error;
-  }
-};
+    if (filtros.fecha_desde) {
+        params.append('fecha_desde', filtros.fecha_desde);
+    }
+    if (filtros.fecha_hasta) {
+        params.append('fecha_hasta', filtros.fecha_hasta);
+    }
+    if (filtros.idfed_jugador) {
+        params.append('idfed_jugador', filtros.idfed_jugador);
+    }
+    
+    const url = `${RESULTADOS_ENDPOINT}?${params.toString()}`;
+    return apiService.custom<ResultadosPaginados>(url);
+  },
 
-/**
- * Obtener todos los resultados de un jugador específico.
- * @param idfed_jugador - IDFED del jugador
- * @returns Lista de resultados del jugador
- */
-export const getResultadosByJugador = async (idfed_jugador: string): Promise<ResultadoResponse[]> => {
-  const url = `${API_URL}/resultados/jugador/${idfed_jugador}`;
-  try {
-    const response = await fetch(url);
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al obtener resultados por jugador:", error);
-    throw error;
-  }
-};
+  // getById necesita la clave primaria compuesta
+  getById: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }) => {
+    const { nch, fecha_campeonato, idfed_jugador } = pk;
+    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    return apiService.custom<ResultadoResponse>(url);
+  },
 
-/**
- * Obtener todos los resultados de un tipo de campeonato específico.
- * @param tipo_campeonato_id - ID del tipo de campeonato
- * @returns Lista de resultados del tipo de campeonato
- */
-export const getResultadosByTipoCampeonato = async (tipo_campeonato_id: number): Promise<ResultadoResponse[]> => {
-  const url = `${API_URL}/resultados/tipo-campeonato/${tipo_campeonato_id}`;
-  try {
-    const response = await fetch(url);
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al obtener resultados por tipo de campeonato:", error);
-    throw error;
-  }
-};
+  create: (data: ResultadoCreate) => apiService.create<ResultadoResponse>(RESULTADOS_ENDPOINT, data),
 
-/**
- * Obtener todos los resultados de un campeonato específico.
- * @param tipo_campeonato_id - ID del tipo de campeonato
- * @param nch - Número de campeonato
- * @returns Lista de resultados del campeonato
- */
-export const getResultadosByCampeonato = async (tipo_campeonato_id: number, nch: number): Promise<ResultadoResponse[]> => {
-  const url = `${API_URL}/resultados/campeonato/${tipo_campeonato_id}/${nch}`;
-  try {
-    const response = await fetch(url);
-    return await handleResponse(response);
-  } catch (error) {
-    console.error("Error al obtener resultados por campeonato:", error);
-    throw error;
+  // update necesita la clave primaria compuesta
+  update: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }, data: ResultadoUpdate) => {
+    const { nch, fecha_campeonato, idfed_jugador } = pk;
+    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    // Usar PUT para update según la API del backend
+    return apiService.custom<ResultadoResponse>(url, 'PUT', data);
+  },
+
+  // delete necesita la clave primaria compuesta
+  delete: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }) => {
+    const { nch, fecha_campeonato, idfed_jugador } = pk;
+    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    // Pasar un segundo argumento (aunque sea vacío) si apiService.delete lo requiere
+    return apiService.delete<ResultadoResponse>(url, ''); 
+  },
+  
+  // Funciones específicas existentes (pueden o no necesitar paginación)
+  getByJugador: (idfed_jugador: string) => {
+      const url = `${RESULTADOS_ENDPOINT}jugador/${idfed_jugador}`;
+      return apiService.custom<ResultadoResponse[]>(url);
+  },
+  getByTipoCampeonato: (tipo_campeonato_id: number) => {
+      const url = `${RESULTADOS_ENDPOINT}tipo-campeonato/${tipo_campeonato_id}`;
+      return apiService.custom<ResultadoResponse[]>(url);
+  },
+  getByCampeonato: (tipo_campeonato_id: number, nch: number) => {
+      const url = `${RESULTADOS_ENDPOINT}campeonato/${tipo_campeonato_id}/${nch}`;
+      return apiService.custom<ResultadoResponse[]>(url);
   }
 }; 

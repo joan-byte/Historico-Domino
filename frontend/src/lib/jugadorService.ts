@@ -38,13 +38,26 @@ export interface JugadorUpdate {
   email?: string;
 }
 
+// --- Nueva interfaz para la respuesta paginada ---
+export interface JugadoresPaginados {
+    total: number;
+    jugadores: JugadorResponse[];
+}
+// --- Fin interfaz ---
+
 // Endpoint para jugadores
 const JUGADORES_ENDPOINT = '/api/jugadores/';
 
 // Servicio para gestionar jugadores
 export const jugadorService = {
-  // Obtener todos los jugadores
-  getAll: () => apiService.getAll<JugadorResponse[]>(JUGADORES_ENDPOINT),
+  // Obtener todos los jugadores CON PAGINACIÓN
+  getAll: (skip: number = 0, limit: number = 100) => {
+    // Construir la URL con parámetros de query
+    const url = `${JUGADORES_ENDPOINT}?skip=${skip}&limit=${limit}`;
+    // Usar apiService.custom o adaptar apiService.getAll si es posible
+    // Asumimos que apiService.custom hace un fetch GET por defecto si no se especifica método
+    return apiService.custom<JugadoresPaginados>(url);
+  },
   
   // Obtener un jugador por su idfed (el backend usa idfed como identificador en las rutas)
   getByIdFed: (idfed: string) => apiService.getById<JugadorResponse>(JUGADORES_ENDPOINT, idfed),

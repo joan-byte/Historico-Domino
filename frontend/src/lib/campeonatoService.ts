@@ -1,5 +1,5 @@
 // campeonatoService.ts - Servicio para manejar las llamadas a la API de campeonatos
-import axios from 'axios';
+import { apiService } from './apiService';
 import { API_URL } from '../config';
 
 // Tipos para campeonatos
@@ -46,54 +46,48 @@ export interface TipoCampeonatoUpdate {
   descripcion?: string;
 }
 
-// Clase para el servicio de campeonatos
-class CampeonatoService {
-  private baseUrl = `${API_URL}/campeonatos`;
-
-  // Obtener todos los campeonatos
-  async getCampeonatos(): Promise<CampeonatoResponse[]> {
-    const response = await axios.get(`${this.baseUrl}/`);
-    return response.data;
-  }
-
-  // Obtener un campeonato por ID
-  async getCampeonatoById(id: number): Promise<CampeonatoResponse> {
-    const response = await axios.get(`${this.baseUrl}/${id}`);
-    return response.data;
-  }
-
-  // Crear un nuevo campeonato
-  async createCampeonato(campeonato: CampeonatoCreate): Promise<CampeonatoResponse> {
-    const response = await axios.post(`${this.baseUrl}/`, campeonato);
-    return response.data;
-  }
-
-  // Actualizar un campeonato
-  async updateCampeonato(id: number, campeonato: CampeonatoUpdate): Promise<CampeonatoResponse> {
-    const response = await axios.put(`${this.baseUrl}/${id}`, campeonato);
-    return response.data;
-  }
-
-  // Eliminar un campeonato
-  async deleteCampeonato(id: number): Promise<void> {
-    await axios.delete(`${this.baseUrl}/${id}`);
-  }
-
-  // Obtener todos los tipos de campeonato
-  async getTiposCampeonato(): Promise<TipoCampeonato[]> {
-    const response = await axios.get(`${this.baseUrl}/tipos`);
-    return response.data;
-  }
-
-  // Crear un nuevo tipo de campeonato
-  async createTipoCampeonato(tipo: { nombre: string; descripcion: string }): Promise<TipoCampeonato> {
-    const response = await axios.post(`${this.baseUrl}/tipos`, tipo);
-    return response.data;
-  }
+// --- Añadir Interfaz Paginada ---
+export interface CampeonatosPaginados {
+    total: number;
+    campeonatos: CampeonatoResponse[];
 }
+// --- Fin Interfaz ---
 
-// Exportar una instancia del servicio
-export const campeonatoService = new CampeonatoService();
+// Endpoint base
+const CAMPEONATOS_ENDPOINT = '/api/campeonatos'; // Asumiendo prefijo /api desde main.py
+const TIPOS_ENDPOINT = '/api/tipos-campeonato'; // Asumiendo prefijo /api desde main.py
+
+// Servicio usando apiService
+export const campeonatoService = {
+  // --- Funciones CRUD para Campeonatos ---
+  getAll: (skip: number = 0, limit: number = 100) => {
+    const url = `${CAMPEONATOS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
+    return apiService.custom<CampeonatosPaginados>(url);
+  },
+  
+  getById: (id: number) => apiService.getById<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString()),
+  
+  create: (data: CampeonatoCreate) => apiService.create<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, data),
+  
+  update: (id: number, data: CampeonatoUpdate) => 
+    apiService.update<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString(), data),
+  
+  // Asegurarse que la respuesta de delete sea consistente (puede ser void o el objeto eliminado)
+  delete: (id: number) => apiService.delete<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString()),
+  
+  // --- Funciones CRUD para Tipos de Campeonato ---
+  // (Mover las funciones sueltas a este objeto para consistencia)
+  getAllTipos: () => apiService.getAll<TipoCampeonatoResponse[]>(TIPOS_ENDPOINT),
+  
+  getTipoById: (id: number) => apiService.getById<TipoCampeonatoResponse>(TIPOS_ENDPOINT, id.toString()),
+  
+  createTipo: (data: TipoCampeonatoCreate) => apiService.create<TipoCampeonatoResponse>(TIPOS_ENDPOINT, data),
+  
+  updateTipo: (id: number, data: TipoCampeonatoUpdate) => 
+    apiService.update<TipoCampeonatoResponse>(TIPOS_ENDPOINT, id.toString(), data),
+    
+  deleteTipo: (id: number) => apiService.delete<void>(TIPOS_ENDPOINT, id.toString())
+};
 
 // Funciones para TipoCampeonato
 export const createTipoCampeonato = async (data: TipoCampeonatoCreate): Promise<TipoCampeonatoResponse> => {

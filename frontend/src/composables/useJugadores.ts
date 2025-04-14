@@ -1,23 +1,28 @@
 // useJugadores.ts - Composable para manejar la lógica de negocio de jugadores
 import { ref, computed } from 'vue';
-import { jugadorService, type JugadorResponse, type JugadorCreate, type JugadorUpdate } from '../lib/jugadorService';
+import { jugadorService, type JugadorResponse, type JugadorCreate, type JugadorUpdate, type JugadoresPaginados } from '../lib/jugadorService';
 
 export function useJugadores() {
   // Estado
   const jugadores = ref<JugadorResponse[]>([]);
+  const totalJugadores = ref(0);
   const selectedJugador = ref<JugadorResponse | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
   // Acciones
-  const fetchJugadores = async () => {
+  const fetchJugadores = async (skip: number = 0, limit: number = 100) => {
     isLoading.value = true;
     error.value = null;
     
     try {
-      jugadores.value = await jugadorService.getAll();
+      const response: JugadoresPaginados = await jugadorService.getAll(skip, limit);
+      jugadores.value = response.jugadores;
+      totalJugadores.value = response.total;
     } catch (err) {
       error.value = 'No se pudieron cargar los jugadores. Intente nuevamente más tarde.';
+      jugadores.value = [];
+      totalJugadores.value = 0;
     } finally {
       isLoading.value = false;
     }
@@ -42,8 +47,11 @@ export function useJugadores() {
     
     try {
       jugadores.value = await jugadorService.getByClub(codigoClub);
+      totalJugadores.value = jugadores.value.length;
     } catch (err) {
       error.value = `No se pudieron cargar los jugadores del club. Intente nuevamente más tarde.`;
+      jugadores.value = [];
+      totalJugadores.value = 0;
     } finally {
       isLoading.value = false;
     }
@@ -55,7 +63,6 @@ export function useJugadores() {
     
     try {
       const newJugador = await jugadorService.create(jugadorData);
-      jugadores.value.push(newJugador);
       return newJugador;
     } catch (err) {
       error.value = 'No se pudo crear el jugador. Intente nuevamente más tarde.';
@@ -72,13 +79,6 @@ export function useJugadores() {
     try {
       const updatedJugador = await jugadorService.update(idfed, jugadorData);
       
-      // Actualizar el jugador en la lista si existe
-      const index = jugadores.value.findIndex(j => j.idfed === idfed);
-      if (index !== -1) {
-        jugadores.value[index] = updatedJugador;
-      }
-      
-      // Actualizar el jugador seleccionado si es el mismo
       if (selectedJugador.value?.idfed === idfed) {
         selectedJugador.value = updatedJugador;
       }
@@ -99,10 +99,6 @@ export function useJugadores() {
     try {
       await jugadorService.delete(idfed);
       
-      // Eliminar el jugador de la lista
-      jugadores.value = jugadores.value.filter(j => j.idfed !== idfed);
-      
-      // Limpiar el jugador seleccionado si es el mismo
       if (selectedJugador.value?.idfed === idfed) {
         selectedJugador.value = null;
       }
@@ -117,29 +113,12 @@ export function useJugadores() {
   };
 
   // Getters
-  const sortedJugadores = computed(() => 
-    [...jugadores.value].sort((a, b) => 
-      a.apellidos.localeCompare(b.apellidos) || a.nombre.localeCompare(b.nombre)
-    )
-  );
-
-  const jugadoresByClub = computed(() => {
-    const jugadoresPorClub: { [key: string]: JugadorResponse[] } = {};
-    
-    jugadores.value.forEach(jugador => {
-      if (!jugadoresPorClub[jugador.codigo_club]) {
-        jugadoresPorClub[jugador.codigo_club] = [];
-      }
-      jugadoresPorClub[jugador.codigo_club].push(jugador);
-    });
-    
-    return jugadoresPorClub;
-  });
 
   // Retornar estado, acciones y getters
   return {
     // Estado
     jugadores,
+    totalJugadores,
     selectedJugador,
     isLoading,
     error,
@@ -153,7 +132,5 @@ export function useJugadores() {
     deleteJugador,
     
     // Getters
-    sortedJugadores,
-    jugadoresByClub
   };
 } 

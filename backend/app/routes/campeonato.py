@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 from ..db.session import get_db
 from ..models.campeonato import Campeonato
 from ..schemas.campeonato import CampeonatoCreate, CampeonatoUpdate, Campeonato as CampeonatoSchema
@@ -10,10 +11,16 @@ router = APIRouter(
     tags=["campeonatos"]
 )
 
-@router.get("/", response_model=List[CampeonatoSchema])
-def get_campeonatos(db: Session = Depends(get_db)):
+class CampeonatosPaginadosResponse(BaseModel):
+    total: int
+    campeonatos: List[CampeonatoSchema]
+
+@router.get("/", response_model=CampeonatosPaginadosResponse)
+def get_campeonatos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Obtener todos los campeonatos"""
-    return db.query(Campeonato).all()
+    total = db.query(Campeonato).count()
+    campeonatos = db.query(Campeonato).offset(skip).limit(limit).all()
+    return CampeonatosPaginadosResponse(total=total, campeonatos=campeonatos)
 
 @router.get("/{campeonato_id}", response_model=CampeonatoSchema)
 def get_campeonato(campeonato_id: int, db: Session = Depends(get_db)):

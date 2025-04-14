@@ -6,7 +6,8 @@ import type {
   CampeonatoUpdate,
   TipoCampeonatoResponse,
   TipoCampeonatoCreate,
-  TipoCampeonatoUpdate
+  TipoCampeonatoUpdate,
+  CampeonatosPaginados
 } from '../lib/campeonatoService';
 import { 
   createTipoCampeonato as createTipoCampeonatoService,
@@ -19,6 +20,7 @@ import {
 export function useCampeonatos() {
   // Estado
   const campeonatos = ref<CampeonatoResponse[]>([]);
+  const totalCampeonatos = ref(0); // Total para paginación
   const selectedCampeonato = ref<CampeonatoResponse | null>(null);
   const tiposCampeonato = ref<TipoCampeonatoResponse[]>([]);
   const selectedTipoCampeonato = ref<TipoCampeonatoResponse | null>(null);
@@ -33,14 +35,18 @@ export function useCampeonatos() {
   });
 
   // Cargar todos los campeonatos
-  const fetchCampeonatos = async () => {
+  const fetchCampeonatos = async (skip: number = 0, limit: number = 100) => {
     isLoading.value = true;
     error.value = null;
     try {
-      campeonatos.value = await campeonatoService.getCampeonatos();
+      const response: CampeonatosPaginados = await campeonatoService.getAll(skip, limit);
+      campeonatos.value = response.campeonatos;
+      totalCampeonatos.value = response.total;
     } catch (err) {
-      error.value = 'Error al cargar los campeonatos';
-      console.error('Error en fetchCampeonatos:', err);
+      console.error('Error fetching campeonatos:', err);
+      error.value = 'Failed to load campeonatos';
+      campeonatos.value = [];
+      totalCampeonatos.value = 0;
     } finally {
       isLoading.value = false;
     }
@@ -51,26 +57,26 @@ export function useCampeonatos() {
     isLoading.value = true;
     error.value = null;
     try {
-      selectedCampeonato.value = await campeonatoService.getCampeonatoById(id);
+      selectedCampeonato.value = await campeonatoService.getById(id);
     } catch (err) {
-      error.value = 'Error al cargar el campeonato';
-      console.error('Error en fetchCampeonatoById:', err);
+      console.error(`Error fetching campeonato ${id}:`, err);
+      error.value = 'Failed to load campeonato';
     } finally {
       isLoading.value = false;
     }
   };
 
   // Crear un nuevo campeonato
-  const createCampeonato = async (campeonato: CampeonatoCreate) => {
+  const createCampeonato = async (data: CampeonatoCreate) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const newCampeonato = await campeonatoService.createCampeonato(campeonato);
-      campeonatos.value.push(newCampeonato);
+      const newCampeonato = await campeonatoService.create(data);
+      // Requiere refetch
       return newCampeonato;
     } catch (err) {
-      error.value = 'Error al crear el campeonato';
-      console.error('Error en createCampeonato:', err);
+      console.error('Error creating campeonato:', err);
+      error.value = 'Failed to create campeonato';
       throw err;
     } finally {
       isLoading.value = false;
@@ -78,19 +84,19 @@ export function useCampeonatos() {
   };
 
   // Actualizar un campeonato existente
-  const updateCampeonato = async (id: number, campeonato: CampeonatoUpdate) => {
+  const updateCampeonato = async (id: number, data: CampeonatoUpdate) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const updatedCampeonato = await campeonatoService.updateCampeonato(id, campeonato);
-      const index = campeonatos.value.findIndex(c => c.id === id);
-      if (index !== -1) {
-        campeonatos.value[index] = updatedCampeonato;
+      const updatedCampeonato = await campeonatoService.update(id, data);
+      // Requiere refetch
+      if (selectedCampeonato.value?.id === id) {
+        selectedCampeonato.value = updatedCampeonato;
       }
       return updatedCampeonato;
     } catch (err) {
-      error.value = 'Error al actualizar el campeonato';
-      console.error('Error en updateCampeonato:', err);
+      console.error(`Error updating campeonato ${id}:`, err);
+      error.value = 'Failed to update campeonato';
       throw err;
     } finally {
       isLoading.value = false;
@@ -102,11 +108,15 @@ export function useCampeonatos() {
     isLoading.value = true;
     error.value = null;
     try {
-      await campeonatoService.deleteCampeonato(id);
-      campeonatos.value = campeonatos.value.filter(c => c.id !== id);
+      await campeonatoService.delete(id);
+      // Requiere refetch
+      if (selectedCampeonato.value?.id === id) {
+        selectedCampeonato.value = null;
+      }
+      return true;
     } catch (err) {
-      error.value = 'Error al eliminar el campeonato';
-      console.error('Error en deleteCampeonato:', err);
+      console.error(`Error deleting campeonato ${id}:`, err);
+      error.value = 'Failed to delete campeonato';
       throw err;
     } finally {
       isLoading.value = false;
@@ -164,6 +174,7 @@ export function useCampeonatos() {
   return {
     // Estado
     campeonatos,
+    totalCampeonatos,
     selectedCampeonato,
     tiposCampeonato,
     selectedTipoCampeonato,

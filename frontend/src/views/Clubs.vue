@@ -1,6 +1,6 @@
 <!-- Vista de Clubs - Muestra las opciones de gestión de clubs -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useClubs } from '../composables/useClubs';
 import { usePagination } from '../composables/usePagination';
@@ -12,15 +12,14 @@ import type { ClubResponse } from '../lib/clubService';
 const router = useRouter();
 const route = useRoute();
 
-// Usar el composable de clubs
-const { clubs, isLoading, error, fetchClubs, sortedClubs } = useClubs();
+// Usar el composable de clubs (ahora con totalClubs)
+const { clubs, totalClubs, isLoading, error, fetchClubs } = useClubs();
 
-// Configurar paginación
+// Configurar paginación (pasar totalClubs)
 const { 
   currentPage, 
   pageSize, 
   totalPages, 
-  paginatedItems: paginatedClubs, 
   canGoPrev, 
   canGoNext, 
   pageRange,
@@ -31,7 +30,7 @@ const {
   setPageSize,
   firstPage,
   lastPage
-} = usePagination(sortedClubs);
+} = usePagination(totalClubs, { initialPageSize: 10 });
 
 // Determinar si estamos en la ruta principal de clubs o una subruta
 const isRootRoute = computed(() => {
@@ -76,56 +75,67 @@ const crudOptions = [
   }
 ];
 
-// Definir las columnas para la tabla
+// Definir las columnas para la tabla (quitar sortable)
 const columns = computed(() => [
   {
     field: 'codigo_club',
     header: 'Código',
-    sortable: true
+    sortable: false
   },
   {
     field: 'nombre',
     header: 'Nombre',
-    sortable: true
+    sortable: false
   },
   {
     field: 'cp',
     header: 'CP',
-    sortable: true
+    sortable: false
   },
   {
     field: 'numero_club',
     header: 'Número',
-    sortable: true
+    sortable: false
   },
   {
     field: 'persona_contacto',
     header: 'Persona de Contacto',
-    sortable: true
+    sortable: false
   },
   {
     field: 'telefono',
     header: 'Teléfono',
-    sortable: true
+    sortable: false
   },
   {
     field: 'direccion',
     header: 'Dirección',
-    sortable: true
+    sortable: false
   },
   {
     field: 'email',
     header: 'Email',
-    sortable: true
+    sortable: false
   }
 ]);
 
-// Cargar la lista de clubs al montar el componente
+// --- Cargar DATOS INICIALES y observar cambios de paginación --- 
 onMounted(() => {
   if (isListRoute.value) {
-    fetchClubs();
+    // Carga inicial
+    fetchClubs(0, pageSize.value);
   }
 });
+
+// Observar cambios en currentPage y pageSize para recargar datos
+watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
+  // Solo recargar si la página o el tamaño realmente cambiaron y estamos en la lista
+  if (isListRoute.value && (newPage !== oldPage || newSize !== oldSize)) {
+    const skip = (newPage - 1) * newSize;
+    fetchClubs(skip, newSize);
+  }
+});
+// --- Fin Observación --- 
 
 // Función para navegar a una ruta
 const navigateTo = (routePath: string) => {
@@ -179,7 +189,7 @@ const getRowClass = (item: ClubResponse): string => {
     </div>
 
     <!-- Vista de lista de clubs -->
-    <div v-else-if="isListRoute" class="space-y-4">
+    <div v-else-if="isListRoute" class="space-y-4 container mx-auto">
       <!-- Título dinámico según el contexto -->
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold">
@@ -208,42 +218,45 @@ const getRowClass = (item: ClubResponse): string => {
       />
       
       <!-- Tabla de datos -->
-      <div class="rounded-md border">
-        <DataTable 
-          :items="paginatedClubs" 
-          :columns="columns" 
-          item-key="codigo_club"
-          :hover="true"
-          initial-sort-field="nombre"
-          initial-sort-direction="asc"
-          @row-click="handleRowClick"
-          :row-class="getRowClass"
-        >
-          <template #empty>
-            No hay clubs que coincidan con los criterios de búsqueda.
-          </template>
-        </DataTable>
+      <div v-if="!isLoading && !error">
+        <div class="rounded-md border">
+          <DataTable 
+            :items="clubs"
+            :columns="columns" 
+            item-key="codigo_club"
+            :hover="true"
+            @row-click="handleRowClick"
+            :row-class="getRowClass"
+          >
+            <template #empty>
+              No hay clubs que coincidan con los criterios de búsqueda.
+            </template>
+          </DataTable>
+        </div>
+        
+        <!-- Paginación -->
+        <div class="flex justify-center mt-4">
+          <Pagination
+            v-if="totalClubs > 0"
+            :current-page="currentPage"
+            :total-pages="totalPages"
+            :can-go-prev="canGoPrev"
+            :can-go-next="canGoNext"
+            :page-range="pageRange"
+            :show-page-size-selector="true"
+            :page-size-options="pageSizeOptions"
+            :page-size="pageSize"
+            @update:currentPage="goToPage"
+            @first-page="firstPage"
+            @prev-page="prevPage"
+            @next-page="nextPage"
+            @last-page="lastPage"
+            @update:page-size="setPageSize"
+          />
+        </div>
       </div>
-      
-      <!-- Paginación -->
-      <div class="flex justify-center mt-4">
-        <Pagination
-          v-if="clubs.length > 0"
-          :current-page="currentPage"
-          :total-pages="totalPages"
-          :can-go-prev="canGoPrev"
-          :can-go-next="canGoNext"
-          :page-range="pageRange"
-          :show-page-size-selector="true"
-          :page-size-options="pageSizeOptions"
-          :page-size="pageSize"
-          @update:current-page="goToPage"
-          @first-page="firstPage"
-          @prev-page="prevPage"
-          @next-page="nextPage"
-          @last-page="lastPage"
-          @update:page-size="setPageSize"
-        />
+      <div v-else-if="!isLoading && clubs.length === 0">
+        <p class="text-center text-gray-500 py-4">No hay clubs registrados.</p>
       </div>
     </div>
 

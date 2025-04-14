@@ -1,27 +1,17 @@
 // useResultados.ts - Composable para manejar la lógica de negocio de resultados
 import { ref, computed } from 'vue';
-import {
-  getResultados,
-  getResultadoById,
-  createResultado,
-  updateResultado,
-  deleteResultado,
-  getResultadosByJugador,
-  getResultadosByTipoCampeonato,
-  getResultadosByCampeonato,
-  type ResultadoCreate,
-  type ResultadoUpdate,
-  type ResultadoResponse,
-  type ResultadosListParams
-} from '../lib/resultadoService';
+import { resultadoService, type ResultadoResponse, type ResultadoCreate, type ResultadoUpdate, type ResultadosPaginados } from '@/lib/resultadoService';
+import type { FiltrosResultados } from '@/types/filtros';
 
 // Composable para gestionar la lógica de los resultados
 export function useResultados() {
   // Estado reactivo
-  const resultados = ref<ResultadoResponse[]>([]);
+  const resultados = ref<(ResultadoResponse & { _uniqueKey: string })[]>([]);
+  const totalResultados = ref(0); // Total para paginación
   const selectedResultado = ref<ResultadoResponse | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const currentFiltros = ref<FiltrosResultados>({}); // Guardar filtros actuales
 
   // Función para limpiar el error
   const clearError = () => {
@@ -39,24 +29,26 @@ export function useResultados() {
   };
 
   // Función auxiliar para añadir la clave única
-  const addUniqueKey = (resultado: ResultadoResponse): ResultadoResponse & { _uniqueKey: string } => {
+  const addUniqueKey = (resultado: ResultadoResponse, index: number): ResultadoResponse & { _uniqueKey: string } => {
     return {
       ...resultado,
-      _uniqueKey: `${resultado.nch}-${resultado.fecha_campeonato}-${resultado.idfed_jugador}`
+      _uniqueKey: `${resultado.nch}-${resultado.fecha_campeonato}-${resultado.idfed_jugador}-${index}`
     };
   };
 
   // Obtener todos los resultados con filtros/paginación
-  const fetchResultados = async (params: ResultadosListParams = {}) => {
-    clearError();
+  const fetchResultados = async (filtros: FiltrosResultados = {}, skip: number = 0, limit: number = 100) => {
     isLoading.value = true;
+    error.value = null;
+    currentFiltros.value = filtros; // Actualizar filtros usados
     try {
-      const rawResultados = await getResultados(params);
-      // Añadir la clave única a cada resultado
-      resultados.value = rawResultados.map(addUniqueKey);
+      const response: ResultadosPaginados = await resultadoService.getAll(filtros, skip, limit);
+      resultados.value = response.resultados.map(addUniqueKey);
+      totalResultados.value = response.total;
     } catch (err) {
       handleError(err, 'Error al cargar los resultados');
-      resultados.value = []; // Asegurarse de limpiar en caso de error
+      resultados.value = [];
+      totalResultados.value = 0;
     } finally {
       isLoading.value = false;
     }
@@ -68,9 +60,9 @@ export function useResultados() {
     isLoading.value = true;
     selectedResultado.value = null;
     try {
-      const rawResultado = await getResultadoById(nch, fecha_campeonato, idfed_jugador);
+      const rawResultado = await resultadoService.getById({ nch, fecha_campeonato, idfed_jugador });
       // Añadir clave única al resultado seleccionado también
-      selectedResultado.value = rawResultado ? addUniqueKey(rawResultado) : null;
+      selectedResultado.value = rawResultado ? addUniqueKey(rawResultado, 0) : null;
     } catch (err) {
       handleError(err, `Error al cargar el resultado ${nch}-${fecha_campeonato}-${idfed_jugador}`);
       selectedResultado.value = null;
@@ -82,16 +74,16 @@ export function useResultados() {
 
   // Crear un nuevo resultado
   const addResultado = async (resultadoData: ResultadoCreate) => {
-    clearError();
     isLoading.value = true;
+    error.value = null;
     try {
-      await createResultado(resultadoData);
-      // Recargar la lista (que ya añadirá la clave única)
-      await fetchResultados(); 
-      // No necesitamos devolver el nuevo resultado aquí si recargamos
+      const newResultado = await resultadoService.create(resultadoData);
+      // Requiere refetch con filtros y paginación actuales
+      await fetchResultados(currentFiltros.value);
+      return newResultado;
     } catch (err) {
       handleError(err, 'Error al crear el resultado');
-      throw err; 
+      throw err;
     } finally {
       isLoading.value = false;
     }
@@ -99,14 +91,13 @@ export function useResultados() {
 
   // Actualizar un resultado existente
   const modifyResultado = async (nch: number, fecha_campeonato: string, idfed_jugador: string, resultadoData: ResultadoUpdate) => {
-    clearError();
     isLoading.value = true;
+    error.value = null;
     try {
-      await updateResultado(nch, fecha_campeonato, idfed_jugador, resultadoData);
-       // Recargar la lista para obtener los datos actualizados con _uniqueKey
-      await fetchResultados(); 
-      // No necesitamos actualizar localmente si recargamos siempre
-      // Opcional: podrías buscar y actualizar localmente si la recarga es lenta
+      const updatedResultado = await resultadoService.update({ nch, fecha_campeonato, idfed_jugador }, resultadoData);
+      // Requiere refetch
+      await fetchResultados(currentFiltros.value);
+      return updatedResultado;
     } catch (err) {
       handleError(err, 'Error al actualizar el resultado');
       throw err;
@@ -117,16 +108,18 @@ export function useResultados() {
 
   // Eliminar un resultado
   const removeResultado = async (nch: number, fecha_campeonato: string, idfed_jugador: string) => {
-    clearError();
     isLoading.value = true;
+    error.value = null;
     try {
-      await deleteResultado(nch, fecha_campeonato, idfed_jugador);
+      await resultadoService.delete({ nch, fecha_campeonato, idfed_jugador });
       // Eliminar de la lista local usando la clave única
       const uniqueKeyToDelete = `${nch}-${fecha_campeonato}-${idfed_jugador}`;
       resultados.value = resultados.value.filter(r => (r as any)._uniqueKey !== uniqueKeyToDelete);
       if (selectedResultado.value && (selectedResultado.value as any)._uniqueKey === uniqueKeyToDelete) {
         selectedResultado.value = null;
       }
+      // Requiere refetch
+      await fetchResultados(currentFiltros.value);
     } catch (err) {
       handleError(err, 'Error al eliminar el resultado');
       throw err;
@@ -140,7 +133,7 @@ export function useResultados() {
     clearError();
     isLoading.value = true;
     try {
-      const rawResultados = await getResultadosByJugador(idfed_jugador);
+      const rawResultados = await resultadoService.getByJugador(idfed_jugador);
       resultados.value = rawResultados.map(addUniqueKey);
     } catch (err) {
       handleError(err, `Error al cargar resultados del jugador ${idfed_jugador}`);
@@ -154,7 +147,7 @@ export function useResultados() {
     clearError();
     isLoading.value = true;
     try {
-      const rawResultados = await getResultadosByTipoCampeonato(tipo_campeonato_id);
+      const rawResultados = await resultadoService.getByTipoCampeonato(tipo_campeonato_id);
        resultados.value = rawResultados.map(addUniqueKey);
     } catch (err) {
       handleError(err, `Error al cargar resultados del tipo de campeonato ${tipo_campeonato_id}`);
@@ -168,7 +161,7 @@ export function useResultados() {
     clearError();
     isLoading.value = true;
     try {
-      const rawResultados = await getResultadosByCampeonato(tipo_campeonato_id, nch);
+      const rawResultados = await resultadoService.getByCampeonato(tipo_campeonato_id, nch);
       resultados.value = rawResultados.map(addUniqueKey);
     } catch (err) {
       handleError(err, `Error al cargar resultados del campeonato ${tipo_campeonato_id}-${nch}`);
@@ -178,19 +171,28 @@ export function useResultados() {
     }
   };
 
+  // Función para recargar con filtros actuales (útil después de CUD)
+  const reloadCurrentPage = (currentPage: number, pageSize: number) => {
+    const skip = (currentPage - 1) * pageSize;
+    fetchResultados(currentFiltros.value, skip, pageSize);
+  };
+
   // Devolver el estado y las funciones
   return {
     resultados,         // Lista reactiva de resultados
-    selectedResultado, // Resultado seleccionado (para detalle/edición)
-    isLoading,          // Estado de carga
-    error,              // Mensaje de error
-    fetchResultados,    // Obtener lista con filtros/paginación
-    fetchResultadoById, // Obtener uno por ID
-    addResultado,       // Crear nuevo resultado
-    modifyResultado,    // Actualizar resultado
-    removeResultado,    // Eliminar resultado
+    totalResultados,    // Total para paginación
+    selectedResultado,   // Resultado seleccionado (para detalle/edición)
+    isLoading,           // Estado de carga
+    error,               // Mensaje de error
+    currentFiltros,       // Exponer filtros actuales para refetch
+    fetchResultados,      // Obtener lista con filtros/paginación
+    fetchResultadoById,   // Obtener uno por ID
+    addResultado,         // Crear nuevo resultado
+    modifyResultado,      // Actualizar resultado
+    removeResultado,       // Eliminar resultado
     fetchResultadosByJugador, // Obtener por jugador
     fetchResultadosByTipoCampeonato, // Obtener por tipo camp.
-    fetchResultadosByCampeonato // Obtener por camp. específico
+    fetchResultadosByCampeonato, // Obtener por camp. específico
+    reloadCurrentPage,     // Exponer para usar después de CUD
   };
 } 

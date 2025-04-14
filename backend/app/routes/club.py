@@ -1,14 +1,19 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from pydantic import BaseModel
 from ..db.session import get_db
 from ..models.club import Club
-from ..schemas.club import ClubCreate, ClubResponse
+from ..schemas.club import ClubCreate, ClubResponse, ClubUpdate
 
 router = APIRouter(
     prefix="/clubs",
     tags=["clubs"]
 )
+
+class ClubsPaginadosResponse(BaseModel):
+    total: int
+    clubs: List[ClubResponse]
 
 @router.post("/", response_model=ClubResponse)
 def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
@@ -45,13 +50,21 @@ def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[ClubResponse])
-def obtener_clubs(db: Session = Depends(get_db)):
+@router.get("/", response_model=ClubsPaginadosResponse)
+def obtener_clubs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
-    Obtener todos los clubs con carga eager de jugadores
+    Obtener clubs con paginación e información total.
+    (Nota: joinedload puede ser menos eficiente con paginación si hay muchos jugadores por club)
     """
-    clubs = db.query(Club).options(joinedload(Club.jugadores)).all()
-    return clubs
+    # Obtener el total de clubs
+    total_clubs = db.query(Club).count()
+    
+    # Obtener los clubs de la página actual
+    # Considerar quitar joinedload si causa problemas de rendimiento con limit/offset
+    clubs_pagina = db.query(Club).options(joinedload(Club.jugadores)).offset(skip).limit(limit).all()
+    
+    # Devolver la respuesta estructurada
+    return ClubsPaginadosResponse(total=total_clubs, clubs=clubs_pagina)
 
 @router.get("/{codigo_club}", response_model=ClubResponse)
 def obtener_club(codigo_club: str, db: Session = Depends(get_db)):
@@ -64,35 +77,24 @@ def obtener_club(codigo_club: str, db: Session = Depends(get_db)):
     return club
 
 @router.put("/{codigo_club}", response_model=ClubResponse)
-def actualizar_club(codigo_club: str, club_data: ClubCreate, db: Session = Depends(get_db)):
+def actualizar_club(codigo_club: str, club_data: ClubUpdate, db: Session = Depends(get_db)):
     """
-    Actualizar un club existente
+    Actualizar un club existente.
+    Nota: Usa ClubUpdate que tiene campos opcionales.
+    No permite cambiar CP ni Numero Club (ya que forman codigo_club).
     """
-    # Buscar el club
-    club_db = db.query(Club).filter(Club.codigo_club == codigo_club).first() # Renombrado a club_db para evitar conflicto
+    club_db = db.query(Club).filter(Club.codigo_club == codigo_club).first()
     if not club_db:
         raise HTTPException(status_code=404, detail="Club no encontrado")
-    
-    # Generar nuevo código con relleno
-    numero_club_rellenado = club_data.numero_club.zfill(4)
-    nuevo_codigo_club = f"{club_data.cp}{numero_club_rellenado}"
 
-    # Verificar si el nuevo código ya existe (y no es el club actual)
-    if nuevo_codigo_club != codigo_club:
-        conflicto = db.query(Club).filter(Club.codigo_club == nuevo_codigo_club).first()
-        if conflicto:
-            raise HTTPException(status_code=400, detail=f"El nuevo código de club '{nuevo_codigo_club}' generado ya está en uso.")
-
-    # Actualizar los campos guardando numero_club CON relleno
-    club_db.nombre = club_data.nombre
-    club_db.cp = club_data.cp
-    club_db.numero_club = numero_club_rellenado
-    club_db.codigo_club = nuevo_codigo_club
-    club_db.persona_contacto = club_data.persona_contacto
-    club_db.telefono = club_data.telefono
-    club_db.direccion = club_data.direccion
-    club_db.email = club_data.email
+    # Actualizar campos usando los datos de ClubUpdate (que pueden ser None)
+    update_data_dict = club_data.model_dump(exclude_unset=True) # Excluir campos no enviados
     
+    for key, value in update_data_dict.items():
+        # Asegurarse de que solo actualizamos atributos que existen en el modelo Club
+        if hasattr(club_db, key):
+            setattr(club_db, key, value)
+
     try:
         db.commit()
         db.refresh(club_db)

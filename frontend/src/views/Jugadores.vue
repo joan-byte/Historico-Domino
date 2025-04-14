@@ -25,14 +25,14 @@ const route = useRoute();
 
 // Usar el composable de jugadores
 const { 
-  jugadores, 
+  jugadores,
+  totalJugadores,
   selectedJugador, 
   isLoading, 
   error, 
   fetchJugadores, 
   updateJugador,
-  deleteJugador,
-  sortedJugadores
+  deleteJugador
 } = useJugadores();
 
 // Configurar paginación
@@ -40,7 +40,6 @@ const {
   currentPage, 
   pageSize, 
   totalPages, 
-  paginatedItems: paginatedJugadores, 
   canGoPrev, 
   canGoNext, 
   pageRange,
@@ -51,7 +50,7 @@ const {
   setPageSize,
   firstPage,
   lastPage
-} = usePagination(sortedJugadores);
+} = usePagination(totalJugadores, { initialPageSize: 10 });
 
 // Estado para ordenamiento
 const sortBy = ref('apellidos');
@@ -66,12 +65,24 @@ const showSuccess = ref(false);
 // Definir las columnas para la tabla
 const columns = computed<Column[]>(() => {
   const baseColumns: Column[] = [
-    { field: 'idfed', header: 'IDFED', sortable: true },
-    { field: 'nombre', header: 'Nombre', sortable: true },
-    { field: 'apellidos', header: 'Apellidos', sortable: true },
-    { field: 'nombre_club', header: 'Club', sortable: true },
-    { field: 'telefono', header: 'Teléfono', sortable: true },
-    { field: 'email', header: 'Email', sortable: true }
+    { field: 'idfed', header: 'IDFED', sortable: false },
+    { field: 'nombre', header: 'Nombre', sortable: false },
+    { field: 'apellidos', header: 'Apellidos', sortable: false },
+    { field: 'nombre_club', header: 'Club', sortable: false },
+    { 
+      field: 'dni', 
+      header: 'DNI', 
+      sortable: false,
+      render: (item: JugadorResponse) => item.dni ? item.dni : '' 
+    },
+    { 
+      field: 'telefono', 
+      header: 'Teléfono', 
+      sortable: false,
+      render: (item: JugadorResponse) => 
+        (item.telefono && item.telefono !== 'nan') ? String(item.telefono) : ''
+    },
+    { field: 'email', header: 'Email', sortable: false }
   ];
   
   // Solo añadir acciones en modo edición, no en modo eliminación
@@ -103,24 +114,6 @@ const handleRowClick = (item: JugadorResponse) => {
   }
 };
 
-// Función para ordenar las filas de la tabla
-const handleSort = (field: string) => {
-  if (sortBy.value === field) {
-    sortDir.value = -sortDir.value;
-  } else {
-    sortBy.value = field;
-    sortDir.value = 1;
-  }
-};
-
-// Función para obtener la dirección de ordenamiento
-const getSortDir = (field: string) => {
-  if (sortBy.value === field) {
-    return sortDir.value === 1 ? 'asc' : 'desc';
-  }
-  return null;
-};
-
 // Función para editar un jugador
 const editarJugador = (event: MouseEvent | null, idfed: string) => {
   if (event) event.stopPropagation();
@@ -130,11 +123,12 @@ const editarJugador = (event: MouseEvent | null, idfed: string) => {
 // Función para confirmar eliminación de jugador
 const confirmarEliminacion = async () => {
   if (jugadorToDelete.value) {
+    const jugadorEliminadoNombre = `${jugadorToDelete.value.nombre} ${jugadorToDelete.value.apellidos}`;
     try {
       await deleteJugador(jugadorToDelete.value.idfed);
       
       // Mostrar mensaje de éxito
-      successMessage.value = `El jugador ${jugadorToDelete.value.nombre} ${jugadorToDelete.value.apellidos} ha sido eliminado correctamente.`;
+      successMessage.value = `El jugador ${jugadorEliminadoNombre} ha sido eliminado correctamente.`;
       showSuccess.value = true;
       
       // Ocultar el mensaje después de 3 segundos
@@ -144,6 +138,8 @@ const confirmarEliminacion = async () => {
       
       showConfirmDialog.value = false;
       jugadorToDelete.value = null;
+      // Volver a cargar los datos de la página actual después de eliminar
+      fetchJugadores((currentPage.value - 1) * pageSize.value, pageSize.value);
     } catch (err) {
       // No vamos a registrar el error en la consola, ya usamos el valor error
     }
@@ -173,7 +169,7 @@ const handleEditJugador = (e: any) => {
 
 // Cargar los jugadores al montar el componente
 onMounted(() => {
-  fetchJugadores();
+  fetchJugadores(0, pageSize.value);
   
   // Agregar escuchadores para los eventos de edición
   document.addEventListener('edit-jugador', handleEditJugador);
@@ -182,6 +178,15 @@ onMounted(() => {
 // Limpiar los escuchadores de eventos al desmontar el componente
 onUnmounted(() => {
   document.removeEventListener('edit-jugador', handleEditJugador);
+});
+
+// Observar cambios en currentPage y pageSize para recargar datos
+watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
+  // Solo recargar si la página o el tamaño realmente cambiaron
+  if (newPage !== oldPage || newSize !== oldSize) {
+    const skip = (newPage - 1) * newSize;
+    fetchJugadores(skip, newSize);
+  }
 });
 
 // Determinar si estamos en la ruta principal de jugadores o una subruta
@@ -263,125 +268,96 @@ const navigateTo = (routePath: string) => {
     </div>
 
     <!-- Vista de lista de jugadores -->
-    <div v-else-if="isListRoute" class="space-y-4">
-      <!-- Título dinámico según el contexto -->
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-semibold">
-          {{ route.query.action === 'edit' ? 'Elige el jugador a editar' : route.query.action === 'delete' ? 'Elige el jugador a eliminar' : 'Lista de Jugadores' }}
-        </h1>
-      </div>
-
-      <!-- Instrucciones para el modo edición -->
-      <div v-if="route.query.action === 'edit'" class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-        Haz clic en el jugador que deseas editar. Se abrirá el formulario de edición con los datos del jugador seleccionado.
+    <div v-else-if="isListRoute" class="container mx-auto">
+      <h1 class="text-2xl font-bold mb-4">Lista de Jugadores</h1>
+      
+      <!-- Mostrar mensaje de carga -->
+      <div v-if="isLoading" class="text-center py-8">
+        <p>Cargando jugadores...</p>
       </div>
       
-      <!-- Instrucciones para el modo eliminación -->
-      <div v-if="route.query.action === 'delete'" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-        Haz clic en el jugador que deseas eliminar. Se abrirá la pantalla de confirmación para eliminar el jugador seleccionado.
-      </div>
+      <!-- Mostrar mensaje de error -->
+      <StatusMessage v-if="error" :message="error" type="error" />
       
-      <!-- Mensajes de estado -->
-      <StatusMessage
-        type="error"
-        :show="!!error"
-        :message="error || ''"
-        class="mb-4"
-      />
-      
-      <StatusMessage
-        type="loading"
-        :show="isLoading"
-        message="Cargando jugadores..."
-        class="mb-4"
-      />
-      
-      <!-- Mensaje de éxito -->
-      <StatusMessage
-        type="success"
-        :show="showSuccess"
-        :message="successMessage"
-        class="mb-4"
-      />
-      
-      <!-- Tabla de datos -->
-      <div class="rounded-md border">
+      <!-- Mostrar tabla y paginación si no hay error y no está cargando -->
+      <div v-if="!isLoading && !error">
         <DataTable 
-            :items="paginatedJugadores" 
-            :columns="columns"
-            itemKey="idfed"
-            hover
-            striped
-            @row-click="handleRowClick"
-            @sort="handleSort"
-            :sort-field="sortBy"
-            :sort-direction="getSortDir(sortBy)"
-            :row-class="getRowClass"
-        >
-          <template #empty>
-            No hay jugadores que coincidan con los criterios de búsqueda.
-          </template>
-        </DataTable>
-      </div>
-      
-      <!-- Paginación -->
-      <div class="flex justify-center mt-4">
+          :items="jugadores" 
+          :columns="columns" 
+          :itemKey="'idfed'" 
+          :row-class="getRowClass"
+          @row-click="handleRowClick"
+        />
+        
+        <!-- --- Componente de Paginación --- -->
         <Pagination
-          v-if="jugadores.length > 0"
           :current-page="currentPage"
           :total-pages="totalPages"
+          :page-size="pageSize"
+          :page-size-options="pageSizeOptions"
+          :show-page-size-selector="true"
           :can-go-prev="canGoPrev"
           :can-go-next="canGoNext"
           :page-range="pageRange"
-          :show-page-size-selector="true"
-          :page-size-options="pageSizeOptions"
-          :page-size="pageSize"
-          @update:current-page="goToPage"
-          @first-page="firstPage"
-          @prev-page="prevPage"
-          @next-page="nextPage"
-          @last-page="lastPage"
-          @update:page-size="setPageSize"
+          @update:currentPage="goToPage"
+          @update:pageSize="setPageSize"
+          @next="nextPage"
+          @prev="prevPage"
+          @first="firstPage"
+          @last="lastPage"
+          class="mt-4"
         />
-      </div>
-      
-      <!-- Modal de confirmación para eliminar jugador -->
-      <div v-if="showConfirmDialog" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex">
-        <div class="relative p-6 bg-white w-full max-w-md m-auto rounded-md shadow-lg">
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900">¿Estás seguro de eliminar este jugador?</h3>
-            <p class="mt-2 text-sm text-gray-500">
-              Esta acción no se puede deshacer. El jugador 
-              <span class="font-medium">{{ jugadorToDelete?.nombre }} {{ jugadorToDelete?.apellidos }}</span> 
-              será eliminado permanentemente.
-            </p>
-          </div>
-          
-          <div class="bg-gray-50 p-4 -mx-6 -mb-6 rounded-b-md">
-            <div class="flex justify-end gap-2">
-              <button 
-                @click="cancelarEliminacion" 
-                class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button 
-                @click="confirmarEliminacion" 
-                class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
+        <!-- --- Fin Paginación --- -->
       </div>
     </div>
 
     <!-- Vista alternativa cuando no estamos en la ruta principal ni en la lista -->
     <router-view v-else />
+
+    <!-- Modal de confirmación para eliminar jugador -->
+    <div v-if="showConfirmDialog" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex">
+      <div class="relative p-6 bg-white w-full max-w-md m-auto rounded-md shadow-lg">
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900">¿Estás seguro de eliminar este jugador?</h3>
+          <p class="mt-2 text-sm text-gray-500">
+            Esta acción no se puede deshacer. El jugador 
+            <span class="font-medium">{{ jugadorToDelete?.nombre }} {{ jugadorToDelete?.apellidos }}</span> 
+            será eliminado permanentemente.
+          </p>
+        </div>
+        
+        <div class="bg-gray-50 p-4 -mx-6 -mb-6 rounded-b-md">
+          <div class="flex justify-end gap-2">
+            <button 
+              @click="cancelarEliminacion" 
+              class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button 
+              @click="confirmarEliminacion" 
+              class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de éxito flotante -->
+    <transition name="fade">
+      <StatusMessage v-if="showSuccess" :message="successMessage" type="success" class="fixed bottom-4 right-4 z-50" />
+    </transition>
   </div>
 </template>
 
 <style scoped>
-/* Estilos específicos para este componente */
+/* Estilos para la transición del mensaje de éxito */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
 </style> 

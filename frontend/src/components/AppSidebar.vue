@@ -6,6 +6,8 @@ import Separator from '@/components/ui/separator/Separator.vue';
 import Button from '@/components/ui/button/Button.vue';
 // Importar el composable de navegación
 import { useNavigation } from '@/composables/useNavigation';
+// Importar RouterLink para la navegación
+import { RouterLink } from 'vue-router';
 
 // Iconos (necesitarás instalar lucide-vue-next)
 // import { 
@@ -83,22 +85,23 @@ const sidebarClasses = computed(() => {
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
-            <a
+            <router-link
               v-else
-              :href="item.href"
+              :to="item.href"  
               class="flex items-center gap-1 rounded-md px-1 py-0.5 text-[9px] text-gray-500 transition-all hover:text-gray-900"
               :class="{ 'bg-gray-100 text-gray-900': item.isActive }"
+              active-class="bg-gray-100 text-gray-900" 
             >
               <svg v-if="item.icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 shrink-0">
                 <path :d="item.icon"></path>
               </svg>
               <span v-if="sidebarContext?.isOpen.value" class="truncate">{{ item.title }}</span>
-            </a>
+            </router-link>
             <!-- Subelementos -->
             <div v-if="item.children && item.children.length > 0 && isExpanded(item.title) && sidebarContext?.isOpen.value" class="mt-0.5 pl-3 space-y-0.5">
-              <a v-for="(child, k) in item.children" :key="`child-${k}`" :href="child.href" class="block rounded-md px-1 py-0.5 text-[9px] text-gray-500 transition-all hover:text-gray-900" :class="{ 'bg-gray-100 text-gray-900': child.isActive }">
+              <router-link v-for="(child, k) in item.children" :key="`child-${k}`" :to="child.href" class="block rounded-md px-1 py-0.5 text-[9px] text-gray-500 transition-all hover:text-gray-900" :class="{ 'bg-gray-100 text-gray-900': child.isActive }" active-class="bg-gray-100 text-gray-900">
                 {{ child.title }}
-              </a>
+              </router-link>
             </div>
           </div>
         </div>

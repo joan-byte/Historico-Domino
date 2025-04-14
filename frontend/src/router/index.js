@@ -172,6 +172,17 @@ const routes = [
         path: '/importar-clubs',
         name: 'ImportarClubs',
         component: () => import('../views/ImportClubsView.vue')
+      },
+      {
+        path: '/importar-jugadores',
+        name: 'ImportarJugadores',
+        component: () => import('../views/ImportPlayersView.vue')
+      },
+      // Rutas para el módulo de Importar Resultados
+      {
+        path: '/resultados/importar',
+        name: 'ImportarResultados',
+        component: () => import('../views/ImportarResultadosView.vue')
       }
     ]
   }

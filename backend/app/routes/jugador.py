@@ -4,11 +4,16 @@ from typing import List
 from ..db.session import get_db
 from ..models.jugador import Jugador
 from ..schemas.jugador import JugadorCreate, JugadorResponse, JugadorUpdate
+from pydantic import BaseModel
 
 router = APIRouter(
     prefix="/jugadores",
     tags=["jugadores"]
 )
+
+class JugadoresPaginadosResponse(BaseModel):
+    total: int
+    jugadores: List[JugadorResponse]
 
 @router.post("/", response_model=JugadorResponse)
 def crear_jugador(jugador: JugadorCreate, db: Session = Depends(get_db)):
@@ -46,12 +51,19 @@ def crear_jugador(jugador: JugadorCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[JugadorResponse])
+@router.get("/", response_model=JugadoresPaginadosResponse)
 def listar_jugadores(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
-    Listar todos los jugadores
+    Listar jugadores con paginación e información total.
     """
-    return db.query(Jugador).offset(skip).limit(limit).all()
+    # Obtener el total de jugadores
+    total_jugadores = db.query(Jugador).count()
+    
+    # Obtener los jugadores de la página actual
+    jugadores_pagina = db.query(Jugador).offset(skip).limit(limit).all()
+    
+    # Devolver la respuesta estructurada
+    return JugadoresPaginadosResponse(total=total_jugadores, jugadores=jugadores_pagina)
 
 @router.get("/{idfed}", response_model=JugadorResponse)
 def obtener_jugador(idfed: str, db: Session = Depends(get_db)):

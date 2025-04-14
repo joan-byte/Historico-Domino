@@ -8,11 +8,18 @@ from ..models.jugador import Jugador
 from ..models.club import Club
 from ..models.tipo_campeonato import TipoCampeonato
 from ..schemas.resultado import ResultadoCreate, ResultadoResponse, ResultadoUpdate
+from pydantic import BaseModel
 
 router = APIRouter(
     prefix="/resultados",
     tags=["resultados"]
 )
+
+# --- Schema Paginado --- 
+class ResultadosPaginadosResponse(BaseModel):
+    total: int
+    resultados: List[ResultadoResponse]
+# --- Fin Schema --- 
 
 @router.post("/", response_model=ResultadoResponse)
 def crear_resultado(resultado: ResultadoCreate, db: Session = Depends(get_db)):
@@ -81,7 +88,7 @@ def crear_resultado(resultado: ResultadoCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[ResultadoResponse])
+@router.get("/", response_model=ResultadosPaginadosResponse)
 def listar_resultados(
     skip: int = 0, 
     limit: int = 100, 
@@ -92,24 +99,27 @@ def listar_resultados(
     db: Session = Depends(get_db)
 ):
     """
-    Listar resultados con filtros opcionales
+    Listar resultados con filtros opcionales y paginación completa.
     """
     query = db.query(Resultado)
     
     # Aplicar filtros si se proporcionan
     if tipo_campeonato_id:
         query = query.filter(Resultado.tipo_campeonato_id == tipo_campeonato_id)
-    
     if fecha_desde:
         query = query.filter(Resultado.fecha_campeonato >= fecha_desde)
-    
     if fecha_hasta:
         query = query.filter(Resultado.fecha_campeonato <= fecha_hasta)
-    
     if idfed_jugador:
         query = query.filter(Resultado.idfed_jugador == idfed_jugador)
     
-    return query.offset(skip).limit(limit).all()
+    # Contar el total DESPUÉS de aplicar filtros
+    total_resultados = query.count()
+    
+    # Aplicar paginación
+    resultados_pagina = query.offset(skip).limit(limit).all()
+    
+    return ResultadosPaginadosResponse(total=total_resultados, resultados=resultados_pagina)
 
 @router.get("/{nch}/{fecha_campeonato}/{idfed_jugador}", response_model=ResultadoResponse)
 def obtener_resultado(

@@ -8,7 +8,7 @@ interface PaginationOptions {
 }
 
 export function usePagination<T>(
-  items: Ref<T[]>, 
+  totalItems: Ref<number>,
   options: PaginationOptions = {}
 ) {
   // Configuración por defecto
@@ -25,22 +25,9 @@ export function usePagination<T>(
   const currentPage = ref(config.initialPage);
   const pageSize = ref(config.initialPageSize);
   
-  // Resetear la página actual cuando cambian los elementos
-  watch(items, () => {
-    currentPage.value = 1;
-  });
-  
   // Cálculos de paginación
-  const totalItems = computed(() => items.value.length);
-  
   const totalPages = computed(() => {
     return Math.ceil(totalItems.value / pageSize.value) || 1;
-  });
-  
-  const paginatedItems = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value;
-    const end = start + pageSize.value;
-    return items.value.slice(start, end);
   });
   
   const canGoPrev = computed(() => currentPage.value > 1);
@@ -123,7 +110,6 @@ export function usePagination<T>(
     pageSize,
     totalItems,
     totalPages,
-    paginatedItems,
     canGoPrev,
     canGoNext,
     pageRange,
