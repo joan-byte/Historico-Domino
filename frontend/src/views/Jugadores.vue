@@ -301,10 +301,10 @@ const navigateTo = (routePath: string) => {
           :page-range="pageRange"
           @update:currentPage="goToPage"
           @update:pageSize="setPageSize"
-          @next="nextPage"
-          @prev="prevPage"
-          @first="firstPage"
-          @last="lastPage"
+          @next-page="nextPage"
+          @prev-page="prevPage"
+          @first-page="firstPage"
+          @last-page="lastPage"
           class="mt-4"
         />
         <!-- --- Fin Paginación --- -->
