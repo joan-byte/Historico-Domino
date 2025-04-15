@@ -1,18 +1,30 @@
 <!-- ListaCampeonatos.vue - Vista para mostrar y gestionar la lista de campeonatos -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useCampeonatos } from '@/composables/useCampeonatos';
 import { usePagination } from '@/composables/usePagination';
 import StatusMessage from '@/components/ui/StatusMessage.vue';
 import Pagination from '@/components/ui/Pagination.vue';
 import DataTable from '@/components/ui/DataTable.vue';
-import type { CampeonatoResponse } from '@/lib/campeonatoService';
+import type { CampeonatoResponse, TipoCampeonatoResponse } from '@/lib/campeonatoService';
 
 const router = useRouter();
+const route = useRoute();
 
-// Usar composable con total
-const { campeonatos, totalCampeonatos, isLoading, error, fetchCampeonatos } = useCampeonatos();
+// Leer el parámetro de acción de la URL
+const action = computed(() => route.query.action as string | undefined);
+
+// Usar composable con total y tipos
+const { 
+  campeonatos, 
+  totalCampeonatos, 
+  isLoading, 
+  error, 
+  fetchCampeonatos, 
+  tiposCampeonato,
+  fetchTiposCampeonato
+} = useCampeonatos();
 
 // Usar paginación con total
 const { 
@@ -31,23 +43,47 @@ const {
   lastPage 
 } = usePagination(totalCampeonatos, { initialPageSize: 10 });
 
-// Definir columnas (quitar sortable)
+// Definir columnas (ajustadas)
 const columns = computed(() => [
-  { field: 'id', header: 'ID', sortable: false },
+  { field: 'nch', header: 'NCH', sortable: false },
   { field: 'nombre', header: 'Nombre', sortable: false },
   {
-    field: 'tipo_campeonato',
+    field: 'tipo_campeonato_id',
     header: 'Tipo',
     sortable: false,
-    render: (item: CampeonatoResponse) => item.tipo_campeonato?.nombre ?? 'N/A'
+    render: (item: CampeonatoResponse) => {
+      const tipo = tiposCampeonato.value.find(t => t.id === item.tipo_campeonato_id);
+      return tipo?.codigo ?? 'N/A';
+    }
   },
   { field: 'fecha_inicio', header: 'Fecha Inicio', sortable: false },
-  { field: 'fecha_fin', header: 'Fecha Fin', sortable: false }
+  { field: 'dias', header: 'Días', sortable: false },
+  { field: 'partidas', header: 'Partidas', sortable: false },
+  { field: 'pm', header: 'PM', sortable: false },
+  {
+    field: 'gb',
+    header: 'GB',
+    sortable: false,
+    render: (item: CampeonatoResponse) => item.gb ? 'B' : 'A'
+  },
+  {
+    field: 'gbp',
+    header: 'Inicio GB',
+    sortable: false,
+    render: (item: CampeonatoResponse) => item.gb ? (item.gbp?.toString() ?? '-') : '-'
+  },
+  {
+    field: 'club',
+    header: 'Club Org.',
+    sortable: false,
+    render: (item: CampeonatoResponse) => item.club_codigo ?? 'N/A'
+  }
 ]);
 
 // Carga inicial y watch para paginación
-onMounted(() => {
-  fetchCampeonatos(0, pageSize.value);
+onMounted(async () => {
+  await fetchCampeonatos(0, pageSize.value);
+  await fetchTiposCampeonato();
 });
 
 watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
@@ -57,9 +93,15 @@ watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
   }
 });
 
-// Navegación para editar (puede necesitar ajuste si la ruta cambia)
+// Navegación para editar o eliminar según la acción
 const handleRowClick = (campeonato: CampeonatoResponse) => {
-  router.push(`/campeonatos/modificar/${campeonato.id}`);
+  if (action.value === 'delete') {
+    // Si la acción es eliminar, ir a la vista de eliminar
+    router.push(`/campeonatos/eliminar/${campeonato.nch}`);
+  } else {
+    // Por defecto (o si action es 'edit'), ir a la vista de modificar
+    router.push(`/campeonatos/modificar/${campeonato.nch}`);
+  }
 };
 
 </script>
@@ -81,7 +123,7 @@ const handleRowClick = (campeonato: CampeonatoResponse) => {
         <DataTable
           :items="campeonatos" 
           :columns="columns"
-          item-key="id"
+          item-key="nch"
           hover
           @row-click="handleRowClick"
         >

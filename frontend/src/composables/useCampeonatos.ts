@@ -52,17 +52,31 @@ export function useCampeonatos() {
     }
   };
 
-  // Cargar un campeonato por ID
-  const fetchCampeonatoById = async (id: number) => {
+  // Cargar un campeonato por NCH
+  const fetchCampeonatoById = async (nch: string) => {
     isLoading.value = true;
     error.value = null;
     try {
-      selectedCampeonato.value = await campeonatoService.getById(id);
-    } catch (err) {
-      console.error(`Error fetching campeonato ${id}:`, err);
-      error.value = 'Failed to load campeonato';
+      console.log(`[useCampeonatos] Fetching campeonato with NCH: ${nch}`); // Log inicio
+      const campeonatoEncontrado = await campeonatoService.getById(nch);
+      // Log detallado de lo que devuelve el servicio
+      console.log(`[useCampeonatos] campeonatoService.getById returned:`, campeonatoEncontrado); 
+      
+      selectedCampeonato.value = campeonatoEncontrado ?? null;
+      // Log del estado después de la asignación
+      console.log(`[useCampeonatos] selectedCampeonato state after fetch:`, selectedCampeonato.value); 
+      
+      error.value = null; 
+    } catch (err: any) {
+      console.error(`Error fetching campeonato ${nch}:`, err);
+      // Intentar obtener el mensaje de detalle del error de la API
+      const message = err?.response?.data?.detail || err?.message || 'Failed to load campeonato';
+      error.value = message;
+      // Asegurar que selectedCampeonato se limpia en caso de error
+      selectedCampeonato.value = null; 
     } finally {
       isLoading.value = false;
+      console.log(`[useCampeonatos] Finished fetching NCH: ${nch}, isLoading: ${isLoading.value}`); // Log fin
     }
   };
 
@@ -83,19 +97,19 @@ export function useCampeonatos() {
     }
   };
 
-  // Actualizar un campeonato existente
-  const updateCampeonato = async (id: number, data: CampeonatoUpdate) => {
+  // Actualizar un campeonato existente por NCH
+  const updateCampeonato = async (nch: string, data: CampeonatoUpdate) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const updatedCampeonato = await campeonatoService.update(id, data);
+      const updatedCampeonato = await campeonatoService.update(nch, data);
       // Requiere refetch
-      if (selectedCampeonato.value?.id === id) {
+      if (selectedCampeonato.value?.nch === nch) {
         selectedCampeonato.value = updatedCampeonato;
       }
       return updatedCampeonato;
     } catch (err) {
-      console.error(`Error updating campeonato ${id}:`, err);
+      console.error(`Error updating campeonato ${nch}:`, err);
       error.value = 'Failed to update campeonato';
       throw err;
     } finally {
@@ -103,19 +117,19 @@ export function useCampeonatos() {
     }
   };
 
-  // Eliminar un campeonato
-  const deleteCampeonato = async (id: number) => {
+  // Eliminar un campeonato por NCH
+  const deleteCampeonato = async (nch: string) => {
     isLoading.value = true;
     error.value = null;
     try {
-      await campeonatoService.delete(id);
+      await campeonatoService.delete(nch);
       // Requiere refetch
-      if (selectedCampeonato.value?.id === id) {
+      if (selectedCampeonato.value?.nch === nch) {
         selectedCampeonato.value = null;
       }
       return true;
     } catch (err) {
-      console.error(`Error deleting campeonato ${id}:`, err);
+      console.error(`Error deleting campeonato ${nch}:`, err);
       error.value = 'Failed to delete campeonato';
       throw err;
     } finally {

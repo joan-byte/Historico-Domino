@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Componente para crear y editar campeonatos
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCampeonatos } from '../composables/useCampeonatos';
+import { useClubs } from '../composables/useClubs';
 import type { CampeonatoCreate } from '../lib/campeonatoService';
 import StatusMessage from '../components/ui/StatusMessage.vue';
 
@@ -11,19 +12,56 @@ const router = useRouter();
 
 // Composable para campeonatos
 const { createCampeonato, fetchTiposCampeonato, tiposCampeonato, error: campeonatoError, isLoading } = useCampeonatos();
+// Composable para clubes
+const { clubs, fetchClubs, error: clubError } = useClubs();
 
 // Estado para el formulario
 const campeonato = ref<CampeonatoCreate>({
   nombre: '',
   fecha_inicio: new Date().toISOString().substring(0, 10),
-  fecha_fin: new Date().toISOString().substring(0, 10),
-  tipo_campeonato_id: 0
+  dias: 1,
+  partidas: 0,
+  pm: 300,
+  gb: false,
+  gbp: null,
+  tipo_campeonato_id: 0,
+  club_codigo: ''
 });
 
 // Estado para mensajes
 const successMessage = ref<string>('');
 const showSuccess = ref(false);
 const formErrors = ref<Record<string, string>>({});
+
+// Propiedad computada para PREVISUALIZAR el NCH
+// El NCH final y correcto lo genera el backend al guardar.
+const nchCalculado = computed(() => {
+  const { tipo_campeonato_id, fecha_inicio, club_codigo } = campeonato.value;
+  
+  // Encontrar el objeto tipoCampeonato seleccionado para obtener su código
+  const tipoSeleccionado = tiposCampeonato.value.find(t => t.id === tipo_campeonato_id);
+  
+  // Solo calcula si todos los campos necesarios tienen valor
+  if (tipoSeleccionado && fecha_inicio && club_codigo) {
+    // 1. Código del Tipo de Campeonato (ej: "DP")
+    const codigoTipo = tipoSeleccionado.codigo.toUpperCase(); 
+
+    // 2. Código del Club (ej: "430002")
+    const codigoClub = club_codigo;
+
+    // 3. Fecha en formato YYYYMMDD
+    // Quita guiones de la fecha YYYY-MM-DD -> YYYYMMDD
+    const fechaFormateada = fecha_inicio.replace(/-/g, ''); 
+
+    // 4. Autoincremental (Placeholder - el backend lo genera)
+    const autoincrementalPlaceholder = '001'; 
+
+    // Combinar partes para formar la previsualización del NCH
+    return `${codigoTipo}${codigoClub}${fechaFormateada}${autoincrementalPlaceholder}`;
+  }
+  // Devuelve cadena vacía si faltan datos
+  return '';
+});
 
 // Validar el formulario
 const validateForm = (): boolean => {
@@ -40,13 +78,23 @@ const validateForm = (): boolean => {
     isValid = false;
   }
 
-  if (!campeonato.value.fecha_fin) {
-    formErrors.value.fecha_fin = 'La fecha de fin es obligatoria';
+  if (campeonato.value.dias === undefined || campeonato.value.dias <= 0) {
+    formErrors.value.dias = 'El número de días debe ser positivo';
     isValid = false;
   }
 
-  if (campeonato.value.fecha_inicio > campeonato.value.fecha_fin) {
-    formErrors.value.fecha_fin = 'La fecha de fin debe ser posterior a la fecha de inicio';
+  if (campeonato.value.partidas === undefined || campeonato.value.partidas < 0) {
+    formErrors.value.partidas = 'El número de partidas no puede ser negativo';
+    isValid = false;
+  }
+
+  if (campeonato.value.pm === undefined || campeonato.value.pm < 0) {
+    formErrors.value.pm = 'Los Puntos Máximos (PM) no pueden ser negativos';
+    isValid = false;
+  }
+
+  if (campeonato.value.gb && (campeonato.value.gbp === undefined || campeonato.value.gbp === null || campeonato.value.gbp <= 0)) {
+    formErrors.value.gbp = 'Si GB está activado, la partida de inicio del Grupo B es obligatoria y debe ser positiva';
     isValid = false;
   }
 
@@ -55,26 +103,40 @@ const validateForm = (): boolean => {
     isValid = false;
   }
 
+  if (!campeonato.value.club_codigo) {
+    formErrors.value.club_codigo = 'El club organizador es obligatorio';
+    isValid = false;
+  }
+
   return isValid;
 };
 
 // Enviar formulario
 const handleSubmit = async () => {
+  if (!campeonato.value.gb) {
+    campeonato.value.gbp = null;
+  }
+  
   if (!validateForm()) return;
   
   try {
     const newCampeonato = await createCampeonato(campeonato.value);
     
-    // Mostrar mensaje de éxito
-    successMessage.value = `Campeonato "${newCampeonato.nombre}" creado con éxito.`;
+    // Mostrar mensaje de éxito incluyendo el NCH
+    successMessage.value = `Campeonato "${newCampeonato.nombre}" (NCH: ${newCampeonato.nch}) creado con éxito.`;
     showSuccess.value = true;
     
     // Limpiar formulario
     campeonato.value = {
       nombre: '',
       fecha_inicio: new Date().toISOString().substring(0, 10),
-      fecha_fin: new Date().toISOString().substring(0, 10),
-      tipo_campeonato_id: 0
+      dias: 1,
+      partidas: 0,
+      pm: 300,
+      gb: false,
+      gbp: null,
+      tipo_campeonato_id: 0,
+      club_codigo: ''
     };
     
     // Volver a la lista después de un breve retraso
@@ -91,9 +153,10 @@ const handleCancel = () => {
   router.go(-1);
 };
 
-// Cargar tipos de campeonato al montar el componente
+// Cargar tipos de campeonato y clubes al montar el componente
 onMounted(async () => {
   await fetchTiposCampeonato();
+  await fetchClubs();
 });
 </script>
 
@@ -103,8 +166,8 @@ onMounted(async () => {
     
     <!-- Mensajes de estado -->
     <StatusMessage 
-      v-if="campeonatoError" 
-      :message="campeonatoError" 
+      v-if="campeonatoError || clubError" 
+      :message="campeonatoError || clubError || 'Error desconocido'" 
       type="error" 
       :show="true"
       class="mb-4" 
@@ -121,6 +184,14 @@ onMounted(async () => {
     <!-- Formulario -->
     <form @submit.prevent="handleSubmit" class="bg-white p-6 rounded-lg shadow-md">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Mostrar NCH Calculado -->
+        <div class="col-span-2 mb-2">
+          <label class="block text-sm font-medium text-gray-500">NCH (Calculado):</label>
+          <div class="mt-1 p-2 h-10 border border-gray-200 rounded-md bg-gray-50 text-lg font-semibold">
+            {{ nchCalculado || '...' }}
+          </div>
+        </div>
+
         <!-- Campo: Nombre -->
         <div class="col-span-2">
           <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
@@ -156,25 +227,97 @@ onMounted(async () => {
           </p>
         </div>
         
-        <!-- Campo: Fecha fin -->
+        <!-- Campo: Días -->
         <div>
-          <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-1">
-            Fecha Fin *
+          <label for="dias" class="block text-sm font-medium text-gray-700 mb-1">
+            Días *
           </label>
           <input 
-            type="date" 
-            id="fecha_fin" 
-            v-model="campeonato.fecha_fin"
+            type="number" 
+            id="dias" 
+            v-model.number="campeonato.dias"
+            min="1"
             class="w-full px-3 py-2 border rounded-md"
-            :class="{ 'border-red-500': formErrors.fecha_fin }"
+            :class="{ 'border-red-500': formErrors.dias }"
           />
-          <p v-if="formErrors.fecha_fin" class="mt-1 text-sm text-red-600">
-            {{ formErrors.fecha_fin }}
+          <p v-if="formErrors.dias" class="mt-1 text-sm text-red-600">
+            {{ formErrors.dias }}
+          </p>
+        </div>
+
+        <!-- Campo: Partidas -->
+        <div>
+          <label for="partidas" class="block text-sm font-medium text-gray-700 mb-1">
+            Partidas *
+          </label>
+          <input 
+            type="number" 
+            id="partidas" 
+            v-model.number="campeonato.partidas"
+            min="0"
+            class="w-full px-3 py-2 border rounded-md"
+            :class="{ 'border-red-500': formErrors.partidas }"
+          />
+          <p v-if="formErrors.partidas" class="mt-1 text-sm text-red-600">
+            {{ formErrors.partidas }}
+          </p>
+        </div>
+
+        <!-- Campo: Puntos Máximos (PM) -->
+        <div>
+          <label for="pm" class="block text-sm font-medium text-gray-700 mb-1">
+            Puntos Máximos (PM) *
+          </label>
+          <input 
+            type="number" 
+            id="pm" 
+            v-model.number="campeonato.pm"
+            min="0"
+            class="w-full px-3 py-2 border rounded-md"
+            :class="{ 'border-red-500': formErrors.pm }"
+          />
+          <p v-if="formErrors.pm" class="mt-1 text-sm text-red-600">
+            {{ formErrors.pm }}
+          </p>
+        </div>
+
+        <!-- Campo: Grupo B (GB) -->
+        <div class="col-span-2 flex items-center space-x-4">
+           <div class="flex items-center h-5">
+             <input 
+               id="gb" 
+               type="checkbox" 
+               v-model="campeonato.gb"
+               class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+             />
+           </div>
+           <div class="text-sm">
+             <label for="gb" class="font-medium text-gray-700">Grupo B</label>
+             <p class="text-gray-500">Marcar si el campeonato pertenece al Grupo B (si no, es Grupo A).</p>
+           </div>
+        </div>
+
+        <!-- Campo: Puntos Grupo B (GB Pts) - Condicional -->
+        <div v-if="campeonato.gb">
+          <label for="gbp" class="block text-sm font-medium text-gray-700 mb-1">
+            Partida inicio Grupo B *
+          </label>
+          <input 
+            type="number" 
+            id="gbp" 
+            v-model.number="campeonato.gbp"
+            min="1"
+            class="w-full px-3 py-2 border rounded-md"
+            :class="{ 'border-red-500': formErrors.gbp }"
+            placeholder="Partida tras la cual inicia Grupo B"
+          />
+          <p v-if="formErrors.gbp" class="mt-1 text-sm text-red-600">
+            {{ formErrors.gbp }}
           </p>
         </div>
         
         <!-- Campo: Tipo de campeonato -->
-        <div class="col-span-2">
+        <div class="col-span-2 md:col-span-1">
           <label for="tipo_campeonato" class="block text-sm font-medium text-gray-700 mb-1">
             Tipo de Campeonato *
           </label>
@@ -197,6 +340,32 @@ onMounted(async () => {
             {{ formErrors.tipo_campeonato_id }}
           </p>
         </div>
+
+        <!-- Campo: Club Organizador -->
+        <div class="col-span-2 md:col-span-1">
+          <label for="club_codigo" class="block text-sm font-medium text-gray-700 mb-1">
+            Club Organizador *
+          </label>
+          <select 
+            id="club_codigo" 
+            v-model="campeonato.club_codigo"
+            class="w-full px-3 py-2 border rounded-md"
+            :class="{ 'border-red-500': formErrors.club_codigo }"
+          >
+            <option value="" disabled>Seleccione un club</option>
+            <option 
+              v-for="club in clubs" 
+              :key="club.codigo_club" 
+              :value="club.codigo_club"
+            >
+              {{ club.nombre }} ({{ club.codigo_club }})
+            </option>
+          </select>
+          <p v-if="formErrors.club_codigo" class="mt-1 text-sm text-red-600">
+            {{ formErrors.club_codigo }}
+          </p>
+        </div>
+
       </div>
       
       <!-- Botones de acción -->

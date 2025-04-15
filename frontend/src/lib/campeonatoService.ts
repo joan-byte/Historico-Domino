@@ -10,20 +10,46 @@ export interface TipoCampeonato {
   descripcion?: string;
 }
 
+// Importar ClubResponse si existe y se va a usar
+// import type { ClubResponse } from './clubService'; // Asumiendo que existe
+// Placeholder si no se importa ClubResponse
+export interface ClubResponse { 
+  codigo_club: string;
+  nombre: string;
+  // otros campos relevantes del club...
+}
+
 export interface CampeonatoBase {
   nombre: string;
   fecha_inicio: string;  // formato YYYY-MM-DD
-  fecha_fin: string;     // formato YYYY-MM-DD
+  dias: number;
+  partidas: number;
+  pm: number;
+  gb: boolean;
+  gbp?: number | null; // opcional y puede ser null
   tipo_campeonato_id: number;
+  club_codigo: string;
 }
 
 export interface CampeonatoCreate extends CampeonatoBase {}
 
-export interface CampeonatoUpdate extends Partial<CampeonatoBase> {}
+export interface CampeonatoUpdate extends Partial<Omit<CampeonatoBase, 'tipo_campeonato_id'>> { 
+  // Incluir explícitamente los campos que sí se pueden actualizar desde el form
+  nombre?: string;
+  fecha_inicio?: string;
+  dias?: number;
+  partidas?: number;
+  pm?: number;
+  gb?: boolean;
+  gbp?: number | null; // Asegurar que se puede poner a null
+  club_codigo?: string; // Permitir club_codigo aunque sea FK, necesario para NCH calc
+}
 
 export interface CampeonatoResponse extends CampeonatoBase {
-  id: number;
-  tipo_campeonato?: TipoCampeonato;
+  nch: string; // Usar NCH como identificador
+  // Añadir objetos anidados si la API los devuelve (ajustar según la respuesta real)
+  tipo_campeonato?: TipoCampeonato; 
+  club?: ClubResponse; 
 }
 
 // Tipos para TipoCampeonato
@@ -53,45 +79,65 @@ export interface CampeonatosPaginados {
 }
 // --- Fin Interfaz ---
 
-// Endpoint base
-const CAMPEONATOS_ENDPOINT = '/api/campeonatos'; // Asumiendo prefijo /api desde main.py
-const TIPOS_ENDPOINT = '/api/tipos-campeonato'; // Asumiendo prefijo /api desde main.py
+// --- Endpoints --- 
+const CAMPEONATOS_ENDPOINT = '/api/campeonatos';
+const TIPOS_ENDPOINT = '/api/tipos-campeonato';
 
-// Servicio usando apiService
+// --- Objeto de Servicio --- 
 export const campeonatoService = {
-  // --- Funciones CRUD para Campeonatos ---
+  // --- Funciones CRUD para Campeonatos (Actualizadas) ---
   getAll: (skip: number = 0, limit: number = 100) => {
-    const url = `${CAMPEONATOS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
-    return apiService.custom<CampeonatosPaginados>(url);
+    // CORRECTO: Construye solo el endpoint relativo con parámetros
+    const relativeEndpoint = `${CAMPEONATOS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
+    // Pasa solo el endpoint relativo a apiService.custom
+    return apiService.custom<CampeonatosPaginados>(relativeEndpoint); 
   },
   
-  getById: (id: number) => apiService.getById<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString()),
+  // Usar NCH (string) como ID
+  getById: (nch: string) => {
+    // CORRECTO: Construye solo el endpoint relativo con el ID
+    const relativeEndpoint = `${CAMPEONATOS_ENDPOINT}/${nch}/`;
+    // Pasa solo el endpoint relativo a apiService.custom
+    return apiService.custom<CampeonatoResponse>(relativeEndpoint);
+  },
   
-  create: (data: CampeonatoCreate) => apiService.create<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, data),
+  // Usar apiService.create (asume que internamente añade API_URL)
+  create: (data: CampeonatoCreate) => {
+      // Pasar solo el endpoint relativo, apiService debería añadir API_URL y la barra final?
+      // Si apiService.create NO añade la barra final, debe ser CAMPEONATOS_ENDPOINT + '/'
+      return apiService.create<CampeonatoResponse>(CAMPEONATOS_ENDPOINT + '/', data);
+  },
   
-  update: (id: number, data: CampeonatoUpdate) => 
-    apiService.update<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString(), data),
+  // Usar NCH (string) como ID y apiService.update
+  update: (nch: string, data: CampeonatoUpdate) => {
+    // Pasar endpoint relativo y nch. apiService debería añadir API_URL y la barra final?
+    // Si apiService.update NO añade la barra final, debe ser CAMPEONATOS_ENDPOINT + '/'
+    return apiService.update<CampeonatoResponse>(CAMPEONATOS_ENDPOINT + '/', nch, data);
+  },
   
-  // Asegurarse que la respuesta de delete sea consistente (puede ser void o el objeto eliminado)
-  delete: (id: number) => apiService.delete<CampeonatoResponse>(CAMPEONATOS_ENDPOINT, id.toString()),
+  // Usar NCH (string) como ID y apiService.delete
+  delete: (nch: string): Promise<void> => {
+    // Pasar endpoint relativo y nch.
+    // Si apiService.delete NO añade la barra final, debe ser CAMPEONATOS_ENDPOINT + '/'
+    return apiService.delete<void>(CAMPEONATOS_ENDPOINT + '/', nch);
+  },
   
-  // --- Funciones CRUD para Tipos de Campeonato ---
-  // (Mover las funciones sueltas a este objeto para consistencia)
-  getAllTipos: () => apiService.getAll<TipoCampeonatoResponse[]>(TIPOS_ENDPOINT),
+  // --- Funciones CRUD para Tipos de Campeonato (Ajustadas a apiService) --- 
+  getAllTipos: () => apiService.getAll<TipoCampeonatoResponse[]>(TIPOS_ENDPOINT + '/'), // Asumiendo que getAll sí necesita la URL completa o el endpoint relativo con barra
   
-  getTipoById: (id: number) => apiService.getById<TipoCampeonatoResponse>(TIPOS_ENDPOINT, id.toString()),
+  getTipoById: (id: number) => apiService.getById<TipoCampeonatoResponse>(TIPOS_ENDPOINT + '/', id.toString()), // Asumiendo que getById maneja el id
   
-  createTipo: (data: TipoCampeonatoCreate) => apiService.create<TipoCampeonatoResponse>(TIPOS_ENDPOINT, data),
+  createTipo: (data: TipoCampeonatoCreate) => apiService.create<TipoCampeonatoResponse>(TIPOS_ENDPOINT + '/', data),
   
   updateTipo: (id: number, data: TipoCampeonatoUpdate) => 
-    apiService.update<TipoCampeonatoResponse>(TIPOS_ENDPOINT, id.toString(), data),
+    apiService.update<TipoCampeonatoResponse>(TIPOS_ENDPOINT + '/', id.toString(), data),
     
-  deleteTipo: (id: number) => apiService.delete<void>(TIPOS_ENDPOINT, id.toString())
+  deleteTipo: (id: number) => apiService.delete<void>(TIPOS_ENDPOINT + '/', id.toString())
 };
 
-// Funciones para TipoCampeonato
+// Funciones para TipoCampeonato (Restaurando el código original)
 export const createTipoCampeonato = async (data: TipoCampeonatoCreate): Promise<TipoCampeonatoResponse> => {
-  const response = await fetch(`${API_URL}/api/tipos-campeonato/`, {
+  const response = await fetch(`${API_URL}${TIPOS_ENDPOINT}/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -107,7 +153,7 @@ export const createTipoCampeonato = async (data: TipoCampeonatoCreate): Promise<
 };
 
 export const updateTipoCampeonato = async (id: number, data: TipoCampeonatoUpdate): Promise<TipoCampeonatoResponse> => {
-  const response = await fetch(`${API_URL}/api/tipos-campeonato/${id}/`, {
+  const response = await fetch(`${API_URL}${TIPOS_ENDPOINT}/${id}/`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -123,7 +169,7 @@ export const updateTipoCampeonato = async (id: number, data: TipoCampeonatoUpdat
 };
 
 export const deleteTipoCampeonato = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/api/tipos-campeonato/${id}/`, {
+  const response = await fetch(`${API_URL}${TIPOS_ENDPOINT}/${id}/`, {
     method: 'DELETE',
   });
 
@@ -133,11 +179,11 @@ export const deleteTipoCampeonato = async (id: number): Promise<void> => {
 };
 
 export const getTiposCampeonato = async (): Promise<TipoCampeonatoResponse[]> => {
-  const response = await fetch(`${API_URL}/api/tipos-campeonato/`);
+  const response = await fetch(`${API_URL}${TIPOS_ENDPOINT}/`); // Restaurado
 
-  if (!response.ok) {
-    throw new Error('Error al obtener los tipos de campeonato');
+  if (!response.ok) { // Restaurado
+    throw new Error('Error al obtener los tipos de campeonato'); // Restaurado
   }
 
-  return response.json();
+  return response.json(); // Restaurado
 }; 

@@ -104,7 +104,7 @@ const routes = [
         component: () => import('../views/NuevoCampeonato.vue')
       },
       {
-        path: '/campeonatos/modificar/:id',
+        path: '/campeonatos/modificar/:nch',
         name: 'ModificarCampeonato',
         component: () => import('../views/ModificarCampeonato.vue'),
         props: true
@@ -118,6 +118,12 @@ const routes = [
         path: '/campeonatos/estadisticas',
         name: 'EstadisticasCampeonatos',
         component: () => import('../views/EstadisticasCampeonatos.vue')
+      },
+      {
+        path: '/campeonatos/eliminar/:nch',
+        name: 'EliminarCampeonato',
+        component: () => import('../views/EliminarCampeonato.vue'),
+        props: true
       },
 
       // Rutas para el módulo de Resultados
