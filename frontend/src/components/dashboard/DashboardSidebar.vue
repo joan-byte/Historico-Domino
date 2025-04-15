@@ -3,6 +3,9 @@
 import { useNavigation, type NavItem } from '@/composables/useNavigation';
 import { useRouter } from 'vue-router';
 import { useClubsManagement } from '@/composables/useClubsManagement';
+// Importar injectSidebarContext para obtener el estado compartido
+import { injectSidebarContext } from '@/components/ui/sidebar/SidebarProvider.vue';
+import { computed } from 'vue'; // Necesario para computed property si se usa
 
 // Propiedades para el componente
 interface Props {
@@ -19,11 +22,14 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Obtener las funciones de navegación
+// Inyectar el contexto del Sidebar
+const sidebarContext = injectSidebarContext();
+// Obtener isOpen del contexto de forma segura
+const isOpen = computed(() => sidebarContext?.isOpen.value ?? true); // Usar computed para reactividad y valor por defecto
+
+// Obtener SOLO las funciones de navegación necesarias de useNavigation
 const {
-  isOpen,
   navigation,
-  toggleSidebar,
   toggleExpand,
   isExpanded
 } = useNavigation();
@@ -56,30 +62,30 @@ const handleChildClick = (href: string | undefined) => {
 
 // Funciones específicas para cada elemento padre
 const handleClubsClick = () => {
-  // Expandir/colapsar el menú de Clubs
-  toggleExpand('Clubs');
-  // Navegar a /clubes/
-  router.push('/clubes');
+  // Expandir/colapsar el menú de Clubs (Comentado temporalmente)
+  // toggleExpand('Clubs');
+  // Navegar a /clubes/crud
+  router.push('/clubes/crud');
 };
 
 const handleJugadoresClick = () => {
-  // Expandir/colapsar el menú de Jugadores
-  toggleExpand('Jugadores');
-  // Navegar a /jugadores/ (la ruta principal)
-  router.push('/jugadores');
+  // Expandir/colapsar el menú de Jugadores (Comentado temporalmente)
+  // toggleExpand('Jugadores');
+  // Navegar a /jugadores/crud
+  router.push('/jugadores/crud');
 };
 
 const handleCampeonatosClick = () => {
-  // Expandir/colapsar el menú de Campeonatos
-  toggleExpand('Campeonatos');
-  // Navegar a la ruta principal de campeonatos
-  router.push('/campeonatos');
+  // Expandir/colapsar el menú de Campeonatos (Comentado temporalmente)
+  // toggleExpand('Campeonatos');
+  // Navegar a /campeonatos/crud
+  router.push('/campeonatos/crud');
 };
 
 const handleResultadosClick = () => {
   // Solo expandir/colapsar el menú de Resultados
   toggleExpand('Resultados');
-  // Por ahora, no navegar a ninguna ruta
+  // Por ahora, no navegar ni cambiar la vista
   // router.push('/resultados');
 };
 
@@ -96,11 +102,15 @@ const handleParentClick = (item: NavItem) => {
       handleCampeonatosClick();
       break;
     case 'Resultados':
-      handleResultadosClick();
+      handleResultadosClick(); // Mantener toggleExpand aquí ya que no navega
       break;
     default:
-      // Para otros elementos, solo expandir/colapsar
-      toggleExpand(item.title);
+      // Para otros elementos sin navegación directa, mantener toggleExpand
+      if (item.children && item.children.length > 0) { 
+        toggleExpand(item.title);
+      } else if (item.href) {
+          router.push(item.href);
+      }
       break;
   }
 };

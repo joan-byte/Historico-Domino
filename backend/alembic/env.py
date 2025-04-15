@@ -7,10 +7,10 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Cargar variables de entorno desde 
-# Asegúrate de que la ruta al  sea correcta desde la ubicación de env.py
-dotenv_path = os.path.join(os.path.dirname(__file__), '..', '') # Sube un nivel desde alembic/ a backend/
-load_dotenv(dotenv_path=dotenv_path)
+# Cargar variables de entorno desde .env
+# Asegúrate de que la ruta al .env sea correcta desde la ubicación de env.py
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env') # Sube un nivel desde alembic/ a backend/
+loaded_dotenv = load_dotenv(dotenv_path=dotenv_path)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,8 +22,8 @@ database_url = os.getenv("DATABASE_URL")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 else:
-    # Opcional: manejar caso si DATABASE_URL no está en , usar alembic.ini
-    print("ADVERTENCIA: DATABASE_URL no encontrada en , usando valor de alembic.ini")
+    # Opcional: manejar caso si DATABASE_URL no está en .env, usar alembic.ini
+    print("ADVERTENCIA: DATABASE_URL no encontrada en .env, usando valor de alembic.ini")
 
 # Interpretar el archivo de configuración para el logging de Python.
 # Esta línea asume que el archivo ini ya está configurado para logging.

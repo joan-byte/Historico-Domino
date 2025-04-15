@@ -40,6 +40,7 @@ def listar_tipos_campeonatos(skip: int = 0, limit: int = 100, db: Session = Depe
     """
     Listar todos los tipos de campeonatos
     """
+    # Restaurar la consulta original a la base de datos
     return db.query(TipoCampeonato).offset(skip).limit(limit).all()
 
 @router.get("/{id}", response_model=TipoCampeonatoResponse)

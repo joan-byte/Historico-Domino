@@ -91,7 +91,7 @@ export const campeonatoService = {
 
 // Funciones para TipoCampeonato
 export const createTipoCampeonato = async (data: TipoCampeonatoCreate): Promise<TipoCampeonatoResponse> => {
-  const response = await fetch(`${API_URL}/tipos-campeonato`, {
+  const response = await fetch(`${API_URL}/api/tipos-campeonato/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const createTipoCampeonato = async (data: TipoCampeonatoCreate): Promise<
 };
 
 export const updateTipoCampeonato = async (id: number, data: TipoCampeonatoUpdate): Promise<TipoCampeonatoResponse> => {
-  const response = await fetch(`${API_URL}/tipos-campeonato/${id}`, {
+  const response = await fetch(`${API_URL}/api/tipos-campeonato/${id}/`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ export const updateTipoCampeonato = async (id: number, data: TipoCampeonatoUpdat
 };
 
 export const deleteTipoCampeonato = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/tipos-campeonato/${id}`, {
+  const response = await fetch(`${API_URL}/api/tipos-campeonato/${id}/`, {
     method: 'DELETE',
   });
 
@@ -133,7 +133,7 @@ export const deleteTipoCampeonato = async (id: number): Promise<void> => {
 };
 
 export const getTiposCampeonato = async (): Promise<TipoCampeonatoResponse[]> => {
-  const response = await fetch(`${API_URL}/tipos-campeonato`);
+  const response = await fetch(`${API_URL}/api/tipos-campeonato/`);
 
   if (!response.ok) {
     throw new Error('Error al obtener los tipos de campeonato');

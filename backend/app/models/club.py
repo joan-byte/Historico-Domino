@@ -37,6 +37,10 @@ class Club(Base):
     # Relación inversa con Jugador
     jugadores = relationship("Jugador", back_populates="club")
     
+    # Relación inversa con Campeonato
+    # Un club puede tener muchos campeonatos
+    campeonatos = relationship("Campeonato", back_populates="club")
+    
     @validates('cp')
     def validar_cp(self, key, cp):
         """

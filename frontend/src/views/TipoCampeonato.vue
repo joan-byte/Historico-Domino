@@ -39,12 +39,14 @@ const successMessage = ref<string>('');
 const showSuccess = ref(false);
 const formErrors = ref<Record<string, string>>({});
 
-// Configurar paginación
+// Calcular el total de elementos
+const totalTipos = computed(() => tiposCampeonato.value.length);
+
+// Configurar paginación pasando el total
 const { 
   currentPage, 
   pageSize, 
   totalPages, 
-  paginatedItems, 
   canGoPrev, 
   canGoNext, 
   pageRange,
@@ -55,7 +57,15 @@ const {
   setPageSize,
   firstPage,
   lastPage
-} = usePagination(tiposCampeonato);
+} = usePagination(totalTipos);
+
+// Calcular los items paginados
+const paginatedItems = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  // Asegurarse de que tiposCampeonato.value es un array antes de slice
+  return Array.isArray(tiposCampeonato.value) ? tiposCampeonato.value.slice(start, end) : [];
+});
 
 // Definir columnas para la tabla
 const columns = computed(() => [
@@ -269,74 +279,60 @@ onMounted(async () => {
       </form>
     </div>
     
-    <!-- Tabla de tipos de campeonato existentes -->
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    <!-- Sección de Tipos Existentes -->
+    <div class="mt-10">
       <h2 class="text-lg font-semibold mb-4">Tipos de Campeonato Existentes</h2>
-      
-      <!-- Loading spinner -->
-      <div v-if="isLoading" class="flex justify-center my-8">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-      
-      <!-- Tabla -->
-      <div v-else>
+
+      <!-- Mostrar indicador de carga -->
+      <div v-if="isLoading" class="text-center py-4">Cargando...</div>
+
+      <!-- Mostrar tabla y paginación solo si no está cargando Y tiposCampeonato es un array -->
+      <!-- Se usa `tiposCampeonato` para `v-if`, pero `paginatedItems` (ahora calculado localmente) para la tabla -->
+      <div v-else-if="Array.isArray(tiposCampeonato)">
         <DataTable 
-          :items="paginatedItems"
+          :items="paginatedItems" 
           :columns="columns"
           item-key="id"
-          class="mb-4"
-          hover
         >
-          <!-- Template para las acciones -->
-          <template #cell-acciones="{ item }">
-            <div class="flex items-center justify-center gap-2">
-              <button 
-                @click.stop="handleEdit(item)"
-                class="inline-flex items-center px-2.5 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                title="Editar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+          <template #cell(acciones)="{ item }">
+            <div class="flex space-x-2">
+              <button @click="handleEdit(item)" class="text-blue-600 hover:text-blue-800">
                 Editar
               </button>
-              <button 
-                @click.stop="handleDelete(item)"
-                class="inline-flex items-center px-2.5 py-1.5 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                title="Eliminar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+              <button @click="handleDelete(item)" class="text-red-600 hover:text-red-800">
                 Eliminar
               </button>
             </div>
           </template>
-
-          <!-- Template para cuando no hay datos -->
+           <!-- Template para cuando no hay datos (usando paginatedItems) -->
           <template #no-data>
             <div class="text-center py-4">
               <p>No hay tipos de campeonato para mostrar.</p>
             </div>
           </template>
         </DataTable>
-        
-        <!-- Paginación -->
-        <Pagination 
+
+        <!-- Paginación (se muestra incluso si paginatedItems está vacío) -->
+        <Pagination v-if="totalPages > 0" 
           :current-page="currentPage"
           :total-pages="totalPages"
-          :page-range="pageRange"
-          :can-go-prev="canGoPrev"
-          :can-go-next="canGoNext"
           :page-size="pageSize"
           :page-size-options="pageSizeOptions"
-          @go-to-page="goToPage"
-          @next-page="nextPage"
-          @prev-page="prevPage"
-          @update-page-size="setPageSize"
-          @first-page="firstPage"
-          @last-page="lastPage"
+          :page-range="pageRange" 
+          :can-go-prev="canGoPrev"
+          :can-go-next="canGoNext"
+          @update:currentPage="goToPage"
+          @update:pageSize="setPageSize"
+          @next="nextPage"
+          @prev="prevPage"
+          @first="firstPage"
+          @last="lastPage"
+          class="mt-4"
         />
+      </div>
+      <!-- Mensaje si hubo un error o la carga falló -->
+      <div v-else class="text-center text-gray-500 py-4">
+        No se pudieron cargar los tipos de campeonato.
       </div>
     </div>
   </div>

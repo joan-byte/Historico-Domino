@@ -1,6 +1,6 @@
 # Importaciones necesarias
 import os
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,8 +8,10 @@ from fastapi.templating import Jinja2Templates
 from .routes import club, jugador, tipo_campeonato, resultado, campeonato
 from .routes import import_export
 from .db.database import Base, engine
+from sqlalchemy.orm import Session
 from .db.session import get_db
 from .db.init_db import init_tipos_campeonatos
+from typing import List
 
 # Obtener la ruta del directorio actual
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -68,10 +70,10 @@ async def custom_swagger_ui_html(request: Request):
 # Montar archivos estáticos
 app.mount("/static", StaticFiles(directory=os.path.dirname(current_dir)), name="static")
 
-# Incluir routers con prefijo /api
+# Incluir routers con prefijo /api --- RESTAURADOS TODOS ---
+app.include_router(tipo_campeonato.router, prefix="/api", tags=["tipos_campeonatos"])
 app.include_router(club.router, prefix="/api", tags=["clubs"])
 app.include_router(jugador.router, prefix="/api", tags=["jugadores"])
-app.include_router(tipo_campeonato.router, prefix="/api", tags=["tipos_campeonatos"])
 app.include_router(resultado.router, prefix="/api", tags=["resultados"])
 app.include_router(campeonato.router, prefix="/api", tags=["campeonatos"])
-app.include_router(import_export.router, prefix="/api/import", tags=["import_export"]) 
+app.include_router(import_export.router, prefix="/api/import", tags=["import_export"])

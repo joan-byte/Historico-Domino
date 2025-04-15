@@ -40,51 +40,13 @@ const {
   toggleExpand, 
   isExpanded, 
   expandedItems, 
-  isOpen, // Obtener isOpen del composable también
-  toggleSidebar, // Obtener toggleSidebar del composable
-  getClubsChildren // Obtener getClubsChildren del composable
+  isOpen,
+  toggleSidebar,
+  getClubsChildren
 } = useNavigation();
 
-// Estado para controlar la vista actual
-const currentView = ref<string>('default');
-
-// Vigilar los cambios de ruta para actualizar la vista automáticamente
-watch(() => route.path, (newPath) => {
-  if (newPath === '/') {
-    // En la ruta principal, mostrar las tarjetas principales
-    currentView.value = 'default';
-    expandedItems.value = [];
-  } else if (newPath.includes('/clubes/') || newPath === '/clubes') {
-    // Si estamos en rutas relacionadas con clubes, mantener las tarjetas CRUD
-    currentView.value = 'crud';
-  } else if (newPath.includes('/jugadores/') || newPath === '/jugadores') {
-    // Si estamos en rutas relacionadas con jugadores, mostrar la vista de CRUD
-    currentView.value = 'crud';
-  } else if (newPath.includes('/campeonatos/') || newPath === '/campeonatos') {
-    // Si estamos en rutas relacionadas con campeonatos, mostrar la vista de CRUD
-    currentView.value = 'crud';
-  } else if (newPath.includes('/resultados/') || newPath === '/resultados') {
-    // Si estamos en rutas relacionadas con resultados, mostrar la vista de CRUD
-    currentView.value = 'crud';
-  } else {
-    // Para otras rutas, mostrar la vista predeterminada
-    currentView.value = 'default';
-  }
-}, { immediate: true });
-
-// Al montar el componente, configurar la vista según la ruta actual
+// Modificar onMounted para solo añadir el listener si aún se necesita
 onMounted(() => {
-  // Inicializar la vista según la ruta actual
-  if (route.path === '/clubes' || route.path.includes('/clubes/') ||
-      route.path === '/jugadores' || route.path.includes('/jugadores/') ||
-      route.path === '/campeonatos' || route.path.includes('/campeonatos/') ||
-      route.path === '/resultados' || route.path.includes('/resultados/')) {
-    currentView.value = 'crud';
-  } else {
-    currentView.value = 'default';
-  }
-
-  // Escuchar el evento personalizado cuando se selecciona un club
   window.addEventListener('club-selected', handleClubSelected);
 });
 
@@ -99,51 +61,41 @@ const handleClubSelected = (event: Event) => {
   selectedClub.value = customEvent.detail as Club | null;
 };
 
-// Función para manejar el clic en los elementos del sidebar
-const handleSidebarItemClick = (item: NavItem): void => {
-  // Navegar directamente a la ruta del elemento
-  if (item.href) {
-    router.push(item.href);
-    
-    // Actualizar la vista según la ruta
-    if (item.href.includes('/clubes/')) {
-      currentView.value = 'crud';
-    } else {
-      currentView.value = 'default';
-    }
-  }
-};
-
-// Función para manejar el clic en las tarjetas principales
-const handleMainCardClick = (route: string): void => {
+// MODIFICAR handleMainCardClick para que solo navegue y expanda
+const handleMainCardClick = (targetRoute: string): void => {
   // Expandir el elemento correspondiente en el sidebar
-  if (route.includes('/clubes')) {
+  if (targetRoute.includes('/clubes')) {
     if (!isExpanded('Clubs')) {
       toggleExpand('Clubs');
     }
-  } else if (route.includes('/jugadores')) {
+  } else if (targetRoute.includes('/jugadores')) {
     if (!isExpanded('Jugadores')) {
       toggleExpand('Jugadores');
     }
-  } else if (route.includes('/campeonatos')) {
+  } else if (targetRoute.includes('/campeonatos')) {
     if (!isExpanded('Campeonatos')) {
       toggleExpand('Campeonatos');
     }
-  } else if (route.includes('/resultados')) {
+  } else if (targetRoute.includes('/resultados')) {
     if (!isExpanded('Resultados')) {
       toggleExpand('Resultados');
     }
+  } else if (targetRoute === '/') {
+     // Opcional: colapsar todos al ir a inicio
+     // expandedItems.value = [];
   }
   
   // Navegar a la ruta
-  router.push(route);
+  router.push(targetRoute);
   
-  // Actualizar la vista según la ruta
-  if (route.includes('/clubes') || route.includes('/jugadores') || route.includes('/campeonatos')) {
-    currentView.value = 'crud';
+  // ELIMINAR actualización de currentView
+  /*
+  if (targetRoute.includes('/clubes') || targetRoute.includes('/jugadores') || targetRoute.includes('/campeonatos')) {
+    // currentView.value = 'crud';
   } else {
-    currentView.value = 'default';
+    // currentView.value = 'default';
   }
+  */
 };
 
 // Clases calculadas para el contenedor principal (si es necesario)
@@ -242,7 +194,7 @@ const mainContainerClasses = computed(() => {
                     :to="child.href || ''" 
                     class="block rounded-md px-2 py-1 text-[10px] text-gray-600 transition-all hover:text-gray-900" 
                     :class="{ 'bg-gray-100 text-gray-900': child.isActive }"
-                    @click="handleSidebarItemClick(child)"
+                    @click="handleMainCardClick(child.href || '')"
                   >
                     {{ child.title }}
                   </router-link>

@@ -50,5 +50,6 @@
   { "cp": "49", "provincia": "Zamora" },
   { "cp": "50", "provincia": "Zaragoza" },
   { "cp": "51", "provincia": "Ceuta" },
-  { "cp": "52", "provincia": "Melilla" }
+  { "cp": "52", "provincia": "Melilla" },
+  { "cp": "99", "provincia": "No Federado" }
 ] 

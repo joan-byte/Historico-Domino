@@ -2,7 +2,7 @@
 
 // URL base de la API
 // @ts-ignore - import.meta.env es una característica de Vite
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Configuración de la aplicación
 export const APP_CONFIG = {
