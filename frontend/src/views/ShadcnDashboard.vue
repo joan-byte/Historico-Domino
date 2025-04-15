@@ -238,15 +238,6 @@ const mainContainerClasses = computed(() => {
             
             <!-- Separador vertical -->
             <div class="h-4 w-px bg-gray-200"></div>
-            
-            <!-- Breadcrumb -->
-            <div class="flex items-center">
-              <div class="flex items-center">
-                <a href="#" class="text-[11px] text-gray-500 hover:text-gray-900 hidden md:block">Building Your Application</a>
-                <span class="mx-1 text-[11px] text-gray-400 hidden md:block">/</span>
-                <span class="text-[11px] font-medium">Data Fetching</span>
-              </div>
-            </div>
           </div>
         </header>
 

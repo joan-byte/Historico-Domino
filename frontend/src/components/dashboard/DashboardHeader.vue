@@ -23,7 +23,8 @@ const { toggleSidebar } = useNavigation();
       <!-- Separador vertical -->
       <div class="h-4 w-px bg-gray-200"></div>
       
-      <!-- Breadcrumb -->
+      <!-- Breadcrumb eliminado -->
+      <!-- 
       <div class="flex items-center">
         <div class="flex items-center">
           <a href="#" class="text-[11px] text-gray-500 hover:text-gray-900 hidden md:block">Building Your Application</a>
@@ -31,6 +32,7 @@ const { toggleSidebar } = useNavigation();
           <span class="text-[11px] font-medium">Data Fetching</span>
         </div>
       </div>
+      -->
     </div>
   </header>
 </template> 
