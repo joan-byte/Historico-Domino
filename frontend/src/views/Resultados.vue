@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Vista para mostrar y gestionar los resultados de los campeonatos
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, reactive } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { useResultados } from '../composables/useResultados';
 import { useCampeonatos } from '../composables/useCampeonatos';
@@ -26,6 +26,82 @@ import Input from '../components/ui/Input.vue'; // Asumiendo Input de Shadcn/ui
 import DatePicker from '../components/ui/DatePicker.vue'; // Asumiendo DatePicker de Shadcn/ui
 import { Trash2 } from 'lucide-vue-next'; // Icono para eliminar fila
 
+// Componentes UI (Asumiendo que existen y están registrados globalmente o se importan aquí)
+// Necesitaremos: Select, Input, Button, DatePicker?
+
+// --- Configuración de Filtros Dinámicos ---
+
+interface FilterFieldOption {
+  value: string; // Corresponde al nombre del campo en el modelo Resultado
+  label: string; // Etiqueta para mostrar en el select
+  type: 'text' | 'number' | 'date' | 'boolean' | 'select-tipo' | 'select-club' | 'select-campeonato'; // Tipo de dato
+}
+
+interface FilterOperatorOption {
+  value: string; // Operador que se enviará a la API (eq, contains, gt, etc.)
+  label: string; // Etiqueta para mostrar
+  types: FilterFieldOption['type'][]; // A qué tipos de campo aplica
+  valueComponent?: 'text' | 'number' | 'date' | 'date-range' | 'select-tipo' | 'select-club' | 'select-campeonato'; // Qué input mostrar (por defecto, 'text')
+}
+
+// Definir los campos filtrables
+const filterFields: FilterFieldOption[] = [
+  { value: 'idfed_jugador', label: 'IDFED Jugador', type: 'text' },
+  { value: 'nombre_jugador', label: 'Nombre Jugador', type: 'text' },
+  { value: 'apellido_jugador', label: 'Apellidos Jugador', type: 'text' },
+  { value: 'campeonato_nch', label: 'NCH Campeonato', type: 'select-campeonato' }, // Cambiado a select
+  { value: 'nombre_campeonato', label: 'Nombre Campeonato', type: 'text' },
+  { value: 'codigo_club_jugador', label: 'Código Club Jugador', type: 'select-club' }, // Cambiado a select
+  { value: 'tipo_campeonato_id', label: 'Tipo Campeonato', type: 'select-tipo' }, 
+  { value: 'fecha_campeonato', label: 'Fecha Campeonato', type: 'date' },
+  { value: 'partida', label: 'Partida', type: 'number' },
+  { value: 'mesa', label: 'Mesa', type: 'number' },
+  { value: 'pg', label: 'Partida Ganada', type: 'number' },
+  { value: 'dif', label: 'Diferencia', type: 'number' },
+  { value: 'pv', label: 'Puntos Válidos', type: 'number' },
+  { value: 'pt', label: 'Puntos Totales', type: 'number' },
+  { value: 'mg', label: 'Manos Ganadas', type: 'number' },
+  { value: 'pos', label: 'Posición', type: 'number' },
+  // Añadir más campos si se desea
+];
+
+// Definir los operadores disponibles
+const filterOperators: FilterOperatorOption[] = [
+  // Texto
+  { value: 'eq', label: 'Igual a', types: ['text', 'select-campeonato', 'select-club'] },
+  { value: 'contains', label: 'Contiene', types: ['text'] },
+  // { value: 'startswith', label: 'Empieza por', types: ['text'] }, // Ejemplo futuro
+  // { value: 'endswith', label: 'Termina en', types: ['text'] }, // Ejemplo futuro
+  
+  // Número y Select ID
+  { value: 'eq', label: 'Igual a', types: ['number', 'select-tipo'], valueComponent: 'number' }, // eq para tipo usa ID (número)
+  { value: 'gt', label: 'Mayor que', types: ['number'], valueComponent: 'number' },
+  { value: 'lt', label: 'Menor que', types: ['number'], valueComponent: 'number' },
+  { value: 'gte', label: 'Mayor o igual que', types: ['number'], valueComponent: 'number' }, // Ejemplo futuro
+  { value: 'lte', label: 'Menor o igual que', types: ['number'], valueComponent: 'number' }, // Ejemplo futuro
+
+  // Fecha
+  { value: 'eq', label: 'En la fecha', types: ['date'], valueComponent: 'date' },
+  { value: 'between', label: 'Entre fechas', types: ['date'], valueComponent: 'date-range' }, // Necesitará dos inputs
+  { value: 'after', label: 'Posterior o igual a', types: ['date'], valueComponent: 'date' },
+  { value: 'before', label: 'Anterior o igual a', types: ['date'], valueComponent: 'date' },
+];
+
+// Estado para los filtros dinámicos
+interface DynamicFilterCondition {
+  id: number; // Para key en v-for
+  field: string; // Valor del campo seleccionado (ej. 'idfed_jugador')
+  operator: string; // Valor del operador seleccionado (ej. 'eq')
+  value: any; // Valor principal
+  value2?: any; // Segundo valor (para 'between')
+}
+
+// Usar reactive para el array de filtros para facilitar la mutación
+const dynamicFilters = reactive<DynamicFilterCondition[]>([]);
+let nextFilterId = 0;
+
+// --- Fin Configuración Filtros --- 
+
 // Router y route
 const router = useRouter();
 const route = useRoute();
@@ -40,7 +116,7 @@ const {
   fetchResultados,
   removeResultado,
   reloadCurrentPage,
-  currentFiltros
+  currentFilterConditions
 } = useResultados();
 const { campeonatos, fetchCampeonatos, isLoading: isLoadingCampeonatos } = useCampeonatos();
 const { clubs, fetchClubs, isLoading: isLoadingClubs } = useClubs();
@@ -154,7 +230,7 @@ onMounted(() => {
   fetchTiposCampeonato();
   
   // Cargar resultados iniciales
-  aplicarFiltros(); // Usar la función aplicarFiltros para la carga inicial
+  fetchResultados([], 0, pageSize.value); 
 });
 
 // Función para cambiar de página (llamado por el componente Pagination)
@@ -346,82 +422,57 @@ const aplicarFiltros = () => {
   const skip = 0;
   const limit = pageSize.value;
   
-  // Construir ARRAY de filtros para la API basado en la selección actual
-  const conditions: FilterConditionFE[] = []; // Empezar con array vacío
+  // Construir ARRAY de condiciones a partir del estado dynamicFilters
+  const conditions: FilterConditionFE[] = dynamicFilters
+    .map(f => {
+      // Validación/Limpieza básica
+      if (!f.field || !f.operator || f.value === null || f.value === '') {
+          if (f.operator !== 'between') return null; // Ignorar filtro incompleto (excepto between)
+      }
+      
+      let apiValue = f.value;
+      // Manejo especial para 'between' que usa value y value2
+      if (f.operator === 'between') {
+          if (f.value === null || f.value === '' || f.value2 === null || f.value2 === ''){
+              return null; // Ignorar between incompleto
+          }
+          apiValue = [f.value, f.value2];
+      }
+      
+      // Podríamos añadir formateo de fechas aquí si DatePicker devuelve Date object
+      // if (filterFields.find(ff => ff.value === f.field)?.type === 'date' && apiValue instanceof Date) {
+      //    apiValue = format(apiValue, 'yyyy-MM-dd');
+      // }
+      // if (Array.isArray(apiValue) && filterFields.find(ff => ff.value === f.field)?.type === 'date') {
+      //    apiValue = apiValue.map(d => d instanceof Date ? format(d, 'yyyy-MM-dd') : d);
+      // }
+      
+      return { 
+        field: f.field, 
+        operator: f.operator, 
+        value: apiValue 
+      };
+    })
+    .filter(c => c !== null) as FilterConditionFE[]; // Filtrar nulos
 
-  // Añadir filtro de fechas si existen
-  if (filtros.value.fecha_desde) {
-    conditions.push({ 
-      field: 'fecha_campeonato', 
-      operator: 'after', // O 'gte' si queremos incluir el día
-      value: filtros.value.fecha_desde 
-    });
-  }
-  if (filtros.value.fecha_hasta) {
-    conditions.push({ 
-      field: 'fecha_campeonato', 
-      operator: 'before', // O 'lte' si queremos incluir el día
-      value: filtros.value.fecha_hasta 
-    });
-  }
-
-  // Añadir filtro específico según el concepto
-  switch (filtros.value.concepto) {
-    case 'idfed':
-      if (filtros.value.valorIdfed) {
-        conditions.push({ field: 'idfed_jugador', operator: 'eq', value: filtros.value.valorIdfed });
-        // Podríamos añadir aquí operador 'contains' si tuviéramos un selector de operador
-      }
-      break;
-    case 'campeonato':
-      if (filtros.value.valorCampeonato) {
-        conditions.push({ field: 'campeonato_nch', operator: 'eq', value: filtros.value.valorCampeonato });
-      }
-      break;
-    case 'club':
-      if (filtros.value.valorClub) {
-        conditions.push({ field: 'codigo_club_jugador', operator: 'eq', value: filtros.value.valorClub });
-      }
-      break;
-    case 'tipo':
-      if (filtros.value.valorTipo !== undefined) { // Comprobar undefined explícitamente
-        conditions.push({ field: 'tipo_campeonato_id', operator: 'eq', value: filtros.value.valorTipo });
-      }
-      break;
-    // 'todos' no añade ninguna condición específica de concepto
-  }
+  console.log("Aplicando filtros con condiciones:", conditions);
+  fetchResultados(conditions, skip, limit); // Llamar a fetch con las condiciones construidas
   
-  // Llamar a fetchResultados con el ARRAY de condiciones
-  fetchResultados(conditions, skip, limit); 
-  
-  // Actualizar query params (opcional, mantener como estaba)
-  router.replace({ 
+  // Ya no actualizamos query params con filtros aquí, es muy complejo
+  // Solo actualizamos paginación
+   router.replace({ 
     query: { 
       page: currentPage.value.toString(), 
       size: pageSize.value.toString(),
-      concepto: filtros.value.concepto,
-      valorIdfed: filtros.value.valorIdfed || undefined,
-      valorCampeonato: filtros.value.valorCampeonato || undefined,
-      valorClub: filtros.value.valorClub || undefined,
-      valorTipo: filtros.value.valorTipo?.toString() || undefined,
-      fecha_desde: filtros.value.fecha_desde || undefined,
-      fecha_hasta: filtros.value.fecha_hasta || undefined,
     }
   });
 };
 
 // Función para limpiar filtros
 const limpiarFiltros = () => {
-  filtros.value = {
-    concepto: 'todos',
-    valorIdfed: '',
-    valorCampeonato: '',
-    valorClub: '',
-    valorTipo: undefined,
-    fecha_desde: undefined,
-    fecha_hasta: undefined,
-  };
-  aplicarFiltros(); // Recargar con filtros limpios
+  dynamicFilters.length = 0; // Vaciar el array reactivo
+  addFilterRow(); // Opcional: añadir una fila vacía por defecto
+  aplicarFiltros(); // Recargar sin filtros
 };
 
 // Función para manejar click en fila
@@ -443,6 +494,65 @@ const getRowClass = (item: any) => {
    }
    return '';
  };
+
+// --- Funciones para Filtros Dinámicos --- 
+
+// Añadir una nueva condición de filtro vacía
+const addFilterRow = () => {
+  dynamicFilters.push({ 
+    id: nextFilterId++, 
+    field: filterFields[0].value, // Valor por defecto
+    operator: getAvailableOperators(filterFields[0].type)[0]?.value || '', // Operador por defecto
+    value: null, 
+    value2: null 
+  });
+};
+
+// Eliminar una condición de filtro por su ID
+const removeFilterRow = (id: number) => {
+  const index = dynamicFilters.findIndex(f => f.id === id);
+  if (index > -1) {
+    dynamicFilters.splice(index, 1);
+  }
+};
+
+// Obtener los operadores válidos para el tipo de campo seleccionado
+const getAvailableOperators = (fieldType: FilterFieldOption['type']) => {
+  return filterOperators.filter(op => op.types.includes(fieldType));
+};
+
+// Obtener el tipo de componente de valor necesario para un operador
+const getValueComponentType = (operatorValue: string) => {
+  const operator = filterOperators.find(op => op.value === operatorValue);
+  // Considerar el tipo del campo también si el operador aplica a varios tipos
+  // Por ahora, nos basamos solo en el operador
+  return operator?.valueComponent || 'text'; // Por defecto, input de texto
+};
+
+// Resetear operador y valor cuando cambia el campo
+const onFieldChange = (filter: DynamicFilterCondition) => {
+  const fieldType = filterFields.find(f => f.value === filter.field)?.type || 'text';
+  const availableOperators = getAvailableOperators(fieldType);
+  filter.operator = availableOperators[0]?.value || '';
+  filter.value = null;
+  filter.value2 = null;
+  // Resetear valor también cuando cambia el operador (si aplica)
+  onOperatorChange(filter);
+};
+
+// Resetear valor cuando cambia el operador (si requiere un input diferente)
+const onOperatorChange = (filter: DynamicFilterCondition) => {
+  // Podríamos añadir lógica aquí si el cambio de operador implica limpiar valores
+  // Por ejemplo, si cambiamos de 'between' a 'eq', limpiar value2
+  if (filter.operator !== 'between') {
+      filter.value2 = null;
+  }
+  // Si cambiamos de un operador de texto a uno numérico (menos probable con la lógica actual)
+  // podríamos intentar convertir/limpiar el valor.
+  // Por ahora, lo dejamos simple.
+};
+
+// --- Fin Funciones Filtros --- 
 
 </script>
 
@@ -475,98 +585,142 @@ const getRowClass = (item: any) => {
     <StatusMessage type="error" :show="!!error" :message="error || ''" class="mb-4" />
     <StatusMessage type="success" :show="showSuccess" :message="successMessage" class="mb-4" />
     
-    <!-- Filtros -->
-    <div class="bg-white border rounded-md shadow-sm p-6 mb-6">
-      <h2 class="text-lg font-medium mb-4">Filtros</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <!-- Selector de Concepto -->
-        <div>
-          <label for="filtro_concepto" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por</label>
-          <select id="filtro_concepto" v-model="filtros.concepto" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
-            <option v-for="opcion in opcionesConcepto" :key="opcion.value" :value="opcion.value">
-              {{ opcion.label }}
-            </option>
-          </select>
-        </div>
+    <!-- Sección de Filtros (REHECHA) -->
+    <div class="bg-white border rounded-md shadow-sm p-4 mb-6">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold">Filtros</h2>
+        <button @click="addFilterRow" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+           <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+           Añadir Filtro
+        </button>
+      </div>
+      
+      <div v-if="dynamicFilters.length === 0" class="text-gray-500 text-sm px-3 py-2">
+        No hay filtros activos. Haz clic en "Añadir Filtro" para empezar.
+      </div>
 
-        <!-- Input/Select Dinámico para el Concepto -->
-        <div :class="{'md:col-span-1': filtros.concepto !== 'todos'}"> 
-          <label v-if="filtros.concepto !== 'todos'" :for="'filtro_valor_' + filtros.concepto" class="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+      <div v-else class="space-y-3">
+        <!-- Fila de Filtro (v-for) -->
+        <div v-for="(filter, index) in dynamicFilters" :key="filter.id" class="flex flex-wrap md:flex-nowrap items-start gap-2 border-b pb-3 last:border-b-0">
           
-          <!-- Input para IDFED -->
-          <input 
-            v-if="filtros.concepto === 'idfed'"
-            id="filtro_valor_idfed" type="text" 
-            v-model="filtros.valorIdfed" 
-            placeholder="Escribir IDFED Jugador" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
+          <!-- Selector Campo -->
+          <div class="w-full md:w-1/4">
+            <label :for="'field-' + filter.id" class="sr-only">Campo</label>
+            <select :id="'field-' + filter.id" v-model="filter.field" @change="onFieldChange(filter)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <option v-for="fieldOption in filterFields" :key="fieldOption.value" :value="fieldOption.value">
+                {{ fieldOption.label }}
+              </option>
+            </select>
+          </div>
 
-          <!-- Select para Campeonato -->
-          <select 
-            v-if="filtros.concepto === 'campeonato'"
-            id="filtro_valor_campeonato" 
-            v-model="filtros.valorCampeonato" 
-            :disabled="isLoadingCampeonatos" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Seleccionar Campeonato</option>
-            <option v-for="camp in campeonatos" :key="camp.nch" :value="camp.nch">{{ camp.nch }} - {{ camp.nombre }}</option>
-          </select>
+          <!-- Selector Operador -->
+          <div class="w-full md:w-1/4">
+             <label :for="'operator-' + filter.id" class="sr-only">Operador</label>
+             <select :id="'operator-' + filter.id" v-model="filter.operator" @change="onOperatorChange(filter)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+               <option v-for="opOption in getAvailableOperators(filterFields.find(f => f.value === filter.field)?.type || 'text')" :key="opOption.value" :value="opOption.value">
+                 {{ opOption.label }}
+               </option>
+             </select>
+          </div>
 
-          <!-- Select para Club -->
-          <select 
-            v-if="filtros.concepto === 'club'"
-            id="filtro_valor_club" 
-            v-model="filtros.valorClub" 
-            :disabled="isLoadingClubs" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="">Seleccionar Club</option>
-            <option v-for="club in clubs" :key="club.codigo_club" :value="club.codigo_club">{{ club.codigo_club }} - {{ club.nombre }}</option>
-          </select>
+          <!-- Input/Select/Date Valor(es) -->
+          <div class="w-full md:w-2/4 flex-grow flex items-start gap-2">
+            <label :for="'value-' + filter.id" class="sr-only">Valor</label>
+            
+            <!-- Input Texto -->
+            <input 
+              v-if="!['date', 'date-range', 'select-tipo', 'select-club', 'select-campeonato', 'number'].includes(getValueComponentType(filter.operator))"
+              :id="'value-' + filter.id" type="text" 
+              v-model="filter.value" 
+              placeholder="Valor" 
+              class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
 
-          <!-- Select para Tipo Campeonato -->
-          <select 
-            v-if="filtros.concepto === 'tipo'"
-            id="filtro_valor_tipo" 
-            v-model="filtros.valorTipo" 
-            :disabled="isLoadingTipos" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option :value="undefined">Seleccionar Tipo</option> <!-- Permitir quitar el filtro -->
-            <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">{{ tipo.codigo }} - {{ tipo.nombre }}</option>
-          </select>
+             <!-- Input Número -->
+            <input 
+              v-if="getValueComponentType(filter.operator) === 'number'" 
+              :id="'value-' + filter.id" type="number" 
+              v-model.number="filter.value" 
+              placeholder="Valor" 
+              class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+
+            <!-- Date Picker (Simple) -->
+            <input 
+              v-if="getValueComponentType(filter.operator) === 'date'" 
+              :id="'value-' + filter.id" type="date" 
+              v-model="filter.value" 
+              class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+
+            <!-- Date Range Picker (Dos inputs) -->
+            <template v-if="getValueComponentType(filter.operator) === 'date-range'">
+              <input 
+                :id="'value-' + filter.id" type="date" 
+                v-model="filter.value" 
+                aria-label="Fecha desde" 
+                class="w-1/2 px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <input 
+                :id="'value2-' + filter.id" type="date" 
+                v-model="filter.value2" 
+                aria-label="Fecha hasta" 
+                class="w-1/2 px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+            </template>
+            
+            <!-- Select Tipo Campeonato -->
+             <select 
+                v-if="getValueComponentType(filter.operator) === 'select-tipo'" 
+                :id="'value-' + filter.id" 
+                v-model="filter.value" 
+                :disabled="isLoadingTipos" 
+                class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option :value="null">Seleccionar Tipo</option>
+                <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">{{ tipo.codigo }} - {{ tipo.nombre }}</option>
+             </select>
+             
+             <!-- Select Club -->
+             <select 
+                v-if="getValueComponentType(filter.operator) === 'select-club'" 
+                :id="'value-' + filter.id" 
+                v-model="filter.value" 
+                :disabled="isLoadingClubs" 
+                class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option :value="null">Seleccionar Club</option>
+                <option v-for="club in clubs" :key="club.codigo_club" :value="club.codigo_club">{{ club.codigo_club }} - {{ club.nombre }}</option>
+             </select>
+
+             <!-- Select Campeonato -->
+             <select 
+                v-if="getValueComponentType(filter.operator) === 'select-campeonato'" 
+                :id="'value-' + filter.id" 
+                v-model="filter.value" 
+                :disabled="isLoadingCampeonatos" 
+                class="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option :value="null">Seleccionar Campeonato</option>
+                <option v-for="camp in campeonatos" :key="camp.nch" :value="camp.nch">{{ camp.nch }} - {{ camp.nombre }}</option>
+             </select>
+
+          </div>
           
-          <!-- Espacio reservado cuando es 'todos' -->
-           <div v-if="filtros.concepto === 'todos'" class="h-10"></div> 
-
-        </div>
-
-        <!-- Fecha Desde y Fecha Hasta (siempre visibles) -->
-         <div>
-          <label for="filtro_fecha_desde" class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
-          <input 
-            id="filtro_fecha_desde" type="date" 
-            v-model="filtros.fecha_desde" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
-        </div>
-        <div>
-          <label for="filtro_fecha_hasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
-          <input 
-            id="filtro_fecha_hasta" type="date" 
-            v-model="filtros.fecha_hasta" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
-        </div>
-
-        <!-- Botones -->
-        <div class="flex gap-2 justify-end md:col-span-3">
-          <button @click="limpiarFiltros" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Limpiar</button>
-          <button @click="aplicarFiltros" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700" :disabled="isLoading">Aplicar Filtros</button>
+           <!-- Botón Eliminar Fila -->
+           <div class="flex-shrink-0">
+             <button @click="removeFilterRow(filter.id)" class="p-2 text-gray-400 hover:text-red-600" aria-label="Eliminar filtro">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+             </button>
+           </div>
         </div>
       </div>
+
+      <!-- Botones Aplicar/Limpiar (Fuera del loop) -->
+       <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
+         <button @click="limpiarFiltros" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Limpiar Todo</button>
+         <button @click="aplicarFiltros" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700" :disabled="isLoading">Aplicar Filtros</button>
+       </div>
     </div>
     
     <!-- Tabla de Resultados -->
