@@ -70,11 +70,11 @@ class Resultado(Base):
     @validates('idfed_jugador', 'idfed_pareja')
     def validar_idfed(self, key, idfed):
         """
-        Valida el formato del IDFED si se proporciona
+        Valida el formato del IDFED si se proporciona (debe ser 6 dígitos)
         """
         if idfed is not None:
-            if len(idfed) != 7 or not idfed.isdigit():
-                raise ValueError("El IDFED debe tener 7 dígitos numéricos")
+            if len(idfed) != 6 or not idfed.isdigit():
+                raise ValueError("El IDFED debe tener 6 dígitos numéricos")
         return idfed
     
     @validates('codigo_club_jugador', 'codigo_club_pareja')

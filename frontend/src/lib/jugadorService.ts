@@ -45,34 +45,57 @@ export interface JugadoresPaginados {
 }
 // --- Fin interfaz ---
 
-// Endpoint para jugadores
-const JUGADORES_ENDPOINT = '/api/jugadores/';
+// Endpoint para jugadores (Corregido: sin /api/ inicial)
+const JUGADORES_ENDPOINT = '/jugadores/';
 
 // Servicio para gestionar jugadores
 export const jugadorService = {
   // Obtener todos los jugadores CON PAGINACIÓN
   getAll: (skip: number = 0, limit: number = 100) => {
-    // Construir la URL con parámetros de query
-    const url = `${JUGADORES_ENDPOINT}?skip=${skip}&limit=${limit}`;
-    // Usar apiService.custom o adaptar apiService.getAll si es posible
-    // Asumimos que apiService.custom hace un fetch GET por defecto si no se especifica método
-    return apiService.custom<JugadoresPaginados>(url);
+    // Construir endpoint relativo con parámetros
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}?skip=${skip}&limit=${limit}`;
+    // Pasar solo endpoint relativo
+    return apiService.custom<JugadoresPaginados>(relativeEndpoint);
   },
   
-  // Obtener un jugador por su idfed (el backend usa idfed como identificador en las rutas)
-  getByIdFed: (idfed: string) => apiService.getById<JugadorResponse>(JUGADORES_ENDPOINT, idfed),
+  // Obtener un jugador por su idfed
+  getByIdFed: (idfed: string) => {
+    // Construir endpoint relativo
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}${idfed}`;
+    // apiService.getById espera id como segundo arg, pero aquí usamos idfed y necesitamos la barra final?
+    // Usar custom para asegurar el formato correcto si la API espera /jugadores/IDFED/
+    return apiService.custom<JugadorResponse>(relativeEndpoint + '/');
+    // Si la API espera /jugadores/IDFED (sin barra) y getById funciona:
+    // return apiService.getById<JugadorResponse>(JUGADORES_ENDPOINT, idfed);
+  },
   
   // Crear un nuevo jugador
-  create: (jugadorData: JugadorCreate) => apiService.create<JugadorResponse>(JUGADORES_ENDPOINT, jugadorData),
+  create: (jugadorData: JugadorCreate) => {
+    // Pasar solo endpoint relativo
+    return apiService.create<JugadorResponse>(JUGADORES_ENDPOINT, jugadorData);
+  },
   
-  // Actualizar un jugador existente (usando POST ya que PUT no está implementado en el backend)
-  update: (idfed: string, jugadorData: JugadorUpdate) => 
-    apiService.custom<JugadorResponse>(`${JUGADORES_ENDPOINT}actualizar/${idfed}`, 'POST', jugadorData),
+  // Actualizar un jugador existente (usando POST)
+  update: (idfed: string, jugadorData: JugadorUpdate) => {
+    // Construir endpoint relativo
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}actualizar/${idfed}`;
+    return apiService.custom<JugadorResponse>(relativeEndpoint, 'POST', jugadorData);
+  },
   
   // Eliminar un jugador
-  delete: (idfed: string) => apiService.delete<JugadorResponse>(JUGADORES_ENDPOINT, idfed),
+  delete: (idfed: string) => {
+    // Construir endpoint relativo
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}${idfed}`;
+    // Usar custom para asegurar formato y método DELETE
+    return apiService.custom<JugadorResponse>(relativeEndpoint + '/', 'DELETE');
+     // Alternativa si delete funciona con idfed:
+     // return apiService.delete<JugadorResponse>(JUGADORES_ENDPOINT, idfed);
+  },
   
   // Obtener jugadores por club
-  getByClub: (codigoClub: string) => 
-    apiService.custom<JugadorResponse[]>(`${JUGADORES_ENDPOINT}club/${codigoClub}`)
+  getByClub: (codigoClub: string) => {
+     // Construir endpoint relativo
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}club/${codigoClub}`;
+    return apiService.custom<JugadorResponse[]>(relativeEndpoint);
+  }
 }; 

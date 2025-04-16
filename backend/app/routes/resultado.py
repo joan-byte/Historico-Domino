@@ -70,6 +70,7 @@ def crear_resultado(resultado: ResultadoCreate, db: Session = Depends(get_db)):
     # Crear el nuevo resultado
     nuevo_resultado = Resultado(
         tipo_campeonato_id=resultado.tipo_campeonato_id,
+        campeonato_nch=resultado.campeonato_nch,
         nombre_campeonato=resultado.nombre_campeonato,
         fecha_campeonato=resultado.fecha_campeonato,
         idfed_jugador=resultado.idfed_jugador,
@@ -172,14 +173,8 @@ def actualizar_resultado(
     if not resultado:
         raise HTTPException(status_code=404, detail="Resultado no encontrado")
     
-    # Si se proporciona un nuevo tipo de campeonato, verificar que existe
-    if resultado_update.tipo_campeonato_id is not None:
-        tipo_campeonato = db.query(TipoCampeonato).filter(TipoCampeonato.id == resultado_update.tipo_campeonato_id).first()
-        if not tipo_campeonato:
-            raise HTTPException(status_code=404, detail="Tipo de campeonato no encontrado")
-    
-    # Actualizar los campos proporcionados
-    update_data = resultado_update.dict(exclude_unset=True)
+    # Actualizar los campos proporcionados del formulario (que ahora solo son los detalles de la partida)
+    update_data = resultado_update.model_dump(exclude_unset=True) # Usar model_dump() en lugar de dict()
     for key, value in update_data.items():
         setattr(resultado, key, value)
     

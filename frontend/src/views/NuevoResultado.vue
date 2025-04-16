@@ -182,29 +182,73 @@ const validarFormulario = (): boolean => {
 // Función para guardar
 const guardarResultado = async () => {
   if (!validarFormulario()) {
+    // Mostrar un mensaje más general o hacer scroll al primer error si es necesario
+    console.warn("Errores de validación:", validationErrors.value);
+    // Podrías añadir aquí un mensaje de error global si lo prefieres
+    // formError.value = "Por favor, corrige los errores del formulario."; // Esto requiere modificar formError computed
     return;
   }
   
   try {
-    // Asegurarse de que todos los campos requeridos por ResultadoCreate estén presentes
+    // *** Asegurar que los IDFED y códigos de club son strings ***
+    // Se eliminó el padStart para IDFED ya que la DB los guarda sin ceros iniciales
+    const idfedJugadorStr = form.value.idfed_jugador ? String(form.value.idfed_jugador) : undefined;
+    const idfedParejaStr = form.value.idfed_pareja ? String(form.value.idfed_pareja) : undefined;
+    // Mantenemos padStart para código de club si es necesario que siempre tenga 6 dígitos
+    const codigoClubJugadorStr = form.value.codigo_club_jugador ? String(form.value.codigo_club_jugador).padStart(6, '0') : undefined;
+    const codigoClubParejaStr = form.value.codigo_club_pareja ? String(form.value.codigo_club_pareja).padStart(6, '0') : undefined;
+    
+    // Validar que los IDFED/códigos son correctos antes de enviar (si existen)
+    // Ajustar validación de longitud/formato si es necesario según cómo se guarden realmente
+    if (!idfedJugadorStr /* || idfedJugadorStr.length !== 7 */ || !/^\d+$/.test(idfedJugadorStr)) { // Se comenta la validación de longitud exacta por ahora
+         console.error("Error: IDFED Jugador inválido antes de enviar:", idfedJugadorStr);
+         validationErrors.value.idfed_jugador = "El IDFED del jugador principal no es válido.";
+         return; // Detener si hay un error crítico aquí
+    }
+     if (idfedParejaStr && (/*! idfedParejaStr.length !== 7 || */ !/^\d+$/.test(idfedParejaStr))) { // Se comenta la validación de longitud exacta por ahora
+         console.error("Error: IDFED Pareja inválido antes de enviar:", idfedParejaStr);
+         validationErrors.value.idfed_pareja = "El IDFED de la pareja no es válido.";
+         return; // Detener si hay un error crítico aquí
+    }
+    if (!codigoClubJugadorStr || codigoClubJugadorStr.length !== 6 || !/^\d+$/.test(codigoClubJugadorStr)) {
+        console.error("Error: Código Club Jugador inválido antes de enviar:", codigoClubJugadorStr);
+        validationErrors.value.idfed_jugador = "El Código Club del jugador principal no es válido."; // Asociar error al campo más relevante
+        return;
+    }
+     if (codigoClubParejaStr && (codigoClubParejaStr.length !== 6 || !/^\d+$/.test(codigoClubParejaStr))) {
+        console.error("Error: Código Club Pareja inválido antes de enviar:", codigoClubParejaStr);
+         validationErrors.value.idfed_pareja = "El Código Club de la pareja no es válido."; // Asociar error al campo más relevante
+        return;
+    }
+
+
+    // Construir el payload asegurando los tipos y campos requeridos por ResultadoCreate
     const resultadoData: ResultadoCreate = {
-      tipo_campeonato_id: form.value.tipo_campeonato_id!,
+      // Info Campeonato
+      tipo_campeonato_id: form.value.tipo_campeonato_id!, 
+      // Incluir el NCH del campeonato seleccionado
       campeonato_nch: form.value.campeonato_nch!,
       nombre_campeonato: form.value.nombre_campeonato!,
       fecha_campeonato: form.value.fecha_campeonato!,
-      idfed_jugador: form.value.idfed_jugador!,
+
+      // Info Jugador Principal
+      idfed_jugador: idfedJugadorStr, // Usar el string validado
       nombre_jugador: form.value.nombre_jugador!,
       apellido_jugador: form.value.apellido_jugador!,
-      codigo_club_jugador: form.value.codigo_club_jugador!,
+      codigo_club_jugador: codigoClubJugadorStr!, // Usar el string validado
       nombre_club_jugador: form.value.nombre_club_jugador!,
-      idfed_pareja: form.value.idfed_pareja || undefined,
-      nombre_pareja: form.value.idfed_pareja ? form.value.nombre_pareja || '' : undefined,
-      apellido_pareja: form.value.idfed_pareja ? form.value.apellido_pareja || '' : undefined,
-      codigo_club_pareja: form.value.idfed_pareja ? form.value.codigo_club_pareja || undefined : undefined,
-      nombre_club_pareja: form.value.idfed_pareja ? form.value.nombre_club_pareja || '' : undefined,
+
+      // Info Pareja (opcional, validada y convertida a string si existe)
+      idfed_pareja: idfedParejaStr, // Usar el string validado (o undefined)
+      nombre_pareja: idfedParejaStr ? form.value.nombre_pareja || undefined : undefined,
+      apellido_pareja: idfedParejaStr ? form.value.apellido_pareja || undefined : undefined,
+      codigo_club_pareja: codigoClubParejaStr, // Usar el string validado (o undefined)
+      nombre_club_pareja: idfedParejaStr ? form.value.nombre_club_pareja || undefined : undefined,
+
+      // Detalles Partida (validados)
       partida: form.value.partida!,
       mesa: form.value.mesa!,
-      gb: form.value.gb!,
+      gb: form.value.gb!, // Es boolean
       pg: form.value.pg!,
       dif: form.value.dif!,
       pv: form.value.pv!,
@@ -213,10 +257,36 @@ const guardarResultado = async () => {
       pos: form.value.pos!,
     };
     
+    console.log("Enviando resultado (final):", JSON.stringify(resultadoData, null, 2)); // Log detallado para depuración
+    
     await addResultado(resultadoData);
-    router.push('/resultados');
-  } catch (error) {
-    console.error("Error al guardar resultado:", error);
+    // Si todo va bien, redirigir
+    router.push('/resultados'); 
+    
+  } catch (error: any) {
+    console.error("Error detallado al guardar resultado:", error);
+    // Mostrar el error del backend si existe en formError
+     const apiError = error?.response?.data?.detail || error?.message || 'Ocurrió un error inesperado al guardar.';
+     // Intentar parsear si es un string JSON (común en FastAPI validation errors)
+     try {
+       const parsedError = JSON.parse(apiError);
+       // Formatear errores de validación de Pydantic si existen
+       if (Array.isArray(parsedError.detail)) {
+         const errorMessages = parsedError.detail.map((e: any) => `${e.loc.join('.')} - ${e.msg}`).join('; ');
+         // Asignar al estado de error para mostrarlo
+         // Necesitaríamos modificar `formError` para que no sea solo `computed` o usar otro ref
+         console.error("Errores de validación del backend:", errorMessages);
+         // Aquí podrías actualizar un ref específico para errores de API
+       } else {
+          console.error("Error API:", apiError);
+          // Actualizar el estado de error general
+       }
+     } catch (parseError) {
+       console.error("Error API (no JSON):", apiError);
+        // Actualizar el estado de error general
+     }
+    // Aquí puedes asignar el error a una variable ref para mostrarlo en StatusMessage
+    // Ejemplo: apiSubmitError.value = apiError;
   }
 };
 
@@ -266,7 +336,7 @@ const cancelar = () => {
               >
                 <option :value="undefined" disabled>Seleccionar campeonato</option>
                 <option v-for="camp in campeonatos" :key="camp.nch" :value="camp.nch">
-                  {{ camp.nch }} - {{ camp.nombre }} ({{ camp.fecha_inicio }})
+                  {{ camp.nch }}
                 </option>
               </select>
             </label>
@@ -312,7 +382,7 @@ const cancelar = () => {
                 >
                   <option :value="undefined" disabled>Seleccionar jugador</option>
                   <option v-for="jugador in jugadores" :key="jugador.idfed" :value="jugador.idfed">
-                    {{ jugador.idfed }} - {{ jugador.apellidos }}, {{ jugador.nombre }}
+                    {{ jugador.idfed }}
                   </option>
                 </select>
               </label>
@@ -348,7 +418,7 @@ const cancelar = () => {
                 >
                   <option :value="undefined">Sin pareja</option>
                   <option v-for="jugador in jugadores" :key="jugador.idfed" :value="jugador.idfed">
-                    {{ jugador.idfed }} - {{ jugador.apellidos }}, {{ jugador.nombre }}
+                    {{ jugador.idfed }}
                   </option>
                 </select>
               </label>

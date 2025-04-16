@@ -327,9 +327,10 @@ const sortedResultados = computed(() => {
 // Columnas para la tabla
 const columns = computed<Columna<ResultadoResponse>[]>(() => { // Usar tipo Columna
   const baseColumns: Columna<ResultadoResponse>[] = [ // Tipar el array
+    // Mostrar el NCH del *campeonato* asociado al resultado
+    { field: 'campeonato_nch', header: 'NCH', sortable: true }, 
     { field: 'fecha_campeonato', header: 'Fecha', sortable: true, render: (item) => item.fecha_campeonato ? format(parseISO(item.fecha_campeonato), 'dd/MM/yyyy', { locale: es }) : '-' },
     { field: 'nombre_campeonato', header: 'Campeonato', sortable: true },
-    { field: 'nch', header: 'NCH', sortable: true },
     { field: 'nombre_jugador', header: 'Jugador', sortable: true, render: (item) => `${item.nombre_jugador || ''} ${item.apellido_jugador || ''}`.trim() || '-' },
     { field: 'nombre_club_jugador', header: 'Club Jugador', sortable: true },
     { field: 'nombre_pareja', header: 'Pareja', sortable: true, render: (item) => item.idfed_pareja ? (`${item.nombre_pareja || ''} ${item.apellido_pareja || ''}`.trim() || '-') : '-' },
@@ -346,11 +347,14 @@ const columns = computed<Columna<ResultadoResponse>[]>(() => { // Usar tipo Colu
     { field: 'mg', header: 'MG', sortable: true },
   ];
 
-  // Solo añadir columna de acciones si no estamos en modo selección (edit/delete)
-  // Usaremos el slot #acciones para mostrar botones condicionalmente
-  if (currentMode.value === 'list') {
-      baseColumns.push({ field: 'acciones', header: 'Acciones', sortable: false });
-  }
+  // Añadir columna "Acciones" sin campo real si estamos en modo lista
+  // para que el slot "row-actions" tenga un espacio donde mostrarse (aunque no se use directamente)
+  // O simplemente para mantener la estructura si DataTable lo espera.
+  // Alternativamente, se podría no añadir la columna y confiar solo en el slot row-actions.
+  // Vamos a añadirla para mayor claridad por ahora.
+   if (currentMode.value === 'list') {
+       baseColumns.push({ field: 'acciones', header: 'Acciones', sortable: false });
+   }
   
   return baseColumns;
 });
@@ -376,22 +380,20 @@ const getSortDir = (field: keyof ResultadoResponse | string) => {
 
 // Función para navegar a la página de edición
 const editarResultado = (resultado: ResultadoResponse) => {
-  // Navegar a la ruta de modificación con los identificadores
   router.push(`/resultados/modificar/${resultado.nch}/${resultado.fecha_campeonato}/${resultado.idfed_jugador}`);
 };
 
-// Función para iniciar el proceso de eliminación
+// Función para iniciar el proceso de eliminación (Restaurada)
 const solicitarEliminacion = (resultado: ResultadoResponse) => {
   resultadoToDelete.value = resultado;
   showConfirmDialog.value = true;
 };
 
-// Función para confirmar la eliminación
+// Función para confirmar la eliminación (ORIGINAL)
 const confirmarEliminacion = async () => {
   if (!resultadoToDelete.value) return;
   
   try {
-    // Usar removeResultado (o como se llame en el composable) con la PK correcta
     await removeResultado(
       resultadoToDelete.value.nch, 
       resultadoToDelete.value.fecha_campeonato, 
@@ -400,10 +402,8 @@ const confirmarEliminacion = async () => {
     successMessage.value = 'Resultado eliminado correctamente.';
     showSuccess.value = true;
     setTimeout(() => showSuccess.value = false, 3000);
-    // No es necesario llamar a reloadCurrentPage si removeResultado ya hace refetch
   } catch (err) {
-    // El error ya se maneja en el composable, se muestra en el StatusMessage
-    // Se podría añadir lógica específica aquí si fuera necesario
+    // Error manejado en composable
   } finally {
     showConfirmDialog.value = false;
     resultadoToDelete.value = null;
@@ -737,24 +737,13 @@ const onOperatorChange = (filter: DynamicFilterCondition) => {
         :row-class="getRowClass"
         @row-click="handleRowClick"
       >
-        <template #acciones="{ item }">
-          <!-- Mostrar botones solo en modo lista -->
-          <div v-if="currentMode === 'list'" class="flex space-x-2">
-            <button 
-              @click.stop="editarResultado(item)"
-              class="text-blue-600 hover:text-blue-800 text-sm"
-              aria-label="Editar resultado"
-            >
-              Editar
-            </button>
-            <button 
-              @click.stop="solicitarEliminacion(item)"
-              class="text-red-600 hover:text-red-800 text-sm"
-              aria-label="Eliminar resultado"
-            >
-              Eliminar
-            </button>
-          </div>
+        <!-- Slot #row-actions SIMPLIFICADO para DEBUG -->
+        <template #row-actions="{ item }">
+          <td v-if="currentMode === 'list'" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+             <!-- Quitar botones temporalmente -->
+             <span>(Acciones)</span> 
+          </td>
+           <td v-else></td> <!-- Celda vacía si no es modo lista -->
         </template>
          <template #empty>
             <div class="text-center py-4 text-gray-500">

@@ -32,11 +32,11 @@ class ResultadoBase(BaseModel):
     @validator('idfed_jugador', 'idfed_pareja')
     def validar_idfed(cls, v):
         """
-        Valida el formato del IDFED si se proporciona
+        Valida el formato del IDFED si se proporciona (debe ser 6 dígitos)
         """
         if v is not None:
-            if len(v) != 7 or not v.isdigit():
-                raise ValueError("El IDFED debe tener 7 dígitos numéricos")
+            if len(v) != 6 or not v.isdigit():
+                raise ValueError("El IDFED debe tener 6 dígitos numéricos")
         return v
 
     @validator('codigo_club_jugador', 'codigo_club_pareja')
@@ -53,14 +53,15 @@ class ResultadoCreate(ResultadoBase):
     """
     Esquema para crear un nuevo resultado
     """
-    pass
+    campeonato_nch: str
 
 class ResultadoUpdate(BaseModel):
     """
     Esquema para actualizar un resultado existente
+    (Se eliminan tipo_campeonato_id y nombre_campeonato ya que no se permite modificarlos desde la UI)
     """
-    tipo_campeonato_id: Optional[int] = None
-    nombre_campeonato: Optional[str] = None
+    # tipo_campeonato_id: Optional[int] = None 
+    # nombre_campeonato: Optional[str] = None 
     partida: Optional[int] = None
     mesa: Optional[int] = None
     gb: Optional[bool] = None
@@ -76,6 +77,7 @@ class ResultadoResponse(ResultadoBase):
     Esquema para la respuesta con un resultado
     """
     nch: int
+    campeonato_nch: Optional[str]
     codigo_tipo_campeonato: str
 
     class Config:
