@@ -1,7 +1,5 @@
 // apiService.ts - Servicio centralizado para gestionar llamadas a la API
-
-// URL base de la API
-const API_URL = 'http://localhost:8000'; // Ajustar según la configuración del entorno
+import { API_URL } from '../config'; // Importar API_URL centralizada
 
 /**
  * Función para realizar peticiones HTTP con fetch

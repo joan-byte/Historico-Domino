@@ -1,7 +1,7 @@
 // resultadoService.ts - Servicio para gestionar los resultados
-import { API_URL } from '../config';
+// import { API_URL } from '../config'; // Ya no se usa directamente aquí
 import { apiService } from './apiService';
-import type { FiltrosResultados } from '@/types/filtros'; // Asegurarse de que esta ruta es correcta
+import type { FiltrosResultados } from '@/types/filtros'; // Tipo antiguo, se reemplazará o adaptará
 
 // Interfaces basadas en los schemas del backend
 export interface ResultadoBase {
@@ -100,100 +100,93 @@ export interface ResultadosPaginados {
 }
 // --- Fin Interfaz --- 
 
-const RESULTADOS_ENDPOINT = '/api/resultados/';
+// Endpoint base
+const RESULTADOS_ENDPOINT = '/resultados'; 
 
-// Función para construir la URL con query params
-const buildUrl = (baseUrl: string, params: Record<string, any>): string => {
-  const url = new URL(baseUrl);
-  Object.keys(params).forEach(key => {
-    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
-      url.searchParams.append(key, params[key]);
-    }
-  });
-  return url.toString();
-};
+// --- Definir nueva interfaz para condiciones de filtro --- 
+export interface FilterConditionFE {
+  field: string;
+  operator: string;
+  value: any;
+}
 
-// Función genérica para manejar las respuestas de la API
-const handleResponse = async (response: Response) => {
-  if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch (e) {
-      errorData = { detail: response.statusText || 'Error desconocido en la API' };
-    }
-    const errorMessage = errorData.detail || `Error ${response.status}: ${response.statusText}`;
-    console.error('Error en API:', errorMessage, errorData);
-    throw new Error(errorMessage);
-  }
-  // Si la respuesta es 204 No Content, devolver null o un objeto vacío
-  if (response.status === 204) {
-    return null;
-  }
-  return response.json();
-};
-
-// Servicio con paginación y filtros para getAll
+// --- Servicio --- 
 export const resultadoService = {
+  // Nueva función para filtrar usando POST
+  filter: (conditions: FilterConditionFE[], skip: number = 0, limit: number = 100) => {
+    const requestBody = {
+      filters: conditions,
+      skip: skip,
+      limit: limit
+    };
+    const endpoint = `${RESULTADOS_ENDPOINT}/filtrar`; // Endpoint POST
+    console.log("Llamando a apiService.custom POST con endpoint:", endpoint, "y body:", requestBody);
+    // Usar apiService.custom para especificar el método POST y el cuerpo
+    return apiService.custom<ResultadosPaginados>(endpoint, 'POST', requestBody);
+  },
+
+  // Mantener getAll (marcarla como obsoleta o eliminarla eventualmente)
+  // @deprecated Usar filter en su lugar
   getAll: (filtros: FiltrosResultados = {}, skip: number = 0, limit: number = 100) => {
-    const params = new URLSearchParams();
-    params.append('skip', skip.toString());
-    params.append('limit', limit.toString());
-    
-    // Añadir filtros a los parámetros si existen
-    if (filtros.tipo_campeonato_id) {
-        params.append('tipo_campeonato_id', filtros.tipo_campeonato_id.toString());
-    }
-    if (filtros.fecha_desde) {
-        params.append('fecha_desde', filtros.fecha_desde);
-    }
-    if (filtros.fecha_hasta) {
-        params.append('fecha_hasta', filtros.fecha_hasta);
-    }
-    if (filtros.idfed_jugador) {
-        params.append('idfed_jugador', filtros.idfed_jugador);
-    }
-    
-    const url = `${RESULTADOS_ENDPOINT}?${params.toString()}`;
-    return apiService.custom<ResultadosPaginados>(url);
+     console.warn("La función resultadoService.getAll está obsoleta. Usar resultadoService.filter.");
+     // Adaptar filtros antiguos a la nueva estructura si es posible, o lanzar error
+     // Por simplicidad, la dejamos funcional pero limitada por ahora
+     const params = new URLSearchParams();
+     params.append('skip', skip.toString());
+     params.append('limit', limit.toString());
+     if (filtros.tipo_campeonato_id) params.append('tipo_campeonato_id', filtros.tipo_campeonato_id.toString());
+     if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+     if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+     if (filtros.idfed_jugador) params.append('idfed_jugador', filtros.idfed_jugador);
+     if (filtros.campeonato_nch) params.append('campeonato_nch', filtros.campeonato_nch);
+     if (filtros.codigo_club_jugador) params.append('codigo_club_jugador', filtros.codigo_club_jugador);
+     
+     const relativeEndpoint = `${RESULTADOS_ENDPOINT}?${params.toString()}`; // Llama a la ruta GET obsoleta
+     return apiService.custom<ResultadosPaginados>(relativeEndpoint);
   },
 
   // getById necesita la clave primaria compuesta
   getById: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }) => {
     const { nch, fecha_campeonato, idfed_jugador } = pk;
-    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
-    return apiService.custom<ResultadoResponse>(url);
+    // Pasar solo el endpoint relativo
+    const relativeEndpoint = `${RESULTADOS_ENDPOINT}/${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    return apiService.custom<ResultadoResponse>(relativeEndpoint);
   },
 
-  create: (data: ResultadoCreate) => apiService.create<ResultadoResponse>(RESULTADOS_ENDPOINT, data),
-
+  create: (data: ResultadoCreate) => {
+    // Pasar solo el endpoint relativo
+    return apiService.create<ResultadoResponse>(RESULTADOS_ENDPOINT, data);
+  },
+  
   // update necesita la clave primaria compuesta
   update: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }, data: ResultadoUpdate) => {
     const { nch, fecha_campeonato, idfed_jugador } = pk;
-    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
-    // Usar PUT para update según la API del backend
-    return apiService.custom<ResultadoResponse>(url, 'PUT', data);
+    // Pasar solo el endpoint relativo
+    const relativeEndpoint = `${RESULTADOS_ENDPOINT}/${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    return apiService.custom<ResultadoResponse>(relativeEndpoint, 'PUT', data);
   },
 
   // delete necesita la clave primaria compuesta
   delete: (pk: { nch: number; fecha_campeonato: string; idfed_jugador: string }) => {
     const { nch, fecha_campeonato, idfed_jugador } = pk;
-    const url = `${RESULTADOS_ENDPOINT}${nch}/${fecha_campeonato}/${idfed_jugador}`;
-    // Pasar un segundo argumento (aunque sea vacío) si apiService.delete lo requiere
-    return apiService.delete<ResultadoResponse>(url, ''); 
+    // Pasar solo el endpoint relativo
+    const relativeEndpoint = `${RESULTADOS_ENDPOINT}/${nch}/${fecha_campeonato}/${idfed_jugador}`;
+    // apiService.delete puede necesitar adaptación si no usa custom internamente
+    // Asumiendo que apiService.delete llama a fetchApi:
+    return apiService.delete<ResultadoResponse>(relativeEndpoint, ''); 
   },
   
   // Funciones específicas existentes (pueden o no necesitar paginación)
   getByJugador: (idfed_jugador: string) => {
-      const url = `${RESULTADOS_ENDPOINT}jugador/${idfed_jugador}`;
-      return apiService.custom<ResultadoResponse[]>(url);
+      const relativeEndpoint = `${RESULTADOS_ENDPOINT}/jugador/${idfed_jugador}`;
+      return apiService.custom<ResultadoResponse[]>(relativeEndpoint);
   },
   getByTipoCampeonato: (tipo_campeonato_id: number) => {
-      const url = `${RESULTADOS_ENDPOINT}tipo-campeonato/${tipo_campeonato_id}`;
-      return apiService.custom<ResultadoResponse[]>(url);
+      const relativeEndpoint = `${RESULTADOS_ENDPOINT}/tipo-campeonato/${tipo_campeonato_id}`;
+      return apiService.custom<ResultadoResponse[]>(relativeEndpoint);
   },
   getByCampeonato: (tipo_campeonato_id: number, nch: number) => {
-      const url = `${RESULTADOS_ENDPOINT}campeonato/${tipo_campeonato_id}/${nch}`;
-      return apiService.custom<ResultadoResponse[]>(url);
+      const relativeEndpoint = `${RESULTADOS_ENDPOINT}/campeonato/${tipo_campeonato_id}/${nch}`;
+      return apiService.custom<ResultadoResponse[]>(relativeEndpoint);
   }
 }; 

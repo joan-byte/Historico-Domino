@@ -9,13 +9,7 @@ import type {
   TipoCampeonatoUpdate,
   CampeonatosPaginados
 } from '../lib/campeonatoService';
-import { 
-  createTipoCampeonato as createTipoCampeonatoService,
-  updateTipoCampeonato as updateTipoCampeonatoService,
-  deleteTipoCampeonato as deleteTipoCampeonatoService,
-  getTiposCampeonato as getTiposCampeonatoService,
-  campeonatoService 
-} from '../lib/campeonatoService';
+import { campeonatoService } from '../lib/campeonatoService';
 
 export function useCampeonatos() {
   // Estado
@@ -139,47 +133,84 @@ export function useCampeonatos() {
 
   // Funciones para tipos de campeonato
   const createTipoCampeonato = async (data: TipoCampeonatoCreate) => {
+    isLoading.value = true;
+    error.value = null;
     try {
-      const newTipoCampeonato = await createTipoCampeonatoService(data);
-      tiposCampeonato.value.push(newTipoCampeonato);
+      const newTipoCampeonato = await campeonatoService.createTipo(data);
+      await fetchTiposCampeonato();
       return newTipoCampeonato;
     } catch (err) {
+      console.error('Error creating tipo campeonato:', err);
       error.value = err instanceof Error ? err.message : 'Error al crear el tipo de campeonato';
       throw err;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   const updateTipoCampeonato = async (id: number, data: TipoCampeonatoUpdate) => {
+    isLoading.value = true;
+    error.value = null;
     try {
-      const updatedTipoCampeonato = await updateTipoCampeonatoService(id, data);
+      const updatedTipoCampeonato = await campeonatoService.updateTipo(id, data);
       const index = tiposCampeonato.value.findIndex(t => t.id === id);
       if (index !== -1) {
         tiposCampeonato.value[index] = updatedTipoCampeonato;
       }
+      if (selectedTipoCampeonato.value?.id === id) {
+        selectedTipoCampeonato.value = updatedTipoCampeonato;
+      }
       return updatedTipoCampeonato;
     } catch (err) {
+      console.error(`Error updating tipo campeonato ${id}:`, err);
       error.value = err instanceof Error ? err.message : 'Error al actualizar el tipo de campeonato';
       throw err;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   const deleteTipoCampeonato = async (id: number) => {
+    isLoading.value = true;
+    error.value = null;
     try {
-      await deleteTipoCampeonatoService(id);
+      await campeonatoService.deleteTipo(id);
       tiposCampeonato.value = tiposCampeonato.value.filter(t => t.id !== id);
+      if (selectedTipoCampeonato.value?.id === id) {
+        selectedTipoCampeonato.value = null;
+      }
     } catch (err) {
+      console.error(`Error deleting tipo campeonato ${id}:`, err);
       error.value = err instanceof Error ? err.message : 'Error al eliminar el tipo de campeonato';
       throw err;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   const fetchTiposCampeonato = async () => {
+    isLoading.value = true;
+    error.value = null;
     try {
-      isLoading.value = true;
-      tiposCampeonato.value = await getTiposCampeonatoService();
+      tiposCampeonato.value = await campeonatoService.getAllTipos();
     } catch (err) {
+      console.error('Error fetching tipos campeonato:', err);
       error.value = err instanceof Error ? err.message : 'Error al obtener los tipos de campeonato';
-      throw err;
+      tiposCampeonato.value = [];
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const fetchTipoCampeonatoById = async (id: number) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      selectedTipoCampeonato.value = await campeonatoService.getTipoById(id);
+    } catch (err) {
+      console.error(`Error fetching tipo campeonato ${id}:`, err);
+      error.value = err instanceof Error ? err.message : 'Error al obtener el tipo de campeonato';
+      selectedTipoCampeonato.value = null;
     } finally {
       isLoading.value = false;
     }
@@ -207,6 +238,7 @@ export function useCampeonatos() {
     createTipoCampeonato,
     updateTipoCampeonato,
     deleteTipoCampeonato,
-    fetchTiposCampeonato
+    fetchTiposCampeonato,
+    fetchTipoCampeonatoById
   };
 } 

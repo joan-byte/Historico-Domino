@@ -6,10 +6,12 @@ import { useResultados } from '../composables/useResultados';
 import { useTiposCampeonato } from '../composables/useTiposCampeonato';
 import { useJugadores } from '../composables/useJugadores';
 import { useClubs } from '../composables/useClubs';
+import { useCampeonatos } from '../composables/useCampeonatos';
 import type { ResultadoCreate, ResultadoResponse } from '../lib/resultadoService';
 import type { TipoCampeonatoResponse } from '../lib/tipoCampeonatoService';
 import type { JugadorResponse } from '../lib/jugadorService';
 import type { ClubResponse } from '../lib/clubService';
+import type { CampeonatoResponse } from '../lib/campeonatoService';
 import StatusMessage from '../components/ui/StatusMessage.vue';
 
 const router = useRouter();
@@ -42,24 +44,34 @@ const {
   error: errorClubs 
 } = useClubs();
 
+// Usar composable de Campeonatos
+const { 
+  campeonatos, 
+  fetchCampeonatos, 
+  isLoading: isLoadingCampeonatos, 
+  error: errorCampeonatos 
+} = useCampeonatos();
+
 // Datos del formulario (refleja ResultadoCreate)
-const form = ref<Partial<ResultadoCreate>>({
+const form = ref<Partial<ResultadoCreate> & { campeonato_nch?: string; tipo_campeonato_nombre?: string }>({
   tipo_campeonato_id: undefined,
-  nombre_campeonato: '', // Se autocompleta al seleccionar tipo
-  fecha_campeonato: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+  tipo_campeonato_nombre: '',
+  campeonato_nch: undefined,
+  nombre_campeonato: '',
+  fecha_campeonato: new Date().toISOString().split('T')[0],
   idfed_jugador: undefined,
-  nombre_jugador: '', // Se autocompleta al seleccionar jugador
-  apellido_jugador: '', // Se autocompleta al seleccionar jugador
-  codigo_club_jugador: undefined, // Se autocompleta al seleccionar jugador
-  nombre_club_jugador: '', // Se autocompleta al seleccionar jugador
+  nombre_jugador: '',
+  apellido_jugador: '',
+  codigo_club_jugador: undefined,
+  nombre_club_jugador: '',
   idfed_pareja: undefined,
-  nombre_pareja: '', // Se autocompleta al seleccionar pareja
-  apellido_pareja: '', // Se autocompleta al seleccionar pareja
-  codigo_club_pareja: undefined, // Se autocompleta al seleccionar pareja
-  nombre_club_pareja: '', // Se autocompleta al seleccionar pareja
-  partida: 1, // Valor por defecto
-  mesa: 1, // Valor por defecto
-  gb: true, // Valor por defecto (A)
+  nombre_pareja: '',
+  apellido_pareja: '',
+  codigo_club_pareja: undefined,
+  nombre_club_pareja: '',
+  partida: 1,
+  mesa: 1,
+  gb: true,
   pg: 0,
   dif: 0,
   pv: 0,
@@ -71,15 +83,26 @@ const form = ref<Partial<ResultadoCreate>>({
 // Cargar datos necesarios al montar
 onMounted(() => {
   fetchTiposCampeonato();
-  fetchJugadores(); // Cargar todos los jugadores por defecto
-  fetchClubs(); // Cargar todos los clubs por defecto
+  fetchJugadores();
+  fetchClubs();
+  fetchCampeonatos();
 });
 
-// Autocompletar nombre del campeonato al seleccionar tipo
-watch(() => form.value.tipo_campeonato_id, (newId) => {
-  // Añadir tipo explícito al parámetro del find
-  const tipo = tiposCampeonato.value.find((t: TipoCampeonatoResponse) => t.id === newId);
-  form.value.nombre_campeonato = tipo ? tipo.nombre : '';
+// Autocompletar datos del campeonato al seleccionar NCH
+watch(() => form.value.campeonato_nch, (newNch) => {
+  const camp = campeonatos.value.find((c: CampeonatoResponse) => c.nch === newNch);
+  if (camp) {
+    form.value.nombre_campeonato = camp.nombre;
+    form.value.fecha_campeonato = camp.fecha_inicio;
+    form.value.tipo_campeonato_id = camp.tipo_campeonato_id;
+    const tipo = tiposCampeonato.value.find(t => t.id === camp.tipo_campeonato_id);
+    form.value.tipo_campeonato_nombre = tipo ? `${tipo.codigo} - ${tipo.nombre}` : 'Tipo no encontrado';
+  } else {
+    form.value.nombre_campeonato = '';
+    form.value.fecha_campeonato = new Date().toISOString().split('T')[0];
+    form.value.tipo_campeonato_id = undefined;
+    form.value.tipo_campeonato_nombre = '';
+  }
 });
 
 // Autocompletar datos del jugador principal al seleccionar IDFED
@@ -123,12 +146,12 @@ watch(() => form.value.idfed_pareja, (newIdfed) => {
 
 // Estado de carga general
 const isLoading = computed(() => 
-  isLoadingResultado.value || isLoadingTipos.value || isLoadingJugadores.value || isLoadingClubs.value
+  isLoadingResultado.value || isLoadingTipos.value || isLoadingJugadores.value || isLoadingClubs.value || isLoadingCampeonatos.value
 );
 
 // Errores combinados
 const formError = computed(() => 
-  errorResultado.value || errorTipos.value || errorJugadores.value || errorClubs.value
+  errorResultado.value || errorTipos.value || errorJugadores.value || errorClubs.value || errorCampeonatos.value
 );
 
 // Estado para errores de validación
@@ -139,15 +162,19 @@ const validarFormulario = (): boolean => {
   validationErrors.value = {};
   const data = form.value;
   
-  if (!data.tipo_campeonato_id) validationErrors.value.tipo_campeonato_id = 'Selecciona un tipo de campeonato.';
+  if (!data.campeonato_nch) validationErrors.value.campeonato_nch = 'Selecciona un campeonato.';
+  if (!data.tipo_campeonato_id) validationErrors.value.tipo_campeonato_id = 'El campeonato seleccionado no tiene un tipo válido.';
   if (!data.fecha_campeonato) validationErrors.value.fecha_campeonato = 'La fecha es obligatoria.';
   if (!data.idfed_jugador) validationErrors.value.idfed_jugador = 'Selecciona un jugador principal.';
   if (data.idfed_jugador && data.idfed_pareja === data.idfed_jugador) validationErrors.value.idfed_pareja = 'La pareja no puede ser el mismo jugador.';
   if (data.partida === undefined || data.partida <= 0) validationErrors.value.partida = 'El número de partida debe ser positivo.';
   if (data.mesa === undefined || data.mesa <= 0) validationErrors.value.mesa = 'El número de mesa debe ser positivo.';
-  // Añadir más validaciones según sea necesario (PG, DIF, PV, PT, MG, POS)
   if (data.pg === undefined || data.pg < 0) validationErrors.value.pg = 'PG debe ser 0 o positivo.';
-  // ... otras validaciones numéricas ...
+  if (data.dif === undefined || data.dif < 0) validationErrors.value.dif = 'DIF debe ser 0 o positivo.';
+  if (data.pv === undefined || data.pv < 0) validationErrors.value.pv = 'PV debe ser 0 o positivo.';
+  if (data.pt === undefined || data.pt < 0) validationErrors.value.pt = 'PT debe ser 0 o positivo.';
+  if (data.mg === undefined || data.mg < 0) validationErrors.value.mg = 'MG debe ser 0 o positivo.';
+  if (data.pos === undefined || data.pos < 0) validationErrors.value.pos = 'POS debe ser 0 o positivo.';
   
   return Object.keys(validationErrors.value).length === 0;
 };
@@ -162,6 +189,7 @@ const guardarResultado = async () => {
     // Asegurarse de que todos los campos requeridos por ResultadoCreate estén presentes
     const resultadoData: ResultadoCreate = {
       tipo_campeonato_id: form.value.tipo_campeonato_id!,
+      campeonato_nch: form.value.campeonato_nch!,
       nombre_campeonato: form.value.nombre_campeonato!,
       fecha_campeonato: form.value.fecha_campeonato!,
       idfed_jugador: form.value.idfed_jugador!,
@@ -186,9 +214,8 @@ const guardarResultado = async () => {
     };
     
     await addResultado(resultadoData);
-    router.push('/resultados'); // O a la lista de resultados
+    router.push('/resultados');
   } catch (error) {
-    // El error se muestra a través de formError
     console.error("Error al guardar resultado:", error);
   }
 };
@@ -221,30 +248,32 @@ const cancelar = () => {
       </div>
     </div>
 
-    <!-- Mensaje de error general -->
     <StatusMessage type="error" :show="!!formError" :message="formError || ''" class="mb-4" />
 
     <div class="bg-white border rounded-md shadow-sm p-6">
       <form @submit.prevent="guardarResultado" class="space-y-6">
-        <!-- Sección Campeonato y Fecha -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label for="tipo_campeonato_id" class="block text-sm font-medium text-gray-700">
-              Tipo de Campeonato <span class="text-red-500">*</span>
+            <label for="campeonato_nch" class="block text-sm font-medium text-gray-700">
+              Campeonato <span class="text-red-500">*</span>
               <select
-                id="tipo_campeonato_id" name="tipo_campeonato_id"
-                v-model="form.tipo_campeonato_id"
+                id="campeonato_nch" name="campeonato_nch"
+                v-model="form.campeonato_nch"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-                :class="{'border-red-500': validationErrors.tipo_campeonato_id}"
-                :disabled="isLoadingTipos"
+                :class="{'border-red-500': validationErrors.campeonato_nch}"
+                :disabled="isLoadingCampeonatos"
               >
-                <option :value="undefined" disabled>Seleccionar tipo</option>
-                <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">
-                  {{ tipo.codigo }} - {{ tipo.nombre }}
+                <option :value="undefined" disabled>Seleccionar campeonato</option>
+                <option v-for="camp in campeonatos" :key="camp.nch" :value="camp.nch">
+                  {{ camp.nch }} - {{ camp.nombre }} ({{ camp.fecha_inicio }})
                 </option>
               </select>
             </label>
+            <p v-if="validationErrors.campeonato_nch" class="text-red-500 text-xs mt-1">{{ validationErrors.campeonato_nch }}</p>
+            <label for="tipo_campeonato_nombre" class="block text-sm font-medium text-gray-700 mt-2">Tipo Campeonato</label>
+            <input id="tipo_campeonato_nombre" name="tipo_campeonato_nombre" type="text" :value="form.tipo_campeonato_nombre" readonly class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1" />
+            <input type="hidden" :value="form.tipo_campeonato_id" />
             <p v-if="validationErrors.tipo_campeonato_id" class="text-red-500 text-xs mt-1">{{ validationErrors.tipo_campeonato_id }}</p>
           </div>
           <div>
@@ -253,13 +282,13 @@ const cancelar = () => {
           </div>
           <div>
             <label for="fecha_campeonato" class="block text-sm font-medium text-gray-700">
-              Fecha Campeonato <span class="text-red-500">*</span>
+              Fecha Campeonato 
               <input
                 id="fecha_campeonato" name="fecha_campeonato"
-                v-model="form.fecha_campeonato"
+                :value="form.fecha_campeonato" 
                 type="date"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
+                readonly 
+                class="w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed mt-1"
                 :class="{'border-red-500': validationErrors.fecha_campeonato}"
               />
             </label>
@@ -267,7 +296,6 @@ const cancelar = () => {
           </div>
         </div>
 
-        <!-- Sección Jugador Principal -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-medium mb-4">Jugador Principal</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -305,7 +333,6 @@ const cancelar = () => {
           </div>
         </div>
 
-        <!-- Sección Pareja (Opcional) -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-medium mb-4">Pareja (Opcional)</h2>
            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -348,79 +375,58 @@ const cancelar = () => {
           </div>
         </div>
 
-        <!-- Sección Detalles Partida -->
-        <div class="border-t pt-6">
-          <h2 class="text-lg font-medium mb-4">Detalles Partida</h2>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <fieldset class="border p-4 rounded-md">
+          <legend class="text-lg font-medium text-gray-900 px-2">Detalles Partida</legend>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-4">
             <div>
-              <label for="partida" class="block text-sm font-medium text-gray-700">
-                Partida <span class="text-red-500">*</span>
-                <input id="partida" name="partida" v-model.number="form.partida" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.partida}"/>
-              </label>
+              <label for="partida" class="block text-sm font-medium text-gray-700">Partida <span class="text-red-500">*</span></label>
+              <input type="number" id="partida" name="partida" v-model.number="form.partida" required min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.partida}">
               <p v-if="validationErrors.partida" class="text-red-500 text-xs mt-1">{{ validationErrors.partida }}</p>
             </div>
-             <div>
-              <label for="mesa" class="block text-sm font-medium text-gray-700">
-                Mesa <span class="text-red-500">*</span>
-                <input id="mesa" name="mesa" v-model.number="form.mesa" type="number" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mesa}"/>
-              </label>
-               <p v-if="validationErrors.mesa" class="text-red-500 text-xs mt-1">{{ validationErrors.mesa }}</p>
-            </div>
-             <div>
-              <label for="gb" class="block text-sm font-medium text-gray-700">
-                GB (Grupo/Banda) <span class="text-red-500">*</span>
-                <select id="gb" name="gb" v-model="form.gb" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1">
-                  <option :value="true">A</option>
-                  <option :value="false">B</option>
-                </select>
-              </label>
+            <div>
+              <label for="mesa" class="block text-sm font-medium text-gray-700">Mesa <span class="text-red-500">*</span></label>
+              <input type="number" id="mesa" name="mesa" v-model.number="form.mesa" required min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mesa}">
+              <p v-if="validationErrors.mesa" class="text-red-500 text-xs mt-1">{{ validationErrors.mesa }}</p>
             </div>
             <div>
-              <label for="pos" class="block text-sm font-medium text-gray-700">
-                POS (Posición)
-                <input id="pos" name="pos" v-model.number="form.pos" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
-              </label>
+              <label for="gb" class="block text-sm font-medium text-gray-700">GB (Grupo/Banda) <span class="text-red-500">*</span></label>
+              <select id="gb" name="gb" v-model="form.gb" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1">
+                <option :value="true">A</option>
+                <option :value="false">B</option>
+              </select>
+            </div>
+            <div>
+              <label for="pos" class="block text-sm font-medium text-gray-700">POS (Posición) <span class="text-red-500">*</span></label>
+              <input type="number" id="pos" name="pos" v-model.number="form.pos" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pos}">
+               <p v-if="validationErrors.pos" class="text-red-500 text-xs mt-1">{{ validationErrors.pos }}</p>
+            </div>
+            <div>
+              <label for="pg" class="block text-sm font-medium text-gray-700">PG (Ganada) <span class="text-red-500">*</span></label>
+              <input type="number" id="pg" name="pg" v-model.number="form.pg" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pg}">
+               <p v-if="validationErrors.pg" class="text-red-500 text-xs mt-1">{{ validationErrors.pg }}</p>
+            </div>
+            <div>
+              <label for="dif" class="block text-sm font-medium text-gray-700">DIF (Diferencia) <span class="text-red-500">*</span></label>
+              <input type="number" id="dif" name="dif" v-model.number="form.dif" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.dif}">
+               <p v-if="validationErrors.dif" class="text-red-500 text-xs mt-1">{{ validationErrors.dif }}</p>
+            </div>
+            <div>
+              <label for="pv" class="block text-sm font-medium text-gray-700">PV (P. Válidos) <span class="text-red-500">*</span></label>
+              <input type="number" id="pv" name="pv" v-model.number="form.pv" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pv}">
+              <p v-if="validationErrors.pv" class="text-red-500 text-xs mt-1">{{ validationErrors.pv }}</p>
+            </div>
+            <div>
+              <label for="pt" class="block text-sm font-medium text-gray-700">PT (P. Totales) <span class="text-red-500">*</span></label>
+              <input type="number" id="pt" name="pt" v-model.number="form.pt" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pt}">
+               <p v-if="validationErrors.pt" class="text-red-500 text-xs mt-1">{{ validationErrors.pt }}</p>
+            </div>
+            <div>
+              <label for="mg" class="block text-sm font-medium text-gray-700">MG (Manos Ganadas) <span class="text-red-500">*</span></label>
+              <input type="number" id="mg" name="mg" v-model.number="form.mg" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.mg}">
+              <p v-if="validationErrors.mg" class="text-red-500 text-xs mt-1">{{ validationErrors.mg }}</p>
             </div>
           </div>
-        </div>
-
-        <!-- Sección Puntuación -->
-        <div class="border-t pt-6">
-          <h2 class="text-lg font-medium mb-4">Puntuación</h2>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div>
-              <label for="pg" class="block text-sm font-medium text-gray-700">
-                PG <span class="text-red-500">*</span>
-                <input id="pg" name="pg" v-model.number="form.pg" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1" :class="{'border-red-500': validationErrors.pg}"/>
-              </label>
-              <p v-if="validationErrors.pg" class="text-red-500 text-xs mt-1">{{ validationErrors.pg }}</p>
-            </div>
-            <div>
-              <label for="dif" class="block text-sm font-medium text-gray-700">
-                DIF
-                <input id="dif" name="dif" v-model.number="form.dif" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
-              </label>
-            </div>
-            <div>
-              <label for="pv" class="block text-sm font-medium text-gray-700">
-                PV
-                <input id="pv" name="pv" v-model.number="form.pv" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
-              </label>
-            </div>
-             <div>
-              <label for="pt" class="block text-sm font-medium text-gray-700">
-                PT
-                <input id="pt" name="pt" v-model.number="form.pt" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
-              </label>
-            </div>
-             <div>
-              <label for="mg" class="block text-sm font-medium text-gray-700">
-                MG
-                <input id="mg" name="mg" v-model.number="form.mg" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"/>
-              </label>
-            </div>
-          </div>
-        </div>
+        </fieldset>
 
       </form>
     </div>

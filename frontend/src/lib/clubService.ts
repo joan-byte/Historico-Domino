@@ -44,27 +44,50 @@ export interface ClubsPaginados {
 }
 // --- Fin interfaz ---
 
-// Endpoint para clubs
-const CLUBS_ENDPOINT = '/api/clubs/';
+// Endpoint para clubs (Corregido: sin /api/ y sin barra final si apiService la maneja)
+const CLUBS_ENDPOINT = '/clubs';
 
 // Servicio para gestionar clubs
 export const clubService = {
   // Obtener todos los clubs CON PAGINACIÓN
   getAll: (skip: number = 0, limit: number = 100) => {
-    const url = `${CLUBS_ENDPOINT}?skip=${skip}&limit=${limit}`;
-    return apiService.custom<ClubsPaginados>(url);
+    // Construir endpoint relativo con parámetros
+    const relativeEndpoint = `${CLUBS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
+    // Pasar solo endpoint relativo
+    return apiService.custom<ClubsPaginados>(relativeEndpoint);
   },
   
   // Obtener un club por su código
-  getByCode: (codigo: string) => apiService.getById<ClubResponse>(CLUBS_ENDPOINT, codigo),
+  getByCode: (codigo: string) => {
+    // Construir endpoint relativo
+    const relativeEndpoint = `${CLUBS_ENDPOINT}/${codigo}`;
+    // Usar custom para asegurar formato
+    return apiService.custom<ClubResponse>(relativeEndpoint);
+    // Alternativa si getById funciona con string y añade barra:
+    // return apiService.getById<ClubResponse>(CLUBS_ENDPOINT, codigo);
+  },
   
   // Crear un nuevo club
-  create: (clubData: ClubCreate) => apiService.create<ClubResponse>(CLUBS_ENDPOINT, clubData),
+  create: (clubData: ClubCreate) => {
+     // Pasar solo endpoint base, apiService.create añade método y datos
+    return apiService.create<ClubResponse>(CLUBS_ENDPOINT + '/', clubData);
+  },
   
   // Actualizar un club existente (usando PUT)
-  update: (codigo: string, clubData: ClubUpdate) => 
-    apiService.update<ClubResponse>(CLUBS_ENDPOINT, codigo, clubData),
+  update: (codigo: string, clubData: ClubUpdate) => { 
+     // Usar custom para asegurar formato y método PUT
+    const relativeEndpoint = `${CLUBS_ENDPOINT}/${codigo}/`; // Añadir barra si la API la espera
+    return apiService.custom<ClubResponse>(relativeEndpoint, 'PUT', clubData);
+    // Alternativa si update funciona con string:
+    // return apiService.update<ClubResponse>(CLUBS_ENDPOINT, codigo, clubData);
+  },
   
   // Eliminar un club
-  delete: (codigo: string) => apiService.delete<ClubResponse>(CLUBS_ENDPOINT, codigo)
+  delete: (codigo: string) => {
+    // Usar custom para asegurar formato y método DELETE
+     const relativeEndpoint = `${CLUBS_ENDPOINT}/${codigo}/`; // Añadir barra si la API la espera
+    return apiService.custom<ClubResponse>(relativeEndpoint, 'DELETE');
+     // Alternativa si delete funciona con string:
+     // return apiService.delete<ClubResponse>(CLUBS_ENDPOINT, codigo);
+  }
 }; 

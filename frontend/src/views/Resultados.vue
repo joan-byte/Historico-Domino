@@ -3,34 +3,48 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { useResultados } from '../composables/useResultados';
-// import { usePagination } from '../composables/usePagination'; // Eliminado
-import type { ResultadoResponse } from '../lib/resultadoService';
+import { useCampeonatos } from '../composables/useCampeonatos';
+import { useClubs } from '../composables/useClubs';
+import { useTiposCampeonato } from '../composables/useTiposCampeonato';
+import type { ResultadoResponse, FilterConditionFE } from '../lib/resultadoService';
+import type { CampeonatoResponse } from '../lib/campeonatoService';
+import type { ClubResponse } from '../lib/clubService';
+import type { TipoCampeonatoResponse } from '../lib/tipoCampeonatoService';
 import DataTable from '../components/ui/DataTable.vue';
 import Pagination from '../components/ui/Pagination.vue';
 import StatusMessage from '../components/ui/StatusMessage.vue';
-import ConfirmationDialog from '../components/ui/ConfirmationDialog.vue'; // Asumiendo que existe
+import ConfirmationDialog from '../components/ui/ConfirmationDialog.vue';
 import { PAGINATION_CONFIG } from '../config';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Columna } from '@/interfaces/DataTable';
-import type { FiltrosResultados } from '@/types/filtros'; // Usar el tipo correcto
+import type { FiltrosResultados } from '@/types/filtros';
+import { v4 as uuidv4 } from 'uuid'; // Para generar IDs únicos para las filas de filtro
+import Button from '../components/ui/Button.vue'; // Asumiendo Button de Shadcn/ui
+import Select from '../components/ui/Select.vue'; // Asumiendo Select de Shadcn/ui
+import Input from '../components/ui/Input.vue'; // Asumiendo Input de Shadcn/ui
+import DatePicker from '../components/ui/DatePicker.vue'; // Asumiendo DatePicker de Shadcn/ui
+import { Trash2 } from 'lucide-vue-next'; // Icono para eliminar fila
 
 // Router y route
 const router = useRouter();
 const route = useRoute();
 
-// Usar el composable de resultados
+// Usar composables
 const {
   resultados,
-  totalResultados, // Necesitamos el total del backend
+  totalResultados,
   selectedResultado,
   isLoading,
   error,
   fetchResultados,
-  removeResultado, // Mantenemos removeResultado si esa es la función en el composable
-  reloadCurrentPage, // Usar la función de recarga si existe
-  currentFiltros // Necesitamos los filtros actuales para recargar
+  removeResultado,
+  reloadCurrentPage,
+  currentFiltros
 } = useResultados();
+const { campeonatos, fetchCampeonatos, isLoading: isLoadingCampeonatos } = useCampeonatos();
+const { clubs, fetchClubs, isLoading: isLoadingClubs } = useClubs();
+const { tiposCampeonato, fetchTiposCampeonato, isLoading: isLoadingTipos } = useTiposCampeonato();
 
 // Estado para paginación (manejado por el backend)
 const currentPage = ref(1);
@@ -51,13 +65,36 @@ const {
 const sortBy = ref<keyof ResultadoResponse | null>('fecha_campeonato'); // Tipo más estricto
 const sortDir = ref(-1); // -1 = desc, 1 = asc
 
+// Tipo para las opciones del filtro principal
+type ConceptoFiltro = 'todos' | 'idfed' | 'campeonato' | 'club' | 'tipo';
+
 // Estado para filtros
-const filtros = ref<FiltrosResultados>({ // Usar tipo correcto
-  tipo_campeonato_id: undefined,
+const filtros = ref<{ 
+  concepto: ConceptoFiltro; // Qué filtrar
+  valorIdfed: string; // Valor si concepto es 'idfed'
+  valorCampeonato: string; // Valor si concepto es 'campeonato' (NCH)
+  valorClub: string; // Valor si concepto es 'club' (Código)
+  valorTipo: number | undefined; // Valor si concepto es 'tipo' (ID)
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}> ({
+  concepto: 'todos', // Por defecto, mostrar todos
+  valorIdfed: '',
+  valorCampeonato: '',
+  valorClub: '',
+  valorTipo: undefined,
   fecha_desde: undefined,
   fecha_hasta: undefined,
-  idfed_jugador: undefined,
 });
+
+// Opciones para el selector de concepto
+const opcionesConcepto: { value: ConceptoFiltro, label: string }[] = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'idfed', label: 'IDFED Jugador' },
+  { value: 'campeonato', label: 'Campeonato' },
+  { value: 'club', label: 'Club Jugador' },
+  { value: 'tipo', label: 'Tipo Campeonato' },
+];
 
 // Estado para confirmación de eliminación
 const showConfirmDialog = ref(false);
@@ -103,8 +140,7 @@ const pageRange = computed(() => {
   return range;
 });
 
-
-// Obtener parámetros de la ruta para filtros y paginación inicial
+// Obtener datos iniciales
 onMounted(() => {
   const queryParams = route.query;
   currentPage.value = parseInt(queryParams.page as string || '1', 10);
@@ -112,10 +148,13 @@ onMounted(() => {
   // TODO: Leer filtros iniciales de la query si es necesario
   // Filtros se inicializan vacíos, aplicarFiltros los cargará si es necesario
 
-  // Cargar resultados iniciales usando skip/limit
-  const skip = (currentPage.value - 1) * pageSize.value;
-  const limit = pageSize.value;
-  fetchResultados(filtros.value, skip, limit); // Pasar filtros, skip y limit
+  // Cargar datos para los filtros
+  fetchCampeonatos();
+  fetchClubs();
+  fetchTiposCampeonato();
+  
+  // Cargar resultados iniciales
+  aplicarFiltros(); // Usar la función aplicarFiltros para la carga inicial
 });
 
 // Función para cambiar de página (llamado por el componente Pagination)
@@ -141,26 +180,34 @@ const prevPage = () => goToPage(currentPage.value - 1);
 const firstPage = () => goToPage(1);
 const lastPage = () => goToPage(totalPages.value);
 
-// Observar cambios en filtros, paginación y ordenamiento para recargar datos
-watch(
-  [currentPage, pageSize, filtros], 
-  () => {
+// Observar cambios en paginación para recargar (el watcher de filtros se elimina, aplicarFiltros lo maneja)
+watch([currentPage, pageSize], () => {
+    // Ya no llamamos a fetchResultados aquí directamente
+    // En su lugar, podríamos llamar a aplicarFiltros si quisiéramos que los filtros se reapliquen
+    // al cambiar de página/tamaño, pero es mejor que aplicarFiltros sea explícito.
+    // Para recargar la página actual con los filtros existentes:
     const skip = (currentPage.value - 1) * pageSize.value;
     const limit = pageSize.value;
-    fetchResultados(filtros.value, skip, limit); // Usar filtros, skip y limit
-
-    // Actualizar query params (opcional, para mantener estado en URL)
-    router.replace({ 
+    // Reconstruir filtrosParaApi para asegurar que pasamos lo correcto
+     const filtrosParaApi: FiltrosResultados = {
+      fecha_desde: filtros.value.fecha_desde || undefined,
+      fecha_hasta: filtros.value.fecha_hasta || undefined,
+      idfed_jugador: filtros.value.concepto === 'idfed' ? filtros.value.valorIdfed || undefined : undefined,
+      campeonato_nch: filtros.value.concepto === 'campeonato' ? filtros.value.valorCampeonato || undefined : undefined,
+      codigo_club_jugador: filtros.value.concepto === 'club' ? filtros.value.valorClub || undefined : undefined,
+      tipo_campeonato_id: filtros.value.concepto === 'tipo' ? filtros.value.valorTipo : undefined,
+    };
+    fetchResultados(filtrosParaApi, skip, limit); 
+    
+     // Actualizar query params
+     router.replace({ 
       query: { 
-        ...route.query, // Mantener otros query params
+        ...route.query, // Mantener otros query params como 'action'
         page: currentPage.value.toString(), 
         size: pageSize.value.toString(),
-        // ...otros filtros si se añaden a la URL...
       }
     });
-  }, 
-  { deep: true } // Necesario para detectar cambios dentro de filtros
-);
+});
 
 // El watcher para ordenamiento se elimina porque fetchResultados no lo usa
 // y sortedResultados lo maneja localmente.
@@ -293,33 +340,88 @@ const cancelarEliminacion = () => {
   resultadoToDelete.value = null;
 };
 
-// Función para aplicar filtros
+// Función para aplicar filtros y recargar datos
 const aplicarFiltros = () => {
-  currentPage.value = 1; // Resetear a la primera página al aplicar filtros
-  // La carga de datos se dispara por el watcher al cambiar currentPage o filtros
-  // Asegurarse que el watcher reacciona a cambios en filtros (deep: true)
-  // Forzar trigger si la página ya es 1:
+  currentPage.value = 1; // Resetear a página 1 al aplicar filtros
   const skip = 0;
   const limit = pageSize.value;
-  fetchResultados(filtros.value, skip, limit);
+  
+  // Construir ARRAY de filtros para la API basado en la selección actual
+  const conditions: FilterConditionFE[] = []; // Empezar con array vacío
+
+  // Añadir filtro de fechas si existen
+  if (filtros.value.fecha_desde) {
+    conditions.push({ 
+      field: 'fecha_campeonato', 
+      operator: 'after', // O 'gte' si queremos incluir el día
+      value: filtros.value.fecha_desde 
+    });
+  }
+  if (filtros.value.fecha_hasta) {
+    conditions.push({ 
+      field: 'fecha_campeonato', 
+      operator: 'before', // O 'lte' si queremos incluir el día
+      value: filtros.value.fecha_hasta 
+    });
+  }
+
+  // Añadir filtro específico según el concepto
+  switch (filtros.value.concepto) {
+    case 'idfed':
+      if (filtros.value.valorIdfed) {
+        conditions.push({ field: 'idfed_jugador', operator: 'eq', value: filtros.value.valorIdfed });
+        // Podríamos añadir aquí operador 'contains' si tuviéramos un selector de operador
+      }
+      break;
+    case 'campeonato':
+      if (filtros.value.valorCampeonato) {
+        conditions.push({ field: 'campeonato_nch', operator: 'eq', value: filtros.value.valorCampeonato });
+      }
+      break;
+    case 'club':
+      if (filtros.value.valorClub) {
+        conditions.push({ field: 'codigo_club_jugador', operator: 'eq', value: filtros.value.valorClub });
+      }
+      break;
+    case 'tipo':
+      if (filtros.value.valorTipo !== undefined) { // Comprobar undefined explícitamente
+        conditions.push({ field: 'tipo_campeonato_id', operator: 'eq', value: filtros.value.valorTipo });
+      }
+      break;
+    // 'todos' no añade ninguna condición específica de concepto
+  }
+  
+  // Llamar a fetchResultados con el ARRAY de condiciones
+  fetchResultados(conditions, skip, limit); 
+  
+  // Actualizar query params (opcional, mantener como estaba)
+  router.replace({ 
+    query: { 
+      page: currentPage.value.toString(), 
+      size: pageSize.value.toString(),
+      concepto: filtros.value.concepto,
+      valorIdfed: filtros.value.valorIdfed || undefined,
+      valorCampeonato: filtros.value.valorCampeonato || undefined,
+      valorClub: filtros.value.valorClub || undefined,
+      valorTipo: filtros.value.valorTipo?.toString() || undefined,
+      fecha_desde: filtros.value.fecha_desde || undefined,
+      fecha_hasta: filtros.value.fecha_hasta || undefined,
+    }
+  });
 };
 
 // Función para limpiar filtros
 const limpiarFiltros = () => {
-  filtros.value = { // Resetear el objeto de filtros
-    tipo_campeonato_id: undefined,
+  filtros.value = {
+    concepto: 'todos',
+    valorIdfed: '',
+    valorCampeonato: '',
+    valorClub: '',
+    valorTipo: undefined,
     fecha_desde: undefined,
     fecha_hasta: undefined,
-    idfed_jugador: undefined,
   };
-  if (currentPage.value !== 1) {
-      currentPage.value = 1; // Esto dispara el watcher
-  } else {
-      // Si ya estamos en la página 1, forzar recarga con filtros limpios
-      const skip = 0;
-      const limit = pageSize.value;
-      fetchResultados(filtros.value, skip, limit);
-  }
+  aplicarFiltros(); // Recargar con filtros limpios
 };
 
 // Función para manejar click en fila
@@ -376,69 +478,94 @@ const getRowClass = (item: any) => {
     <!-- Filtros -->
     <div class="bg-white border rounded-md shadow-sm p-6 mb-6">
       <h2 class="text-lg font-medium mb-4">Filtros</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- TODO: Añadir select para tipo campeonato si se necesita -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <!-- Selector de Concepto -->
         <div>
-          <label for="filtro-idfed" class="block text-sm font-medium text-gray-700">IDFED Jugador</label>
-          <input 
-            id="filtro-idfed"
-            name="filtro-idfed"
-            v-model="filtros.idfed_jugador" 
-            type="text" 
-            placeholder="Filtrar por IDFED" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-          />
-        </div>
-        <div>
-          <label for="filtro-fecha-desde" class="block text-sm font-medium text-gray-700">Fecha Desde</label>
-          <input 
-            id="filtro-fecha-desde"
-            name="filtro-fecha-desde"
-            v-model="filtros.fecha_desde" 
-            type="date" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-          />
-        </div>
-        <div>
-          <label for="filtro-fecha-hasta" class="block text-sm font-medium text-gray-700">Fecha Hasta</label>
-          <input 
-            id="filtro-fecha-hasta"
-            name="filtro-fecha-hasta"
-            v-model="filtros.fecha_hasta" 
-            type="date" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-          />
-        </div>
-        <!-- Añadir select para tipo_campeonato_id si se necesita -->
-        <!-- Ejemplo:
-        <div>
-          <label for="filtro-tipo" class="block text-sm font-medium text-gray-700">Tipo Campeonato</label>
-          <select 
-            id="filtro-tipo" 
-            v-model="filtros.tipo_campeonato_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1"
-          >
-            <option :value="undefined">Todos</option>
-            <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">
-              {{ tipo.nombre }}
+          <label for="filtro_concepto" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por</label>
+          <select id="filtro_concepto" v-model="filtros.concepto" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option v-for="opcion in opcionesConcepto" :key="opcion.value" :value="opcion.value">
+              {{ opcion.label }}
             </option>
           </select>
-        </div> 
-        -->
-      </div>
-      <div class="flex justify-end gap-2">
-        <button 
-          @click="limpiarFiltros"
-          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Limpiar
-        </button>
-        <button 
-          @click="aplicarFiltros"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-        >
-          Aplicar Filtros
-        </button>
+        </div>
+
+        <!-- Input/Select Dinámico para el Concepto -->
+        <div :class="{'md:col-span-1': filtros.concepto !== 'todos'}"> 
+          <label v-if="filtros.concepto !== 'todos'" :for="'filtro_valor_' + filtros.concepto" class="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+          
+          <!-- Input para IDFED -->
+          <input 
+            v-if="filtros.concepto === 'idfed'"
+            id="filtro_valor_idfed" type="text" 
+            v-model="filtros.valorIdfed" 
+            placeholder="Escribir IDFED Jugador" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+
+          <!-- Select para Campeonato -->
+          <select 
+            v-if="filtros.concepto === 'campeonato'"
+            id="filtro_valor_campeonato" 
+            v-model="filtros.valorCampeonato" 
+            :disabled="isLoadingCampeonatos" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="">Seleccionar Campeonato</option>
+            <option v-for="camp in campeonatos" :key="camp.nch" :value="camp.nch">{{ camp.nch }} - {{ camp.nombre }}</option>
+          </select>
+
+          <!-- Select para Club -->
+          <select 
+            v-if="filtros.concepto === 'club'"
+            id="filtro_valor_club" 
+            v-model="filtros.valorClub" 
+            :disabled="isLoadingClubs" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="">Seleccionar Club</option>
+            <option v-for="club in clubs" :key="club.codigo_club" :value="club.codigo_club">{{ club.codigo_club }} - {{ club.nombre }}</option>
+          </select>
+
+          <!-- Select para Tipo Campeonato -->
+          <select 
+            v-if="filtros.concepto === 'tipo'"
+            id="filtro_valor_tipo" 
+            v-model="filtros.valorTipo" 
+            :disabled="isLoadingTipos" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option :value="undefined">Seleccionar Tipo</option> <!-- Permitir quitar el filtro -->
+            <option v-for="tipo in tiposCampeonato" :key="tipo.id" :value="tipo.id">{{ tipo.codigo }} - {{ tipo.nombre }}</option>
+          </select>
+          
+          <!-- Espacio reservado cuando es 'todos' -->
+           <div v-if="filtros.concepto === 'todos'" class="h-10"></div> 
+
+        </div>
+
+        <!-- Fecha Desde y Fecha Hasta (siempre visibles) -->
+         <div>
+          <label for="filtro_fecha_desde" class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+          <input 
+            id="filtro_fecha_desde" type="date" 
+            v-model="filtros.fecha_desde" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+        <div>
+          <label for="filtro_fecha_hasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+          <input 
+            id="filtro_fecha_hasta" type="date" 
+            v-model="filtros.fecha_hasta" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+
+        <!-- Botones -->
+        <div class="flex gap-2 justify-end md:col-span-3">
+          <button @click="limpiarFiltros" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Limpiar</button>
+          <button @click="aplicarFiltros" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700" :disabled="isLoading">Aplicar Filtros</button>
+        </div>
       </div>
     </div>
     

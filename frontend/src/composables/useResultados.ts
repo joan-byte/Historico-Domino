@@ -1,7 +1,6 @@
 // useResultados.ts - Composable para manejar la lógica de negocio de resultados
 import { ref, computed } from 'vue';
-import { resultadoService, type ResultadoResponse, type ResultadoCreate, type ResultadoUpdate, type ResultadosPaginados } from '@/lib/resultadoService';
-import type { FiltrosResultados } from '@/types/filtros';
+import { resultadoService, type ResultadoResponse, type ResultadoCreate, type ResultadoUpdate, type ResultadosPaginados, type FilterConditionFE } from '@/lib/resultadoService';
 
 // Composable para gestionar la lógica de los resultados
 export function useResultados() {
@@ -11,7 +10,7 @@ export function useResultados() {
   const selectedResultado = ref<ResultadoResponse | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
-  const currentFiltros = ref<FiltrosResultados>({}); // Guardar filtros actuales
+  const currentFilterConditions = ref<FilterConditionFE[]>([]); // Guardar filtros actuales como la lista de condiciones
 
   // Función para limpiar el error
   const clearError = () => {
@@ -37,12 +36,12 @@ export function useResultados() {
   };
 
   // Obtener todos los resultados con filtros/paginación
-  const fetchResultados = async (filtros: FiltrosResultados = {}, skip: number = 0, limit: number = 100) => {
+  const fetchResultados = async (conditions: FilterConditionFE[] = [], skip: number = 0, limit: number = 100) => {
     isLoading.value = true;
     error.value = null;
-    currentFiltros.value = filtros; // Actualizar filtros usados
+    currentFilterConditions.value = conditions; // Actualizar filtros usados
     try {
-      const response: ResultadosPaginados = await resultadoService.getAll(filtros, skip, limit);
+      const response: ResultadosPaginados = await resultadoService.filter(conditions, skip, limit);
       resultados.value = response.resultados.map(addUniqueKey);
       totalResultados.value = response.total;
     } catch (err) {
@@ -79,7 +78,7 @@ export function useResultados() {
     try {
       const newResultado = await resultadoService.create(resultadoData);
       // Requiere refetch con filtros y paginación actuales
-      await fetchResultados(currentFiltros.value);
+      await fetchResultados(currentFilterConditions.value);
       return newResultado;
     } catch (err) {
       handleError(err, 'Error al crear el resultado');
@@ -96,7 +95,7 @@ export function useResultados() {
     try {
       const updatedResultado = await resultadoService.update({ nch, fecha_campeonato, idfed_jugador }, resultadoData);
       // Requiere refetch
-      await fetchResultados(currentFiltros.value);
+      await fetchResultados(currentFilterConditions.value);
       return updatedResultado;
     } catch (err) {
       handleError(err, 'Error al actualizar el resultado');
@@ -112,14 +111,11 @@ export function useResultados() {
     error.value = null;
     try {
       await resultadoService.delete({ nch, fecha_campeonato, idfed_jugador });
-      // Eliminar de la lista local usando la clave única
-      const uniqueKeyToDelete = `${nch}-${fecha_campeonato}-${idfed_jugador}`;
-      resultados.value = resultados.value.filter(r => (r as any)._uniqueKey !== uniqueKeyToDelete);
-      if (selectedResultado.value && (selectedResultado.value as any)._uniqueKey === uniqueKeyToDelete) {
-        selectedResultado.value = null;
-      }
-      // Requiere refetch
-      await fetchResultados(currentFiltros.value);
+      // Optimización: Eliminar de la lista local si se desea
+      // const keyToDelete = `${nch}-${fecha_campeonato}-${idfed_jugador}`;
+      // resultados.value = resultados.value.filter(r => (r as any)._uniqueKey !== keyToDelete);
+      // Requiere refetch para actualizar paginación y total
+      await fetchResultados(currentFilterConditions.value);
     } catch (err) {
       handleError(err, 'Error al eliminar el resultado');
       throw err;
@@ -128,53 +124,11 @@ export function useResultados() {
     }
   };
 
-  // Funciones adicionales para obtener resultados filtrados (pueden ser útiles)
-  const fetchResultadosByJugador = async (idfed_jugador: string) => {
-    clearError();
-    isLoading.value = true;
-    try {
-      const rawResultados = await resultadoService.getByJugador(idfed_jugador);
-      resultados.value = rawResultados.map(addUniqueKey);
-    } catch (err) {
-      handleError(err, `Error al cargar resultados del jugador ${idfed_jugador}`);
-      resultados.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  };
-  
-  const fetchResultadosByTipoCampeonato = async (tipo_campeonato_id: number) => {
-    clearError();
-    isLoading.value = true;
-    try {
-      const rawResultados = await resultadoService.getByTipoCampeonato(tipo_campeonato_id);
-       resultados.value = rawResultados.map(addUniqueKey);
-    } catch (err) {
-      handleError(err, `Error al cargar resultados del tipo de campeonato ${tipo_campeonato_id}`);
-       resultados.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const fetchResultadosByCampeonato = async (tipo_campeonato_id: number, nch: number) => {
-    clearError();
-    isLoading.value = true;
-    try {
-      const rawResultados = await resultadoService.getByCampeonato(tipo_campeonato_id, nch);
-      resultados.value = rawResultados.map(addUniqueKey);
-    } catch (err) {
-      handleError(err, `Error al cargar resultados del campeonato ${tipo_campeonato_id}-${nch}`);
-      resultados.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  // Función para recargar con filtros actuales (útil después de CUD)
+  // Función para recargar con filtros actuales (puede simplificarse)
   const reloadCurrentPage = (currentPage: number, pageSize: number) => {
     const skip = (currentPage - 1) * pageSize;
-    fetchResultados(currentFiltros.value, skip, pageSize);
+    // Ya no necesita currentFiltros porque la función fetchResultados los recuerda internamente
+    fetchResultados(currentFilterConditions.value, skip, pageSize);
   };
 
   // Devolver el estado y las funciones
@@ -184,15 +138,12 @@ export function useResultados() {
     selectedResultado,   // Resultado seleccionado (para detalle/edición)
     isLoading,           // Estado de carga
     error,               // Mensaje de error
-    currentFiltros,       // Exponer filtros actuales para refetch
+    currentFilterConditions, // Exponer las condiciones actuales si es útil
     fetchResultados,      // Obtener lista con filtros/paginación
     fetchResultadoById,   // Obtener uno por ID
     addResultado,         // Crear nuevo resultado
     modifyResultado,      // Actualizar resultado
     removeResultado,       // Eliminar resultado
-    fetchResultadosByJugador, // Obtener por jugador
-    fetchResultadosByTipoCampeonato, // Obtener por tipo camp.
-    fetchResultadosByCampeonato, // Obtener por camp. específico
     reloadCurrentPage,     // Exponer para usar después de CUD
   };
 } 
