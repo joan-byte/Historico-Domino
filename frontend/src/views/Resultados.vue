@@ -20,7 +20,7 @@ import { es } from 'date-fns/locale';
 import type { Columna } from '@/interfaces/DataTable';
 import type { FiltrosResultados } from '@/types/filtros';
 import { v4 as uuidv4 } from 'uuid'; // Para generar IDs únicos para las filas de filtro
-import Button from '../components/ui/Button.vue'; // Asumiendo Button de Shadcn/ui
+import Button from '../components/ui/button/Button.vue';
 import Select from '../components/ui/Select.vue'; // Asumiendo Select de Shadcn/ui
 import Input from '../components/ui/Input.vue'; // Asumiendo Input de Shadcn/ui
 import DatePicker from '../components/ui/DatePicker.vue'; // Asumiendo DatePicker de Shadcn/ui
@@ -127,19 +127,9 @@ const currentPage = ref(1);
 const pageSize = ref(PAGINATION_CONFIG.defaultPageSize); // Tamaño de página por defecto
 const pageSizeOptions = PAGINATION_CONFIG.pageSizeOptions; // Opciones de tamaño
 
-// Eliminar composable de paginación local
-/*
-const {
-  // ... variables eliminadas ...
-} = usePagination(resultados, { // Se elimina esta llamada
-  initialPageSize: PAGINATION_CONFIG.defaultPageSize, 
-  initialPage: 1 
-});
-*/
-
-// Estado para ordenamiento (local por ahora)
-const sortBy = ref<keyof ResultadoResponse | null>('fecha_campeonato'); // Tipo más estricto
-const sortDir = ref(-1); // -1 = desc, 1 = asc
+// Estado de ordenación (adaptado)
+const sortField = ref<string>('fecha_campeonato'); // Campo inicial
+const sortDirection = ref<'asc' | 'desc'>('desc'); // Dirección inicial
 
 // Tipo para las opciones del filtro principal
 type ConceptoFiltro = 'todos' | 'idfed' | 'campeonato' | 'club' | 'tipo';
@@ -285,9 +275,6 @@ watch([currentPage, pageSize], () => {
     });
 });
 
-// El watcher para ordenamiento se elimina porque fetchResultados no lo usa
-// y sortedResultados lo maneja localmente.
-
 // Resultados ordenados (ordena la página actual localmente)
 const sortedResultados = computed(() => {
   // Asegurarse de que resultados.value es un array antes de intentar ordenar
@@ -297,13 +284,13 @@ const sortedResultados = computed(() => {
 
   const itemsToSort = [...resultados.value]; 
 
-  if (sortBy.value) {
+  if (sortField.value) {
     itemsToSort.sort((a, b) => {
-      let valA = (a as any)[sortBy.value!];
-      let valB = (b as any)[sortBy.value!];
+      let valA = (a as any)[sortField.value!];
+      let valB = (b as any)[sortField.value!];
 
       // Manejo especial para fechas
-      if (sortBy.value === 'fecha_campeonato' && typeof valA === 'string' && typeof valB === 'string') {
+      if (sortField.value === 'fecha_campeonato' && typeof valA === 'string' && typeof valB === 'string') {
         try {
           valA = parseISO(valA).getTime();
           valB = parseISO(valB).getTime();
@@ -316,8 +303,8 @@ const sortedResultados = computed(() => {
          valB = valB.toLowerCase();
       }
 
-      if (valA < valB) return -1 * sortDir.value;
-      if (valA > valB) return 1 * sortDir.value;
+      if (valA < valB) return -1 * sortDirection.value;
+      if (valA > valB) return 1 * sortDirection.value;
       return 0;
     });
   }
@@ -358,25 +345,6 @@ const columns = computed<Columna<ResultadoResponse>[]>(() => { // Usar tipo Colu
   
   return baseColumns;
 });
-
-// Función para ordenar la tabla (modifica estado local, no llama a fetch)
-const handleSort = (field: keyof ResultadoResponse | string) => {
-  const sortKey = field as keyof ResultadoResponse; // Castear a tipo más específico
-  if (sortBy.value === sortKey) {
-    sortDir.value = -sortDir.value;
-  } else {
-    sortBy.value = sortKey;
-    sortDir.value = 1;
-  }
-};
-
-// Función para obtener la dirección de ordenamiento para la UI
-const getSortDir = (field: keyof ResultadoResponse | string) => {
-  if (sortBy.value === field) {
-    return sortDir.value === 1 ? 'asc' : 'desc';
-  }
-  return null;
-};
 
 // Función para navegar a la página de edición
 const editarResultado = (resultado: ResultadoResponse) => {
@@ -554,6 +522,47 @@ const onOperatorChange = (filter: DynamicFilterCondition) => {
 
 // --- Fin Funciones Filtros --- 
 
+// --- Carga de Datos (Centralizada) ---
+const loadData = () => {
+    const skip = (currentPage.value - 1) * pageSize.value;
+    fetchResultados(
+        currentFilterConditions.value, // Filtros actuales
+        skip,
+        pageSize.value,
+        sortField.value, // Orden actual
+        sortDirection.value // Dirección actual
+    );
+};
+
+// --- Manejar evento de ordenación --- 
+const handleSort = (params: { field: string; direction: 'asc' | 'desc' }) => {
+  sortField.value = params.field;
+  sortDirection.value = params.direction;
+  goToPage(1); // Ir a la primera página
+  loadData(); // Recargar datos
+};
+
+// --- Lógica de Filtros (aplicarFiltrosDinamicos debe llamar a loadData) ---
+const aplicarFiltrosDinamicos = () => {
+  // ... (código para construir conditionsFE) ...
+  currentFilterConditions.value = conditionsFE; 
+  goToPage(1); 
+  loadData(); 
+};
+
+// Carga inicial
+onMounted(() => {
+  fetchCampeonatos();
+  fetchClubs();
+  fetchTiposCampeonato();
+  loadData(); // Carga inicial con filtros vacíos y orden por defecto
+});
+
+// Watchers para paginación
+watch([currentPage, pageSize], () => {
+  loadData();
+});
+
 </script>
 
 <template>
@@ -724,37 +733,45 @@ const onOperatorChange = (filter: DynamicFilterCondition) => {
     </div>
     
     <!-- Tabla de Resultados -->
-    <div class="bg-white border rounded-md shadow-sm overflow-x-auto">
-      <DataTable
-        v-if="!isLoading"
-        :items="sortedResultados"
-        :columns="columns"
-        :item-key="'_uniqueKey'"
-        :is-loading="isLoading"
-        :sort-by="sortBy"
-        :sort-dir="getSortDir(sortBy as string)"
-        @sort="handleSort"
-        :row-class="getRowClass"
-        @row-click="handleRowClick"
-      >
-        <!-- Slot #row-actions SIMPLIFICADO para DEBUG -->
-        <template #row-actions="{ item }">
-          <td v-if="currentMode === 'list'" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
-             <!-- Quitar botones temporalmente -->
-             <span>(Acciones)</span> 
-          </td>
-           <td v-else></td> <!-- Celda vacía si no es modo lista -->
-        </template>
-         <template #empty>
-            <div class="text-center py-4 text-gray-500">
-                No hay resultados que coincidan con los filtros actuales.
-            </div>
-         </template>
-      </DataTable>
-      <div v-else class="p-4 text-center text-gray-500">
-        Cargando resultados...
-      </div>
+    <div v-if="!isLoading && !error" class="overflow-x-auto">
+        <DataTable
+          :items="resultados"
+          :columns="columns"
+          item-key="id"
+          :hover="currentMode !== 'list'"
+          :row-class="getRowClass"
+          @row-click="handleRowClick"
+          :sort-field="sortField"
+          :sort-direction="sortDirection"
+          @sort="handleSort"
+        >
+            <!-- Slots para celdas si es necesario -->
+            <template #cell-acciones="{ item }">
+              <!-- Botones Editar/Eliminar -->
+              <Button 
+                v-if="currentMode === 'edit'" 
+                variant="outline" 
+                size="sm" 
+                @click.stop="editarResultado(item)" <!-- Asumiendo que editarResultado recibe el item completo -->
+              >
+                Editar
+              </Button>
+              <Button 
+                v-if="currentMode === 'delete'" 
+                variant="destructive" 
+                size="sm" 
+                @click.stop="solicitarEliminacion(item)" <!-- Asumiendo que solicitarEliminacion recibe el item completo -->
+              >
+                Eliminar
+              </Button>
+            </template>
+            <template #empty>
+                No hay resultados que coincidan con los filtros aplicados.
+            </template>
+        </DataTable>
     </div>
+    <div v-else-if="isLoading">Cargando...</div>
+    <div v-else-if="error">Error al cargar: {{ error }}</div>
 
     <!-- Paginación -->
     <!-- Mostrar selector de tamaño de página si se desea -->

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
+from sqlalchemy import and_, or_, asc, desc
 from typing import List, Optional, Any
 from datetime import date
 from ..db.session import get_db
@@ -9,8 +10,7 @@ from ..models.club import Club
 from ..models.tipo_campeonato import TipoCampeonato
 from ..schemas.resultado import ResultadoCreate, ResultadoResponse, ResultadoUpdate
 from pydantic import BaseModel, field_validator
-from sqlalchemy import and_, or_
-from sqlalchemy.types import String
+from ..models.campeonato import Campeonato
 
 router = APIRouter(
     prefix="/resultados",
@@ -22,11 +22,15 @@ class FilterCondition(BaseModel):
     field: str  # Nombre del campo en el modelo Resultado (ej. 'idfed_jugador')
     operator: str # Operador ('eq', 'contains', 'gt', 'lt', 'between', etc.)
     value: Any    # Valor para el filtro (puede ser str, int, date, list[date], etc.)
+    value2: Optional[Any] = None # Para operadores 'between'
 
 class FilterRequest(BaseModel):
     filters: List[FilterCondition] = [] # Lista de condiciones a aplicar (con AND)
     skip: int = 0
-    limit: int = 100
+    limit: int = 10
+    # Añadir parámetros de ordenación al schema del request
+    sort_by: Optional[str] = None
+    sort_dir: Optional[str] = 'asc'
     # TODO: Añadir sort_by: Optional[str] = None, sort_dir: Optional[str] = 'asc'
 
 # --- Schema Paginado --- 
@@ -327,12 +331,65 @@ def filtrar_resultados(request: FilterRequest, db: Session = Depends(get_db)):
     if filter_conditions:
         query = query.filter(and_(*filter_conditions))
 
-    # Contar el total DESPUÉS de aplicar filtros
+    # --- Aplicar Ordenación --- 
+    # Carga eager de relaciones necesarias para ordenar
+    query = query.options(
+        selectinload(Resultado.jugador),
+        selectinload(Resultado.club_jugador),
+        selectinload(Resultado.campeonato).selectinload(Campeonato.tipo_campeonato),
+        # Añadir otras relaciones si se ordena por ellas
+    )
+
+    # Mapeo de campos permitidos para ordenar (incluir relaciones)
+    allowed_sort_fields = {
+        'fecha_campeonato': Resultado.fecha_campeonato,
+        'campeonato_nch': Resultado.campeonato_nch,
+        'nombre_campeonato': Campeonato.nombre,
+        'idfed_jugador': Resultado.idfed_jugador,
+        # 'nombre_completo_jugador': ..., # Requiere concatenar Jugador.nombre y Jugador.apellidos
+        'nombre_jugador': Jugador.nombre, # Ordenar por nombre
+        'apellido_jugador': Jugador.apellidos, # Ordenar por apellido
+        'nombre_club_jugador': Club.nombre,
+        'partida': Resultado.partida,
+        'mesa': Resultado.mesa,
+        'pg': Resultado.pg,
+        'dif': Resultado.dif,
+        'pv': Resultado.pv,
+        'pt': Resultado.pt,
+        'mg': Resultado.mg,
+        'pos': Resultado.pos,
+        # Añadir otros campos directos o de relaciones
+    }
+
+    sort_by = request.sort_by
+    sort_dir = request.sort_dir
+
+    if sort_by and sort_by in allowed_sort_fields:
+        sort_column = allowed_sort_fields[sort_by]
+        
+        # Añadir JOINs explícitos si se ordena por campos relacionados
+        if sort_by == 'nombre_campeonato':
+             query = query.join(Resultado.campeonato)
+        elif sort_by in ['nombre_jugador', 'apellido_jugador']:
+            query = query.join(Resultado.jugador)
+        elif sort_by == 'nombre_club_jugador':
+            query = query.join(Resultado.club_jugador) # Asegurarse que la relación se llama así
+            
+        if sort_dir and sort_dir.lower() == 'desc':
+            query = query.order_by(desc(sort_column))
+        else:
+            query = query.order_by(asc(sort_column))
+    else:
+        # Orden por defecto
+        query = query.order_by(desc(Resultado.fecha_campeonato), asc(Resultado.partida))
+    # --- Fin Ordenación --- 
+
+    # Contar DESPUÉS de aplicar filtros
     total_resultados = query.count()
-    
-    # Aplicar paginación y ordenar (mantener orden por defecto)
-    resultados_pagina = query.order_by(Resultado.fecha_campeonato.desc(), Resultado.nch.desc()).offset(request.skip).limit(request.limit).all()
-    
+
+    # Aplicar paginación DESPUÉS de ordenar
+    resultados_pagina = query.offset(request.skip).limit(request.limit).all()
+
     return ResultadosPaginadosResponse(total=total_resultados, resultados=resultados_pagina)
 
 @router.get("/", response_model=ResultadosPaginadosResponse, deprecated=True)

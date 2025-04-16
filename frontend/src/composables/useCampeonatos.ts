@@ -29,16 +29,22 @@ export function useCampeonatos() {
   });
 
   // Cargar todos los campeonatos
-  const fetchCampeonatos = async (skip: number = 0, limit: number = 100) => {
+  const fetchCampeonatos = async (
+    skip: number = 0, 
+    limit: number = 10, 
+    sortBy: string | null = null,
+    sortDir: 'asc' | 'desc' | null = null
+  ) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response: CampeonatosPaginados = await campeonatoService.getAll(skip, limit);
+      // Pasar parámetros al servicio
+      const response: CampeonatosPaginados = await campeonatoService.getAll(skip, limit, sortBy, sortDir);
       campeonatos.value = response.campeonatos;
       totalCampeonatos.value = response.total;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching campeonatos:', err);
-      error.value = 'Failed to load campeonatos';
+      error.value = err.message || 'Failed to load campeonatos';
       campeonatos.value = [];
       totalCampeonatos.value = 0;
     } finally {

@@ -110,39 +110,39 @@ export interface FilterConditionFE {
   value: any;
 }
 
+export interface ResultadosPaginadosResponse {
+    total: number;
+    resultados: ResultadoResponse[];
+}
+
 // --- Servicio --- 
 export const resultadoService = {
-  // Nueva función para filtrar usando POST
-  filter: (conditions: FilterConditionFE[], skip: number = 0, limit: number = 100) => {
-    const requestBody = {
-      filters: conditions,
-      skip: skip,
-      limit: limit
-    };
-    const endpoint = `${RESULTADOS_ENDPOINT}/filtrar`; // Endpoint POST
-    console.log("Llamando a apiService.custom POST con endpoint:", endpoint, "y body:", requestBody);
-    // Usar apiService.custom para especificar el método POST y el cuerpo
-    return apiService.custom<ResultadosPaginados>(endpoint, 'POST', requestBody);
+  // Modificar filtrar para incluir ordenación en el payload
+  filtrar: (
+      conditions: FilterConditionFE[], 
+      skip: number = 0, 
+      limit: number = 10, 
+      sortBy: string | null = null, 
+      sortDir: 'asc' | 'desc' | null = null
+  ): Promise<ResultadosPaginadosResponse> => {
+      const payload = {
+          conditions: conditions,
+          skip: skip,
+          limit: limit,
+          // Añadir parámetros de ordenación al payload
+          sort_by: sortBy,
+          sort_dir: sortDir
+      };
+      // Llamar al endpoint de filtrado con POST y el payload
+      const relativeEndpoint = `${RESULTADOS_ENDPOINT}/filtrar`; // Endpoint POST para filtros
+      return apiService.custom<ResultadosPaginadosResponse>(relativeEndpoint, 'POST', payload);
   },
 
   // Mantener getAll (marcarla como obsoleta o eliminarla eventualmente)
   // @deprecated Usar filter en su lugar
-  getAll: (filtros: FiltrosResultados = {}, skip: number = 0, limit: number = 100) => {
-     console.warn("La función resultadoService.getAll está obsoleta. Usar resultadoService.filter.");
-     // Adaptar filtros antiguos a la nueva estructura si es posible, o lanzar error
-     // Por simplicidad, la dejamos funcional pero limitada por ahora
-     const params = new URLSearchParams();
-     params.append('skip', skip.toString());
-     params.append('limit', limit.toString());
-     if (filtros.tipo_campeonato_id) params.append('tipo_campeonato_id', filtros.tipo_campeonato_id.toString());
-     if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
-     if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
-     if (filtros.idfed_jugador) params.append('idfed_jugador', filtros.idfed_jugador);
-     if (filtros.campeonato_nch) params.append('campeonato_nch', filtros.campeonato_nch);
-     if (filtros.codigo_club_jugador) params.append('codigo_club_jugador', filtros.codigo_club_jugador);
-     
-     const relativeEndpoint = `${RESULTADOS_ENDPOINT}?${params.toString()}`; // Llama a la ruta GET obsoleta
-     return apiService.custom<ResultadosPaginados>(relativeEndpoint);
+  getAll: (skip: number = 0, limit: number = 100) => {
+      const relativeEndpoint = `${RESULTADOS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
+      return apiService.custom<ResultadosPaginadosResponse>(relativeEndpoint); 
   },
 
   // getById necesita la clave primaria compuesta

@@ -87,8 +87,19 @@ const TIPOS_ENDPOINT = '/tipos-campeonato';
 // --- Objeto de Servicio --- 
 export const campeonatoService = {
   // --- Funciones CRUD para Campeonatos (Usando endpoints relativos) ---
-  getAll: (skip: number = 0, limit: number = 100) => {
-    const relativeEndpoint = `${CAMPEONATOS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
+  getAll: (skip: number = 0, limit: number = 10, sortBy: string | null = null, sortDir: 'asc' | 'desc' | null = null) => {
+    const params = new URLSearchParams({
+      skip: String(skip),
+      limit: String(limit),
+    });
+    if (sortBy) {
+      params.append('sort_by', sortBy);
+    }
+    if (sortDir) {
+      params.append('sort_dir', sortDir);
+    }
+    
+    const relativeEndpoint = `${CAMPEONATOS_ENDPOINT}/?${params.toString()}`;
     return apiService.custom<CampeonatosPaginados>(relativeEndpoint); 
   },
   

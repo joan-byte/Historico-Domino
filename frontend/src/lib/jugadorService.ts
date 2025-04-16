@@ -46,15 +46,24 @@ export interface JugadoresPaginados {
 // --- Fin interfaz ---
 
 // Endpoint para jugadores (Corregido: sin /api/ inicial)
-const JUGADORES_ENDPOINT = '/jugadores/';
+const JUGADORES_ENDPOINT = '/jugadores';
 
 // Servicio para gestionar jugadores
 export const jugadorService = {
   // Obtener todos los jugadores CON PAGINACIÓN
-  getAll: (skip: number = 0, limit: number = 100) => {
-    // Construir endpoint relativo con parámetros
-    const relativeEndpoint = `${JUGADORES_ENDPOINT}?skip=${skip}&limit=${limit}`;
-    // Pasar solo endpoint relativo
+  getAll: async (skip: number = 0, limit: number = 10, sortBy: string | null = null, sortDir: 'asc' | 'desc' | null = null): Promise<JugadoresPaginados> => {
+    const params = new URLSearchParams({
+      skip: String(skip),
+      limit: String(limit),
+    });
+    if (sortBy) {
+      params.append('sort_by', sortBy);
+    }
+    if (sortDir) {
+      params.append('sort_dir', sortDir);
+    }
+    
+    const relativeEndpoint = `${JUGADORES_ENDPOINT}/?${params.toString()}`;
     return apiService.custom<JugadoresPaginados>(relativeEndpoint);
   },
   

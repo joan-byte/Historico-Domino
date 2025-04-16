@@ -11,16 +11,21 @@ export function useJugadores() {
   const error = ref<string | null>(null);
 
   // Acciones
-  const fetchJugadores = async (skip: number = 0, limit: number = 100) => {
+  const fetchJugadores = async (
+    skip: number = 0, 
+    limit: number = 10,
+    sortBy: string | null = null,
+    sortDir: 'asc' | 'desc' | null = null
+  ) => {
     isLoading.value = true;
     error.value = null;
-    
     try {
-      const response: JugadoresPaginados = await jugadorService.getAll(skip, limit);
+      const response = await jugadorService.getAll(skip, limit, sortBy, sortDir);
       jugadores.value = response.jugadores;
       totalJugadores.value = response.total;
-    } catch (err) {
-      error.value = 'No se pudieron cargar los jugadores. Intente nuevamente más tarde.';
+    } catch (err: any) {
+      console.error('Error fetching jugadores:', err);
+      error.value = err.message || 'Failed to load jugadores';
       jugadores.value = [];
       totalJugadores.value = 0;
     } finally {

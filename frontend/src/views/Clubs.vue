@@ -12,10 +12,14 @@ import type { ClubResponse } from '../lib/clubService';
 const router = useRouter();
 const route = useRoute();
 
-// Usar el composable de clubs (ahora con totalClubs)
+// Usar el composable de clubs
 const { clubs, totalClubs, isLoading, error, fetchClubs } = useClubs();
 
-// Configurar paginación (pasar totalClubs)
+// Estado de ordenación
+const sortField = ref<string>('codigo_club'); // Orden inicial por código
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
+// Configurar paginación
 const { 
   currentPage, 
   pageSize, 
@@ -75,64 +79,79 @@ const crudOptions = [
   }
 ];
 
-// Definir las columnas para la tabla (quitar sortable)
+// Definir las columnas para la tabla (¡habilitar sortable!)
 const columns = computed(() => [
   {
     field: 'codigo_club',
     header: 'Código',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'nombre',
     header: 'Nombre',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'cp',
     header: 'CP',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'numero_club',
     header: 'Número',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'persona_contacto',
     header: 'Persona de Contacto',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'telefono',
     header: 'Teléfono',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'direccion',
     header: 'Dirección',
-    sortable: false
+    sortable: true // Habilitar ordenación
   },
   {
     field: 'email',
     header: 'Email',
-    sortable: false
+    sortable: true // Habilitar ordenación
   }
 ]);
 
-// --- Cargar DATOS INICIALES y observar cambios de paginación --- 
-onMounted(() => {
+// --- Función para cargar datos con paginación Y ORDENACIÓN --- 
+const loadData = () => {
   if (isListRoute.value) {
-    // Carga inicial
-    fetchClubs(0, pageSize.value);
+    const skip = (currentPage.value - 1) * pageSize.value;
+    // Pasar parámetros de ordenación a fetchClubs
+    fetchClubs(skip, pageSize.value, sortField.value, sortDirection.value);
   }
+};
+
+// --- Manejar evento de ordenación desde DataTable --- 
+const handleSort = (params: { field: string; direction: 'asc' | 'desc' }) => {
+  sortField.value = params.field;
+  sortDirection.value = params.direction;
+  // Volver a la primera página al cambiar el orden
+  goToPage(1);
+  // Recargar datos con el nuevo orden
+  loadData(); 
+};
+
+// --- Cargar DATOS INICIALES y observar cambios --- 
+onMounted(() => {
+  loadData(); // Carga inicial con paginación y ordenación por defecto
 });
 
 // Observar cambios en currentPage y pageSize para recargar datos
 watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
   // Solo recargar si la página o el tamaño realmente cambiaron y estamos en la lista
   if (isListRoute.value && (newPage !== oldPage || newSize !== oldSize)) {
-    const skip = (newPage - 1) * newSize;
-    fetchClubs(skip, newSize);
+    loadData(); // Recargar con la nueva página/tamaño y el orden actual
   }
 });
 // --- Fin Observación --- 
@@ -221,12 +240,15 @@ const getRowClass = (item: ClubResponse): string => {
       <div v-if="!isLoading && !error">
         <div class="rounded-md border">
           <DataTable 
-            :items="clubs"
+            :items="clubs" 
             :columns="columns" 
             item-key="codigo_club"
             :hover="true"
             @row-click="handleRowClick"
             :row-class="getRowClass"
+            :sort-field="sortField"
+            :sort-direction="sortDirection"
+            @sort="handleSort"
           >
             <template #empty>
               No hay clubs que coincidan con los criterios de búsqueda.
@@ -248,19 +270,27 @@ const getRowClass = (item: ClubResponse): string => {
             :page-size="pageSize"
             @update:currentPage="goToPage"
             @first-page="firstPage"
-            @prev-page="prevPage"
-            @next-page="nextPage"
             @last-page="lastPage"
-            @update:page-size="setPageSize"
+            @next-page="nextPage"
+            @prev-page="prevPage"
+            @update:pageSize="setPageSize"            
           />
         </div>
-      </div>
-      <div v-else-if="!isLoading && clubs.length === 0">
-        <p class="text-center text-gray-500 py-4">No hay clubs registrados.</p>
-      </div>
-    </div>
 
-    <!-- Router view para mostrar las subvistas -->
-    <router-view v-else></router-view>
+      </div>
+      
+      <!-- Indicador de carga y error -->
+      <div v-else-if="isLoading" class="text-center py-4">Cargando...</div>
+      <div v-else-if="error" class="text-center text-red-500 py-4">{{ error }}</div>
+
+    </div>
+    
+    <!-- Router view para subrutas (corregido) -->
+    <router-view v-else />
+    
   </div>
-</template> 
+</template>
+
+<style scoped>
+/* Estilos específicos si los hubiera */
+</style> 

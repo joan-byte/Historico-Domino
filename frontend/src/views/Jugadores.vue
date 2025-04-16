@@ -35,6 +35,10 @@ const {
   deleteJugador
 } = useJugadores();
 
+// Estado para ordenamiento (cambiado de sortBy/sortDir a sortField/sortDirection)
+const sortField = ref<string>('apellidos'); // Orden inicial por apellidos
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
 // Configurar paginación
 const { 
   currentPage, 
@@ -52,40 +56,36 @@ const {
   lastPage
 } = usePagination(totalJugadores, { initialPageSize: 10 });
 
-// Estado para ordenamiento
-const sortBy = ref('apellidos');
-const sortDir = ref(1); // 1 = asc, -1 = desc
-
 // Estado para confirmación de eliminación
 const showConfirmDialog = ref(false);
 const jugadorToDelete = ref<JugadorResponse | null>(null);
 const successMessage = ref<string>('');
 const showSuccess = ref(false);
 
-// Definir las columnas para la tabla
+// Definir las columnas para la tabla (¡habilitar sortable!)
 const columns = computed<Column[]>(() => {
   const baseColumns: Column[] = [
-    { field: 'idfed', header: 'IDFED', sortable: false },
-    { field: 'nombre', header: 'Nombre', sortable: false },
-    { field: 'apellidos', header: 'Apellidos', sortable: false },
-    { field: 'nombre_club', header: 'Club', sortable: false },
+    { field: 'idfed', header: 'IDFED', sortable: true },
+    { field: 'nombre', header: 'Nombre', sortable: true },
+    { field: 'apellidos', header: 'Apellidos', sortable: true },
+    { field: 'nombre_club', header: 'Club', sortable: true }, // Asumiendo que el backend puede ordenar por nombre_club
     { 
       field: 'dni', 
       header: 'DNI', 
-      sortable: false,
+      sortable: true,
       render: (item: JugadorResponse) => item.dni ? item.dni : '' 
     },
     { 
       field: 'telefono', 
       header: 'Teléfono', 
-      sortable: false,
+      sortable: true,
       render: (item: JugadorResponse) => 
         (item.telefono && item.telefono !== 'nan') ? String(item.telefono) : ''
     },
-    { field: 'email', header: 'Email', sortable: false }
+    { field: 'email', header: 'Email', sortable: true }
   ];
   
-  // Solo añadir acciones en modo edición, no en modo eliminación
+  // Columna de acciones no ordenable
   if (route.query.action === 'edit') {
     baseColumns.push({
       field: 'acciones',
@@ -139,7 +139,7 @@ const confirmarEliminacion = async () => {
       showConfirmDialog.value = false;
       jugadorToDelete.value = null;
       // Volver a cargar los datos de la página actual después de eliminar
-      fetchJugadores((currentPage.value - 1) * pageSize.value, pageSize.value);
+      fetchJugadores(0, pageSize.value, sortField.value, sortDirection.value);
     } catch (err) {
       // No vamos a registrar el error en la consola, ya usamos el valor error
     }
@@ -167,11 +167,23 @@ const handleEditJugador = (e: any) => {
   editarJugador(null, e.detail);
 };
 
+// Función para cargar datos (ahora incluye ordenación)
+const loadData = () => {
+  const skip = (currentPage.value - 1) * pageSize.value;
+  fetchJugadores(skip, pageSize.value, sortField.value, sortDirection.value);
+};
+
+// Manejar evento de ordenación desde DataTable
+const handleSort = (params: { field: string; direction: 'asc' | 'desc' }) => {
+  sortField.value = params.field;
+  sortDirection.value = params.direction;
+  goToPage(1); // Volver a la primera página
+  loadData(); // Recargar con nuevo orden
+};
+
 // Cargar los jugadores al montar el componente
 onMounted(() => {
-  fetchJugadores(0, pageSize.value);
-  
-  // Agregar escuchadores para los eventos de edición
+  loadData(); // Carga inicial con orden por defecto
   document.addEventListener('edit-jugador', handleEditJugador);
 });
 
@@ -182,10 +194,8 @@ onUnmounted(() => {
 
 // Observar cambios en currentPage y pageSize para recargar datos
 watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
-  // Solo recargar si la página o el tamaño realmente cambiaron
   if (newPage !== oldPage || newSize !== oldSize) {
-    const skip = (newPage - 1) * newSize;
-    fetchJugadores(skip, newSize);
+    loadData(); // Recargar con nueva página/tamaño y orden actual
   }
 });
 
@@ -276,8 +286,8 @@ const navigateTo = (routePath: string) => {
         <p>Cargando jugadores...</p>
       </div>
       
-      <!-- Mostrar mensaje de error -->
-      <StatusMessage v-if="error" :message="error" type="error" />
+      <!-- Mostrar mensaje de error (Asegurar :show) -->
+      <StatusMessage v-if="error" :message="error" type="error" :show="!!error" />
       
       <!-- Mostrar tabla y paginación si no hay error y no está cargando -->
       <div v-if="!isLoading && !error">
@@ -287,7 +297,31 @@ const navigateTo = (routePath: string) => {
           :itemKey="'idfed'" 
           :row-class="getRowClass"
           @row-click="handleRowClick"
-        />
+          :sort-field="sortField"
+          :sort-direction="sortDirection"
+          @sort="handleSort"
+        >
+          <!-- Slot para acciones (si no se usa render) -->
+          <template #cell-acciones="{ item }">
+             <button 
+               v-if="route.query.action === 'edit'"
+               @click.stop="editarJugador($event, item.idfed)" 
+               class="text-blue-600 hover:text-blue-800 text-sm"
+             >
+               Editar
+             </button>
+             <button 
+               v-if="route.query.action === 'delete'"
+               @click.stop="confirmarEliminacionJugador(item)" 
+               class="text-red-600 hover:text-red-800 text-sm ml-2"
+             >
+               Eliminar
+             </button>
+           </template>
+          <template #empty>
+            No hay jugadores que coincidan con los criterios.
+          </template>
+        </DataTable>
         
         <!-- --- Componente de Paginación --- -->
         <Pagination

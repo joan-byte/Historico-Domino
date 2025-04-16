@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from sqlalchemy import func, select, asc, desc
+from typing import List, Optional
 from pydantic import BaseModel
 from ..db.session import get_db
 from ..models.club import Club
@@ -51,20 +52,46 @@ def crear_club(club: ClubCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=ClubsPaginadosResponse)
-def obtener_clubs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Obtener clubs con paginación e información total.
-    (Nota: joinedload puede ser menos eficiente con paginación si hay muchos jugadores por club)
-    """
-    # Obtener el total de clubs
-    total_clubs = db.query(Club).count()
+def get_clubs(
+    skip: int = 0, 
+    limit: int = 10, 
+    sort_by: Optional[str] = Query(None, alias="sort_by", description="Campo por el cual ordenar (ej: nombre)"),
+    sort_dir: Optional[str] = Query('asc', alias="sort_dir", description="Dirección de ordenación ('asc' o 'desc')"),
+    db: Session = Depends(get_db)
+):
+    """Obtener todos los clubs con paginación y ordenación."""
+    query = db.query(Club)
     
-    # Obtener los clubs de la página actual
-    # Considerar quitar joinedload si causa problemas de rendimiento con limit/offset
-    clubs_pagina = db.query(Club).options(joinedload(Club.jugadores)).offset(skip).limit(limit).all()
+    # Mapeo de campos permitidos para ordenar (evita inyección SQL)
+    allowed_sort_fields = {
+        'codigo_club': Club.codigo_club,
+        'nombre': Club.nombre,
+        'cp': Club.cp,
+        'numero_club': Club.numero_club,
+        'persona_contacto': Club.persona_contacto,
+        'telefono': Club.telefono,
+        'direccion': Club.direccion,
+        'email': Club.email,
+        # Añade otros campos si son necesarios
+    }
     
-    # Devolver la respuesta estructurada
-    return ClubsPaginadosResponse(total=total_clubs, clubs=clubs_pagina)
+    # Aplicar ordenación si se proporciona un campo válido
+    if sort_by and sort_by in allowed_sort_fields:
+        sort_column = allowed_sort_fields[sort_by]
+        if sort_dir and sort_dir.lower() == 'desc':
+            query = query.order_by(desc(sort_column))
+        else:
+            query = query.order_by(asc(sort_column))
+    else:
+        # Orden por defecto si no se especifica o el campo no es válido
+        query = query.order_by(asc(Club.codigo_club))
+            
+    total = query.count() # Contar sobre la query base (después de filtrar si hubiera)
+    
+    # Aplicar offset y limit después de ordenar y contar
+    clubs = query.offset(skip).limit(limit).all()
+    
+    return ClubsPaginadosResponse(total=total, clubs=clubs)
 
 @router.get("/{codigo_club}", response_model=ClubResponse)
 def obtener_club(codigo_club: str, db: Session = Depends(get_db)):

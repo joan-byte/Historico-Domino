@@ -36,16 +36,24 @@ export function useResultados() {
   };
 
   // Obtener todos los resultados con filtros/paginación
-  const fetchResultados = async (conditions: FilterConditionFE[] = [], skip: number = 0, limit: number = 100) => {
+  const fetchResultados = async (
+    filters: FilterConditionFE[], 
+    skip: number = 0, 
+    limit: number = 10, 
+    sortBy: string | null = null, 
+    sortDir: 'asc' | 'desc' | null = null
+  ) => {
     isLoading.value = true;
     error.value = null;
-    currentFilterConditions.value = conditions; // Actualizar filtros usados
+    currentFilterConditions.value = filters; // Guardar filtros actuales
     try {
-      const response: ResultadosPaginados = await resultadoService.filter(conditions, skip, limit);
+      // Pasar filtros Y ordenación al método filtrar del servicio
+      const response = await resultadoService.filtrar(filters, skip, limit, sortBy, sortDir);
       resultados.value = response.resultados.map(addUniqueKey);
       totalResultados.value = response.total;
-    } catch (err) {
-      handleError(err, 'Error al cargar los resultados');
+    } catch (err: any) {
+      console.error('Error fetching resultados:', err);
+      error.value = err.message || 'Failed to load resultados';
       resultados.value = [];
       totalResultados.value = 0;
     } finally {
@@ -124,11 +132,10 @@ export function useResultados() {
     }
   };
 
-  // Función para recargar con filtros actuales (puede simplificarse)
-  const reloadCurrentPage = (currentPage: number, pageSize: number) => {
-    const skip = (currentPage - 1) * pageSize;
-    // Ya no necesita currentFiltros porque la función fetchResultados los recuerda internamente
-    fetchResultados(currentFilterConditions.value, skip, pageSize);
+  // Función para recargar la página actual con los filtros actuales
+  const reloadCurrentPage = async (currentPage: number, pageSize: number, sortBy: string | null, sortDir: 'asc' | 'desc' | null) => {
+      const skip = (currentPage - 1) * pageSize;
+      await fetchResultados(currentFilterConditions.value, skip, pageSize, sortBy, sortDir);
   };
 
   // Devolver el estado y las funciones

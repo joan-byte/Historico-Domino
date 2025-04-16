@@ -50,10 +50,23 @@ const CLUBS_ENDPOINT = '/clubs';
 // Servicio para gestionar clubs
 export const clubService = {
   // Obtener todos los clubs CON PAGINACIÓN
-  getAll: (skip: number = 0, limit: number = 100) => {
-    // Construir endpoint relativo con parámetros
-    const relativeEndpoint = `${CLUBS_ENDPOINT}/?skip=${skip}&limit=${limit}`;
-    // Pasar solo endpoint relativo
+  getAll: (skip: number = 0, limit: number = 10, sortBy: string | null = null, sortDir: 'asc' | 'desc' | null = null) => {
+    // Construir los parámetros de query
+    const params = new URLSearchParams({
+      skip: String(skip),
+      limit: String(limit),
+    });
+    if (sortBy) {
+      params.append('sort_by', sortBy);
+    }
+    if (sortDir) {
+      params.append('sort_dir', sortDir);
+    }
+    
+    // Construir la URL relativa con los parámetros
+    const relativeEndpoint = `${CLUBS_ENDPOINT}/?${params.toString()}`;
+    
+    // Llamar a la API con la URL construida
     return apiService.custom<ClubsPaginados>(relativeEndpoint);
   },
   

@@ -15,7 +15,7 @@ const route = useRoute();
 // Leer el parámetro de acción de la URL
 const action = computed(() => route.query.action as string | undefined);
 
-// Usar composable con total y tipos
+// Usar composable
 const { 
   campeonatos, 
   totalCampeonatos, 
@@ -26,7 +26,11 @@ const {
   fetchTiposCampeonato
 } = useCampeonatos();
 
-// Usar paginación con total
+// Estado de ordenación
+const sortField = ref<string>('fecha_inicio'); // Orden inicial por fecha
+const sortDirection = ref<'asc' | 'desc'>('desc'); // Descendente por defecto
+
+// Usar paginación
 const { 
   currentPage, 
   pageSize, 
@@ -43,53 +47,69 @@ const {
   lastPage 
 } = usePagination(totalCampeonatos, { initialPageSize: 10 });
 
-// Definir columnas (ajustadas)
+// Definir columnas (¡habilitar sortable!)
 const columns = computed(() => [
-  { field: 'nch', header: 'NCH', sortable: false },
-  { field: 'nombre', header: 'Nombre', sortable: false },
+  { field: 'nch', header: 'NCH', sortable: true },
+  { field: 'nombre', header: 'Nombre', sortable: true },
   {
-    field: 'tipo_campeonato_id',
+    field: 'tipo_campeonato.codigo', // Ordenar por código del tipo
     header: 'Tipo',
-    sortable: false,
+    sortable: true,
     render: (item: CampeonatoResponse) => {
       const tipo = tiposCampeonato.value.find(t => t.id === item.tipo_campeonato_id);
       return tipo?.codigo ?? 'N/A';
     }
   },
-  { field: 'fecha_inicio', header: 'Fecha Inicio', sortable: false },
-  { field: 'dias', header: 'Días', sortable: false },
-  { field: 'partidas', header: 'Partidas', sortable: false },
-  { field: 'pm', header: 'PM', sortable: false },
+  { field: 'fecha_inicio', header: 'Fecha Inicio', sortable: true },
+  { field: 'dias', header: 'Días', sortable: true },
+  { field: 'partidas', header: 'Partidas', sortable: true },
+  { field: 'pm', header: 'PM', sortable: true },
   {
     field: 'gb',
     header: 'GB',
-    sortable: false,
+    sortable: true,
     render: (item: CampeonatoResponse) => item.gb ? 'B' : 'A'
   },
   {
     field: 'gbp',
     header: 'Inicio GB',
-    sortable: false,
+    sortable: true,
     render: (item: CampeonatoResponse) => item.gb ? (item.gbp?.toString() ?? '-') : '-'
   },
   {
-    field: 'club',
+    field: 'club.nombre', // Ordenar por nombre de club
     header: 'Club Org.',
-    sortable: false,
-    render: (item: CampeonatoResponse) => item.club_codigo ?? 'N/A'
+    sortable: true,
+    render: (item: CampeonatoResponse) => item.club_codigo ?? 'N/A' // Mostrar código, ordenar por nombre
   }
 ]);
 
+// --- Función para cargar datos (con ordenación) ---
+const loadData = () => {
+  const skip = (currentPage.value - 1) * pageSize.value;
+  fetchCampeonatos(skip, pageSize.value, sortField.value, sortDirection.value);
+  // También cargar tipos si no están cargados
+  if (tiposCampeonato.value.length === 0) {
+    fetchTiposCampeonato();
+  }
+};
+
+// --- Manejar evento de ordenación --- 
+const handleSort = (params: { field: string; direction: 'asc' | 'desc' }) => {
+  sortField.value = params.field;
+  sortDirection.value = params.direction;
+  goToPage(1); // Volver a la primera página
+  loadData(); // Recargar con nuevo orden
+};
+
 // Carga inicial y watch para paginación
-onMounted(async () => {
-  await fetchCampeonatos(0, pageSize.value);
-  await fetchTiposCampeonato();
+onMounted(() => {
+  loadData();
 });
 
 watch([currentPage, pageSize], ([newPage, newSize], [oldPage, oldSize]) => {
   if (newPage !== oldPage || newSize !== oldSize) {
-    const skip = (newPage - 1) * newSize;
-    fetchCampeonatos(skip, newSize);
+    loadData();
   }
 });
 
@@ -119,13 +139,16 @@ const handleRowClick = (campeonato: CampeonatoResponse) => {
     <StatusMessage type="loading" :show="isLoading" message="Cargando campeonatos..." />
 
     <div v-if="!isLoading && !error">
-      <div class="rounded-md border">
+      <div class="rounded-md border overflow-x-auto">
         <DataTable
           :items="campeonatos" 
           :columns="columns"
           item-key="nch"
           hover
           @row-click="handleRowClick"
+          :sort-field="sortField"
+          :sort-direction="sortDirection"
+          @sort="handleSort"
         >
             <template #empty>
                 No hay campeonatos registrados.

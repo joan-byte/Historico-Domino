@@ -13,17 +13,22 @@ export function useClubs() {
 
   // Acciones
   // Adaptar fetchClubs
-  const fetchClubs = async (skip: number = 0, limit: number = 100) => {
+  const fetchClubs = async (
+    skip: number = 0, 
+    limit: number = 10, // Ajustar el límite por defecto si es necesario
+    sortBy: string | null = null, // Campo para ordenar
+    sortDir: 'asc' | 'desc' | null = null // Dirección de ordenación
+  ) => {
     isLoading.value = true;
     error.value = null;
     
     try {
-      const response: ClubsPaginados = await clubService.getAll(skip, limit);
+      const response: ClubsPaginados = await clubService.getAll(skip, limit, sortBy, sortDir);
       clubs.value = response.clubs;
       totalClubs.value = response.total;
-    } catch (err) {
-      console.error('Error al cargar los clubs:', err);
-      error.value = 'No se pudieron cargar los clubs. Intente nuevamente más tarde.';
+    } catch (err: any) {
+      console.error('Error fetching clubs:', err);
+      error.value = err.message || 'Failed to load clubs';
       clubs.value = [];
       totalClubs.value = 0;
     } finally {

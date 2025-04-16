@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, select
-from typing import List
+from sqlalchemy import func, select, asc, desc
+from typing import List, Optional
 from pydantic import BaseModel
 import datetime # Necesario para formatear fecha en NCH
 from datetime import date # Importar date explícitamente
@@ -65,15 +65,57 @@ async def generar_siguiente_nch(db: Session, club_codigo: str, tipo_campeonato_i
     return f"{prefijo_nch}{incremental_str}"
 
 @router.get("/", response_model=CampeonatosPaginadosResponse)
-def get_campeonatos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Obtener todos los campeonatos. Incluye carga eager de relaciones."""
+def get_campeonatos(
+    skip: int = 0, 
+    limit: int = 10, 
+    # Añadir parámetros de ordenación
+    sort_by: Optional[str] = Query(None, alias="sort_by"),
+    sort_dir: Optional[str] = Query('asc', alias="sort_dir"),
+    db: Session = Depends(get_db)
+):
+    """Obtener todos los campeonatos con paginación y ordenación."""
+    # Carga eager de relaciones para ordenar y mostrar
     query = db.query(Campeonato).options(
         joinedload(Campeonato.tipo_campeonato), 
         joinedload(Campeonato.club)
     )
-    total = query.count() # Contar sobre la query base
-    # Aplicar offset y limit después de contar
+    
+    # Mapeo de campos permitidos (incluyendo relaciones)
+    allowed_sort_fields = {
+        'nch': Campeonato.nch,
+        'nombre': Campeonato.nombre,
+        'fecha_inicio': Campeonato.fecha_inicio,
+        'dias': Campeonato.dias,
+        'partidas': Campeonato.partidas,
+        'pm': Campeonato.pm,
+        'gb': Campeonato.gb,
+        'gbp': Campeonato.gbp,
+        'tipo_campeonato.codigo': TipoCampeonato.codigo,
+        'club.nombre': Club.nombre 
+    }
+
+    # Aplicar ordenación
+    if sort_by and sort_by in allowed_sort_fields:
+        sort_column = allowed_sort_fields[sort_by]
+        
+        # Unir explícitamente si se ordena por campo relacionado 
+        # (aunque joinedload carga los datos, order_by necesita el JOIN)
+        if sort_by.startswith('tipo_campeonato.'):
+            query = query.join(Campeonato.tipo_campeonato)
+        elif sort_by.startswith('club.'):
+            query = query.join(Campeonato.club)
+            
+        if sort_dir and sort_dir.lower() == 'desc':
+            query = query.order_by(desc(sort_column))
+        else:
+            query = query.order_by(asc(sort_column))
+    else:
+        # Orden por defecto: fecha inicio descendente
+        query = query.order_by(desc(Campeonato.fecha_inicio))
+            
+    total = query.count() 
     campeonatos = query.offset(skip).limit(limit).all()
+    
     return CampeonatosPaginadosResponse(total=total, campeonatos=campeonatos)
 
 # Ruta actualizada para usar nch (string)
