@@ -129,7 +129,6 @@ const handleDelete = async (tipo: TipoCampeonatoResponse) => {
     await deleteTipoCampeonato(tipo.id);
     successMessage.value = `Tipo de campeonato "${tipo.nombre}" eliminado con éxito.`;
     showSuccess.value = true;
-    await fetchTiposCampeonato();
   } catch (err) {
     console.error('Error al eliminar tipo de campeonato:', err);
   }
@@ -294,12 +293,20 @@ onMounted(async () => {
           :columns="columns"
           item-key="id"
         >
-          <template #cell(acciones)="{ item }">
+          <template #cell-acciones="{ item }">
             <div class="flex space-x-2">
-              <button @click="handleEdit(item)" class="text-blue-600 hover:text-blue-800">
+              <!-- Botón Editar: Estilo azul -->
+              <button 
+                @click="handleEdit(item)" 
+                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+              >
                 Editar
               </button>
-              <button @click="handleDelete(item)" class="text-red-600 hover:text-red-800">
+              <!-- Botón Eliminar: Estilo rojo -->
+              <button 
+                @click="handleDelete(item)" 
+                class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+              >
                 Eliminar
               </button>
             </div>

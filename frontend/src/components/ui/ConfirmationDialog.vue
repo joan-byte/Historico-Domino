@@ -55,12 +55,12 @@ const confirmButtonClass = computed(() => {
 </script>
 
 <template>
-  <teleport to="body">
-    <!-- <transition name="fade"> --> <!-- Transición comentada temporalmente -->
+  <teleport to="body"> <!-- Renderizar el modal fuera del DOM actual -->
+    <transition name="fade"> <!-- Transición suave -->
       <div 
         v-if="show" 
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-        @click.self="handleCancel"
+        @click.self="handleCancel" <!-- Cerrar al hacer clic fuera -->
       >
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
           <!-- Título -->
@@ -94,7 +94,7 @@ const confirmButtonClass = computed(() => {
           </div>
         </div>
       </div>
-    <!-- </transition> -->
+    </transition>
   </teleport>
 </template>
 

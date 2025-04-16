@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..db.session import get_db
 from ..models.tipo_campeonato import TipoCampeonato
-from ..schemas.tipo_campeonato import TipoCampeonatoCreate, TipoCampeonatoResponse
+from ..schemas.tipo_campeonato import TipoCampeonatoCreate, TipoCampeonatoResponse, TipoCampeonatoUpdate
 
 router = APIRouter(
     prefix="/tipos-campeonato",
@@ -82,4 +82,35 @@ def eliminar_tipo_campeonato(id: int, db: Session = Depends(get_db)):
         return tipo_campeonato_eliminado
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error al eliminar el tipo de campeonato: {str(e)}") 
+        raise HTTPException(status_code=400, detail=f"Error al eliminar el tipo de campeonato: {str(e)}")
+
+@router.patch("/{id}", response_model=TipoCampeonatoResponse)
+def actualizar_tipo_campeonato(id: int, tipo_update: TipoCampeonatoUpdate, db: Session = Depends(get_db)):
+    """
+    Actualizar un tipo de campeonato existente por ID
+    """
+    # Buscar el tipo de campeonato existente
+    db_tipo = db.query(TipoCampeonato).filter(TipoCampeonato.id == id).first()
+    if not db_tipo:
+        raise HTTPException(status_code=404, detail="Tipo de campeonato no encontrado")
+
+    # Obtener los datos a actualizar del schema, excluyendo los no establecidos
+    update_data = tipo_update.model_dump(exclude_unset=True)
+
+    # Validar si el código se está actualizando y si ya existe
+    if 'codigo' in update_data and update_data['codigo'] != db_tipo.codigo:
+        existing_code = db.query(TipoCampeonato).filter(TipoCampeonato.codigo == update_data['codigo']).first()
+        if existing_code:
+            raise HTTPException(status_code=400, detail=f"Ya existe un tipo de campeonato con el código {update_data['codigo']}")
+
+    # Actualizar los campos del objeto de base de datos
+    for key, value in update_data.items():
+        setattr(db_tipo, key, value)
+
+    try:
+        db.commit()
+        db.refresh(db_tipo)
+        return db_tipo
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error al actualizar el tipo de campeonato: {str(e)}") 

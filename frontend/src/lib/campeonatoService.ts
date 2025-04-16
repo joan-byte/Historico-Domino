@@ -139,9 +139,9 @@ export const campeonatoService = {
   },
   
   updateTipo: (id: number, data: TipoCampeonatoUpdate) => {
-     // Usar custom para asegurar la barra final y el método PUT
+     // Usar custom para asegurar la barra final y el método PATCH
      const relativeEndpoint = `${TIPOS_ENDPOINT}/${id}/`;
-     return apiService.custom<TipoCampeonatoResponse>(relativeEndpoint, 'PUT', data);
+     return apiService.custom<TipoCampeonatoResponse>(relativeEndpoint, 'PATCH', data);
      // Alternativa si update funciona: return apiService.update<TipoCampeonatoResponse>(TIPOS_ENDPOINT, id, data);
   },
     
