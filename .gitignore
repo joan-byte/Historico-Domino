@@ -68,3 +68,7 @@ backend/*.pyo
 
 # Ignorar archivo de entorno del backend (Eliminamos línea repetida de abajo)
 # backend/.env 
+
+# Carpetas específicas a ignorar
+estructura.md
+Manual_Usuario.md 
